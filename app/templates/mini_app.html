@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            display: grid;
+            place-items: center;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .card {
+            width: min(92vw, 560px);
+            padding: 28px;
+            border-radius: 16px;
+            background: #111827;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            text-align: center;
+        }
+
+        .title {
+            font-size: 24px;
+            margin: 0 0 10px;
+        }
+
+        .line {
+            margin: 6px 0;
+            font-size: 18px;
+        }
+
+        .muted {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+<main class="card">
+    <h1 class="title">Welcome</h1>
+    <p class="line">User: <strong id="user-name">{{ name }}</strong></p>
+    <p class="line">Platform: <strong id="platform-name">{{ platform }}</strong></p>
+    <p class="muted">The values are detected from Telegram WebApp data or URL query params.</p>
+</main>
+
+<script>
+    (function () {
+        const userNameNode = document.getElementById("user-name");
+        const platformNode = document.getElementById("platform-name");
+
+        const params = new URLSearchParams(window.location.search);
+        const queryName = params.get("name");
+        const queryPlatform = params.get("platform");
+
+        if (queryName) {
+            userNameNode.textContent = queryName;
+        }
+        if (queryPlatform) {
+            platformNode.textContent = queryPlatform.toLowerCase();
+        }
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tgWebApp = window.Telegram.WebApp;
+            tgWebApp.ready();
+            const tgUser = tgWebApp.initDataUnsafe && tgWebApp.initDataUnsafe.user;
+            if (tgUser) {
+                const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ").trim();
+                userNameNode.textContent = fullName || tgUser.username || String(tgUser.id);
+                platformNode.textContent = "telegram";
+            }
+        }
+    })();
+</script>
+</body>
+</html>
