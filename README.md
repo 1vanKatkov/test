@@ -59,6 +59,9 @@ Available endpoints:
 
 Important env vars for web services:
 - `OPENROUTER_API_KEY`
+- `OPENROUTER_URL`
+- `MODEL_SONNIK`
+- `MODEL_SOVMESTIMOST`
 - `MAX_AUTH_SECRET`
 - `DATABASE_PATH`
 - `STARTING_CREDITS`, `COST_SONNIK`, `COST_NUMEROLOGY`, `COST_SOVMESTIMOST`
@@ -85,6 +88,26 @@ The app is prepared for common hostings in two formats:
 - `MAX_AUTH_SECRET=...`
 
 `PORT` is supported automatically (most hostings set it). If missing, app uses `APP_PORT` or `8000`.
+
+## AI/OpenRouter troubleshooting
+
+If AI endpoints fail, check these first:
+- `OPENROUTER_API_KEY` is set and active.
+- `OPENROUTER_URL` is `https://openrouter.ai/api/v1/chat/completions`.
+- `MODEL_SONNIK` and `MODEL_SOVMESTIMOST` are valid for your OpenRouter account.
+
+Typical API errors and meaning:
+- `OPENROUTER_API_KEY is not configured` -> key is missing in `.env`.
+- `AI provider status 401/403` -> key is invalid or access denied.
+- `AI provider status 429` -> rate limit or quota exhausted.
+- `AI provider returned no choices` -> provider returned unexpected payload.
+
+Quick local check:
+```bash
+curl -X POST http://127.0.0.1:8000/api/sonnik/interpret \
+  -H "Content-Type: application/json" \
+  -d "{\"dream_text\":\"Приснился океан и птицы\"}"
+```
 
 ## Notes
 

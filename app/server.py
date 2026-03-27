@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -153,12 +153,18 @@ async def api_sonnik(payload: SonnikRequest, identity: MaxIdentity | None = Depe
         charge(user_id, settings.cost_sonnik, "sonnik", {"module": "sonnik"})
     try:
         interpretation = sonnik.interpret_dream(payload.dream_text)
-    except Exception:
+    except HTTPException as exc:
         if is_guest:
             new_balance = "Unlimited"
         else:
             new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
-        return JSONResponse(status_code=502, content={"error": "AI service is unavailable", "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+    except Exception as exc:
+        if is_guest:
+            new_balance = "Unlimited"
+        else:
+            new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
+        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
 
     db.record_history(user_id, "sonnik", payload.dream_text, interpretation)
     balance_value = "Unlimited" if is_guest else get_balance(user_id)
@@ -172,6 +178,12 @@ async def api_numerology(payload: NumerologyRequest, identity: MaxIdentity | Non
         charge(user_id, settings.cost_numerology, "numerology", {"module": "numerology"})
     try:
         report_path = numerology.generate_report(user_id, payload.full_name, payload.birth_date)
+    except HTTPException as exc:
+        if is_guest:
+            new_balance = "Unlimited"
+        else:
+            new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
     except Exception as exc:
         if is_guest:
             new_balance = "Unlimited"
@@ -207,7 +219,7 @@ async def api_sovmestimost_names(
         charge(user_id, settings.cost_sovmestimost, "sovmestimost_names", {"module": "sovmestimost"})
     try:
         result = compatibility.by_names(payload.name1, payload.name2, language)
-    except Exception:
+    except HTTPException as exc:
         if is_guest:
             new_balance = "Unlimited"
         else:
@@ -217,7 +229,18 @@ async def api_sovmestimost_names(
                 "sovmestimost_refund",
                 {"module": "sovmestimost"},
             )
-        return JSONResponse(status_code=502, content={"error": "AI service is unavailable", "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+    except Exception as exc:
+        if is_guest:
+            new_balance = "Unlimited"
+        else:
+            new_balance = refund(
+                user_id,
+                settings.cost_sovmestimost,
+                "sovmestimost_refund",
+                {"module": "sovmestimost"},
+            )
+        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
 
     db.record_history(user_id, "sovmestimost_names", f"{payload.name1};{payload.name2}", result)
     return {"success": True, "result": result, "balance": "Unlimited" if is_guest else get_balance(user_id)}
@@ -244,6 +267,17 @@ async def api_sovmestimost_names_dates(
             payload.date2,
             language,
         )
+    except HTTPException as exc:
+        if is_guest:
+            new_balance = "Unlimited"
+        else:
+            new_balance = refund(
+                user_id,
+                settings.cost_sovmestimost,
+                "sovmestimost_refund",
+                {"module": "sovmestimost"},
+            )
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
     except Exception as exc:
         if is_guest:
             new_balance = "Unlimited"

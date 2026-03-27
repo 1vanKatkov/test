@@ -1,23 +1,13 @@
-const state = {
-  auth: null,
-};
-
 function setResult(id, text) {
-  document.getElementById(id).textContent = text || "";
+  const node = document.getElementById(id);
+  if (!node) {
+    return;
+  }
+  node.textContent = text || "";
 }
 
 function getAuthHeaders() {
-  const headers = { "Content-Type": "application/json" };
-  if (!state.auth) {
-    return headers;
-  }
-  headers["X-Max-User-Id"] = state.auth.userId;
-  headers["X-Max-Username"] = state.auth.username;
-  headers["X-Max-Language"] = state.auth.language;
-  headers["X-Max-Timestamp"] = state.auth.timestamp;
-  headers["X-Max-Nonce"] = state.auth.nonce;
-  headers["X-Max-Signature"] = state.auth.signature;
-  return headers;
+  return { "Content-Type": "application/json" };
 }
 
 async function apiRequest(url, method, bodyObj) {
@@ -38,34 +28,11 @@ async function refreshBalance() {
   document.getElementById("balance-view").textContent = String(result.balance);
 }
 
-document.getElementById("auth-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const timestamp = document.getElementById("max-timestamp").value.trim();
-  const userId = document.getElementById("max-user-id").value.trim();
-  const signature = document.getElementById("max-signature").value.trim();
-  const nonce = document.getElementById("max-nonce").value.trim();
-  const username = document.getElementById("max-username").value.trim();
-  const language = document.getElementById("max-language").value.trim() || "ru";
-
-  state.auth = { timestamp, userId, signature, nonce, username, language };
-  try {
-    const result = await apiRequest("/api/auth/max/verify", "POST", {});
-    localStorage.setItem("astrolhub.maxVerified", "true");
-    localStorage.setItem("astrolhub.lastAuthPlatform", "max");
-    localStorage.setItem("astrolhub.lastAuthUser", result.profile.username || "");
-    setResult("auth-result", `Пользователь: ${result.profile.username}\nБаланс: ${result.balance}`);
-    document.getElementById("balance-view").textContent = String(result.balance);
-  } catch (error) {
-    localStorage.removeItem("astrolhub.maxVerified");
-    setResult("auth-result", error.message);
-  }
-});
-
 document.getElementById("refresh-balance").addEventListener("click", async () => {
   try {
     await refreshBalance();
   } catch (error) {
-    setResult("auth-result", error.message);
+    setResult("compat-result", error.message);
   }
 });
 
@@ -145,5 +112,5 @@ document.querySelectorAll(".tab-btn").forEach((button) => {
   });
 });
 
-document.getElementById("max-timestamp").value = String(Math.floor(Date.now() / 1000));
+refreshBalance().catch(() => {});
 
