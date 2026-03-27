@@ -7,18 +7,17 @@ function setResult(id, text) {
 }
 
 function getAuthHeaders() {
+  const headers = { "Content-Type": "application/json" };
   if (!state.auth) {
-    throw new Error("Сначала выполните авторизацию");
+    return headers;
   }
-  return {
-    "Content-Type": "application/json",
-    "X-Max-User-Id": state.auth.userId,
-    "X-Max-Username": state.auth.username,
-    "X-Max-Language": state.auth.language,
-    "X-Max-Timestamp": state.auth.timestamp,
-    "X-Max-Nonce": state.auth.nonce,
-    "X-Max-Signature": state.auth.signature,
-  };
+  headers["X-Max-User-Id"] = state.auth.userId;
+  headers["X-Max-Username"] = state.auth.username;
+  headers["X-Max-Language"] = state.auth.language;
+  headers["X-Max-Timestamp"] = state.auth.timestamp;
+  headers["X-Max-Nonce"] = state.auth.nonce;
+  headers["X-Max-Signature"] = state.auth.signature;
+  return headers;
 }
 
 async function apiRequest(url, method, bodyObj) {

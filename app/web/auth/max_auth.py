@@ -93,3 +93,29 @@ async def require_max_auth(
         internal_user_id=user["id"],
     )
 
+
+async def optional_max_auth(
+    request: Request,
+    x_max_user_id: str = Header(default="", alias="X-Max-User-Id"),
+    x_max_timestamp: str = Header(default="", alias="X-Max-Timestamp"),
+    x_max_nonce: str = Header(default="", alias="X-Max-Nonce"),
+    x_max_signature: str = Header(default="", alias="X-Max-Signature"),
+    x_max_username: str = Header(default="", alias="X-Max-Username"),
+    x_max_language: str = Header(default="ru", alias="X-Max-Language"),
+) -> MaxIdentity | None:
+    if not x_max_user_id or not x_max_timestamp or not x_max_signature:
+        return None
+
+    try:
+        return await require_max_auth(
+            request=request,
+            x_max_user_id=x_max_user_id,
+            x_max_timestamp=x_max_timestamp,
+            x_max_nonce=x_max_nonce,
+            x_max_signature=x_max_signature,
+            x_max_username=x_max_username,
+            x_max_language=x_max_language,
+        )
+    except HTTPException:
+        return None
+
