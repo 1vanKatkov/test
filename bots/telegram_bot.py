@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_webapp_url() -> str:
-    return f"{settings.app_base_url}/mini-app?platform=telegram"
+    return f"{settings.app_base_url}/?platform=telegram"
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

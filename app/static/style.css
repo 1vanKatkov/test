@@ -21,6 +21,7 @@ body {
   margin: 0;
   color: var(--text);
   font-family: "Segoe UI", Arial, sans-serif;
+  overflow-x: hidden;
 }
 
 a {
@@ -143,6 +144,14 @@ a {
   line-height: 1.6;
 }
 
+.state-view {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .eyebrow {
   display: inline-block;
   border: 1px solid #3e4d7d;
@@ -166,6 +175,7 @@ a {
   margin-top: 18px;
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
   align-items: center;
   color: var(--muted);
 }
@@ -416,6 +426,13 @@ button {
   color: var(--text);
 }
 
+button,
+.primary-btn,
+.secondary-btn,
+.ghost-btn {
+  min-height: 44px;
+}
+
 textarea {
   resize: vertical;
 }
@@ -472,6 +489,10 @@ button {
 }
 
 @media (max-width: 960px) {
+  .header-inner {
+    padding: 12px 14px;
+  }
+
   .hero-inner,
   .feature-grid,
   .steps,
@@ -481,6 +502,96 @@ button {
 
   .main-nav {
     display: none;
+  }
+
+  .hero {
+    padding: 32px 14px 24px;
+  }
+
+  .section {
+    padding: 28px 14px;
+  }
+
+  .site-footer {
+    margin-top: 0;
+    padding: 16px 14px 26px;
+  }
+}
+
+@media (max-width: 430px) {
+  .brand {
+    font-size: 18px;
+  }
+
+  .hero-content h1 {
+    font-size: clamp(28px, 10vw, 36px);
+  }
+
+  .hero-content p {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .hero-cta {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .big,
+  .primary-btn,
+  .secondary-btn,
+  .ghost-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 14px;
+  }
+
+  .floating-card {
+    width: 100%;
+    padding: 18px;
+  }
+
+  .section-head h2 {
+    font-size: 24px;
+  }
+
+  .step,
+  .feature-card,
+  .benefit,
+  .card {
+    padding: 14px;
+  }
+
+  .topbar-inner {
+    padding: 12px;
+  }
+
+  .container {
+    padding: 16px 12px 28px;
+  }
+
+  input,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-inner {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-actions .ghost-btn {
+    width: 100%;
   }
 }
 

@@ -38,20 +38,35 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def root(request: Request):
+async def root(
+    request: Request,
+    name: str = Query(default=""),
+    platform: str = Query(default=""),
+):
+    initial_name = name.strip()
+    initial_platform = platform.strip().lower()
+    recognized_from_query = bool(initial_name or initial_platform)
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "telegram_bot_url": "https://t.me/your_telegram_bot",
             "max_bot_url": "https://max.ru/your_max_bot",
+            "brand_name": "Astrolhub",
+            "initial_name": initial_name,
+            "initial_platform": initial_platform,
+            "recognized_from_query": recognized_from_query,
         },
     )
 
 
 @app.get("/app", response_class=HTMLResponse, include_in_schema=False)
 async def web_app_page(request: Request):
-    return templates.TemplateResponse("web_app.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="web_app.html",
+        context={"brand_name": "Astrolhub"},
+    )
 
 
 @app.get("/health")

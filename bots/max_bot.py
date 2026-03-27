@@ -47,7 +47,7 @@ class MaxBotClient:
     def send_welcome(self, chat_id: int, user_name: str | None) -> None:
         display_name = user_name or "Unknown user"
         mini_app_url = (
-            f"{settings.app_base_url}/mini-app"
+            f"{settings.app_base_url}/"
             f"?platform=max&name={requests.utils.quote(display_name)}"
         )
         payload = {

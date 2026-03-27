@@ -51,9 +51,13 @@ document.getElementById("auth-form").addEventListener("submit", async (event) =>
   state.auth = { timestamp, userId, signature, nonce, username, language };
   try {
     const result = await apiRequest("/api/auth/max/verify", "POST", {});
+    localStorage.setItem("astrolhub.maxVerified", "true");
+    localStorage.setItem("astrolhub.lastAuthPlatform", "max");
+    localStorage.setItem("astrolhub.lastAuthUser", result.profile.username || "");
     setResult("auth-result", `Пользователь: ${result.profile.username}\nБаланс: ${result.balance}`);
     document.getElementById("balance-view").textContent = String(result.balance);
   } catch (error) {
+    localStorage.removeItem("astrolhub.maxVerified");
     setResult("auth-result", error.message);
   }
 });
