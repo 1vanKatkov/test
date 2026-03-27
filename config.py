@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 
 load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
 
 
 def _bool_from_env(name: str, default: bool = False) -> bool:
@@ -33,5 +35,26 @@ class Settings:
     run_telegram_bot: bool = _bool_from_env("RUN_TELEGRAM_BOT", True)
     run_max_bot: bool = _bool_from_env("RUN_MAX_BOT", True)
 
+    # Web services settings (ported from bots228/max_web_app)
+    database_path: str = os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "web_app.db"))
+    openrouter_url: str = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions")
+    openrouter_api_key: str = os.getenv("OPENROUTER_API_KEY", "")
+    model_sonnik: str = os.getenv("MODEL_SONNIK", "@preset/sonnik")
+    model_sovmestimost: str = os.getenv("MODEL_SOVMESTIMOST", "@preset/sovmestimost")
+    starting_credits: int = int(os.getenv("STARTING_CREDITS", "5"))
+    cost_sonnik: int = int(os.getenv("COST_SONNIK", "5"))
+    cost_numerology: int = int(os.getenv("COST_NUMEROLOGY", "5"))
+    cost_sovmestimost: int = int(os.getenv("COST_SOVMESTIMOST", "5"))
+    max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
+    max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))
+    numerology_dir: str = os.getenv("NUMEROLOGY_DIR", str(BASE_DIR / "bots228" / "numerology"))
+    sovmestimost_messages_path: str = os.getenv(
+        "SOVMESTIMOST_MESSAGES_PATH",
+        str(BASE_DIR / "bots228" / "sovmestimost" / "messages.json"),
+    )
+    reports_dir: Path = Path(os.getenv("REPORTS_DIR", str(BASE_DIR / "app" / "reports")))
+
 
 settings = Settings()
+Path(settings.database_path).parent.mkdir(parents=True, exist_ok=True)
+settings.reports_dir.mkdir(parents=True, exist_ok=True)

@@ -1,23 +1,57 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi import Depends, FastAPI, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.web.auth.max_auth import MaxIdentity, require_max_auth
+from app.web.db import db
+from app.web.schemas import (
+    NumerologyRequest,
+    SonnikRequest,
+    SovmestimostNamesDatesRequest,
+    SovmestimostNamesRequest,
+)
+from app.web.services import compatibility, numerology, sonnik
+from app.web.services.balance import charge, get_balance, refund
 from config import settings
 
 
 BASE_DIR = Path(__file__).resolve().parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+TEMPLATES_DIR = BASE_DIR / "templates"
+STATIC_DIR = BASE_DIR / "static"
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-app = FastAPI(title=settings.app_title)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    db.init()
+    yield
 
 
-@app.get("/", include_in_schema=False)
-async def root() -> RedirectResponse:
-    return RedirectResponse(url="/mini-app")
+app = FastAPI(title=settings.app_title, lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def root(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "telegram_bot_url": "https://t.me/your_telegram_bot",
+            "max_bot_url": "https://max.ru/your_max_bot",
+        },
+    )
+
+
+@app.get("/app", response_class=HTMLResponse, include_in_schema=False)
+async def web_app_page(request: Request):
+    return templates.TemplateResponse("web_app.html", {"request": request})
 
 
 @app.get("/health")
@@ -41,3 +75,132 @@ async def mini_app(
             "platform": safe_platform,
         },
     )
+
+
+@app.post("/api/auth/max/verify")
+async def verify_auth(identity: MaxIdentity = Depends(require_max_auth)):
+    return {
+        "success": True,
+        "profile": {
+            "provider": "max",
+            "provider_user_id": identity.user_id,
+            "username": identity.username,
+            "language": identity.language,
+        },
+        "balance": get_balance(identity.internal_user_id),
+    }
+
+
+@app.get("/api/profile")
+async def profile(identity: MaxIdentity = Depends(require_max_auth)):
+    return {
+        "provider": "max",
+        "provider_user_id": identity.user_id,
+        "username": identity.username,
+        "language": identity.language,
+    }
+
+
+@app.get("/api/balance")
+async def balance(identity: MaxIdentity = Depends(require_max_auth)):
+    return {"balance": get_balance(identity.internal_user_id)}
+
+
+@app.post("/api/sonnik/interpret")
+async def api_sonnik(payload: SonnikRequest, identity: MaxIdentity = Depends(require_max_auth)):
+    user_id = identity.internal_user_id
+    charge(user_id, settings.cost_sonnik, "sonnik", {"module": "sonnik"})
+    try:
+        interpretation = sonnik.interpret_dream(payload.dream_text)
+    except Exception:
+        new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
+        return JSONResponse(status_code=502, content={"error": "AI service is unavailable", "balance": new_balance})
+
+    db.record_history(user_id, "sonnik", payload.dream_text, interpretation)
+    return {"success": True, "interpretation": interpretation, "balance": get_balance(user_id)}
+
+
+@app.post("/api/numerology/generate")
+async def api_numerology(payload: NumerologyRequest, identity: MaxIdentity = Depends(require_max_auth)):
+    user_id = identity.internal_user_id
+    charge(user_id, settings.cost_numerology, "numerology", {"module": "numerology"})
+    try:
+        report_path = numerology.generate_report(user_id, payload.full_name, payload.birth_date)
+    except Exception as exc:
+        new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
+        return JSONResponse(status_code=500, content={"error": str(exc), "balance": new_balance})
+
+    db.record_report(user_id, "numerology", report_path.name, str(report_path))
+    db.record_history(user_id, "numerology", f"{payload.full_name};{payload.birth_date}", report_path.name)
+    return {
+        "success": True,
+        "file_name": report_path.name,
+        "file_url": f"/api/reports/{report_path.name}",
+        "balance": get_balance(user_id),
+    }
+
+
+@app.get("/api/reports/{file_name}")
+def api_report(file_name: str):
+    file_path = settings.reports_dir / file_name
+    if not file_path.exists():
+        return JSONResponse(status_code=404, content={"error": "Report not found"})
+    return FileResponse(file_path, media_type="application/pdf", filename=file_name)
+
+
+@app.post("/api/sovmestimost/by-names")
+async def api_sovmestimost_names(payload: SovmestimostNamesRequest, identity: MaxIdentity = Depends(require_max_auth)):
+    user_id = identity.internal_user_id
+    charge(user_id, settings.cost_sovmestimost, "sovmestimost_names", {"module": "sovmestimost"})
+    try:
+        result = compatibility.by_names(payload.name1, payload.name2, identity.language)
+    except Exception:
+        new_balance = refund(
+            user_id,
+            settings.cost_sovmestimost,
+            "sovmestimost_refund",
+            {"module": "sovmestimost"},
+        )
+        return JSONResponse(status_code=502, content={"error": "AI service is unavailable", "balance": new_balance})
+
+    db.record_history(user_id, "sovmestimost_names", f"{payload.name1};{payload.name2}", result)
+    return {"success": True, "result": result, "balance": get_balance(user_id)}
+
+
+@app.post("/api/sovmestimost/by-names-dates")
+async def api_sovmestimost_names_dates(
+    payload: SovmestimostNamesDatesRequest,
+    identity: MaxIdentity = Depends(require_max_auth),
+):
+    user_id = identity.internal_user_id
+    charge(
+        user_id,
+        settings.cost_sovmestimost,
+        "sovmestimost_names_dates",
+        {"module": "sovmestimost"},
+    )
+    try:
+        result = compatibility.by_names_dates(
+            payload.name1,
+            payload.date1,
+            payload.name2,
+            payload.date2,
+            identity.language,
+        )
+    except Exception as exc:
+        new_balance = refund(
+            user_id,
+            settings.cost_sovmestimost,
+            "sovmestimost_refund",
+            {"module": "sovmestimost"},
+        )
+        status_code = 400 if "Invalid date format" in str(exc) else 502
+        return JSONResponse(status_code=status_code, content={"error": str(exc), "balance": new_balance})
+
+    db.record_history(
+        user_id,
+        "sovmestimost_names_dates",
+        f"{payload.name1};{payload.date1};{payload.name2};{payload.date2}",
+        result,
+    )
+    return {"success": True, "result": result, "balance": get_balance(user_id)}

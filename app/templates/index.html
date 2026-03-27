@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astro Insight - Сонник, Нумерология, Совместимость</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="landing-body">
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="brand">Astro Insight</a>
+      <nav class="main-nav">
+        <a href="#features">Возможности</a>
+        <a href="#how">Как это работает</a>
+        <a href="#about">О сервисе</a>
+      </nav>
+      <div class="header-actions">
+        <a class="ghost-btn" href="/app">Открыть веб-кабинет</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero reveal">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <span class="eyebrow">AI-сервисы для личных инсайтов</span>
+          <h1>Сонник, нумерология и совместимость в одном месте</h1>
+          <p>
+            Если вы не авторизованы, начните через бота в Telegram или MAX. После входа получите
+            персональные разборы, сохранение истории и доступ к генерации PDF-отчетов.
+          </p>
+          <div class="hero-cta">
+            <a class="primary-btn big" href="{{ telegram_bot_url }}" target="_blank" rel="noopener noreferrer">Перейти в Telegram-бот</a>
+            <a class="secondary-btn big" href="{{ max_bot_url }}" target="_blank" rel="noopener noreferrer">Перейти в MAX-бот</a>
+          </div>
+          <div class="hero-meta">
+            <span>Для уже авторизованных пользователей</span>
+            <a href="/app">Открыть веб-кабинет</a>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="floating-card">
+            <h3>Что доступно</h3>
+            <ul>
+              <li>Сонник с AI-интерпретацией</li>
+              <li>Нумерологический PDF-отчет</li>
+              <li>Анализ совместимости (2 режима)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section reveal">
+      <div class="section-head">
+        <h2>Функционал</h2>
+        <p>Каждый инструмент закрывает отдельный сценарий: быстрый ответ, глубокий разбор, или сравнительный анализ.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <h3>Сонник</h3>
+          <p>Опишите сон свободным текстом и получите осмысленную AI-интерпретацию с акцентом на символы и контекст.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Нумерология</h3>
+          <p>По ФИО и дате рождения формируется персональный PDF-отчет, который можно сохранить и пересматривать.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Совместимость</h3>
+          <p>Два режима анализа: по именам или по именам+датам рождения для более детального и точного результата.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="how" class="section section-alt reveal">
+      <div class="section-head">
+        <h2>Как это работает</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span>01</span>
+          <h3>Вход через бота</h3>
+          <p>Неавторизованный пользователь переходит в Telegram или MAX и получает доступ к безопасному сценарию входа.</p>
+        </div>
+        <div class="step">
+          <span>02</span>
+          <h3>Запрос в сервис</h3>
+          <p>Вы выбираете нужный инструмент и отправляете данные в веб-кабинете.</p>
+        </div>
+        <div class="step">
+          <span>03</span>
+          <h3>Результат и история</h3>
+          <p>Сервис возвращает результат, обновляет баланс и сохраняет историю запросов и отчеты.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="section reveal">
+      <div class="section-head">
+        <h2>Почему это удобно</h2>
+      </div>
+      <div class="benefits">
+        <div class="benefit">
+          <h3>Один кабинет</h3>
+          <p>Весь функционал в одном интерфейсе без переключений между разными ботами.</p>
+        </div>
+        <div class="benefit">
+          <h3>Прозрачный баланс</h3>
+          <p>Перед каждым запросом видно текущее состояние и списания по каждому модулю.</p>
+        </div>
+        <div class="benefit">
+          <h3>Готово к масштабированию</h3>
+          <p>Архитектура позволяет добавлять новые модули и сценарии без полного редизайна.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Astro Insight</p>
+    <a href="/app">Веб-кабинет</a>
+  </footer>
+
+  <script src="/static/landing.js"></script>
+</body>
+</html>
+
