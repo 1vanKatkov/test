@@ -41,12 +41,14 @@ class Database:
                     username TEXT,
                     language TEXT DEFAULT 'ru',
                     credits INTEGER NOT NULL DEFAULT 0,
+                    subscription_end TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     UNIQUE(provider, provider_user_id)
                 )
                 """
             )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_provider ON users(provider, provider_user_id)")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS transactions (
@@ -61,6 +63,27 @@ class Database:
                 )
                 """
             )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS payments (
+                    payment_id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    provider TEXT NOT NULL,
+                    provider_user_id TEXT NOT NULL,
+                    username TEXT,
+                    sparks INTEGER NOT NULL,
+                    amount INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    credited INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    is_subscription INTEGER DEFAULT 0,
+                    subscription_days INTEGER,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS request_history (
@@ -87,6 +110,19 @@ class Database:
                 )
                 """
             )
+            self._ensure_column(conn, "users", "subscription_end", "TEXT")
+            self._ensure_column(conn, "payments", "provider", "TEXT DEFAULT 'telegram'")
+            self._ensure_column(conn, "payments", "provider_user_id", "TEXT DEFAULT ''")
+            self._ensure_column(conn, "payments", "username", "TEXT")
+            self._ensure_column(conn, "payments", "credited", "INTEGER DEFAULT 0")
+            self._ensure_column(conn, "payments", "is_subscription", "INTEGER DEFAULT 0")
+            self._ensure_column(conn, "payments", "subscription_days", "INTEGER")
+
+    def _ensure_column(self, conn: sqlite3.Connection, table_name: str, column_name: str, column_def: str) -> None:
+        columns = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+        existing = {row["name"] for row in columns}
+        if column_name not in existing:
+            conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}")
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -133,6 +169,16 @@ class Database:
         conn = self.connect()
         try:
             return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        finally:
+            conn.close()
+
+    def get_user_by_provider(self, provider: str, provider_user_id: str) -> Optional[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                "SELECT * FROM users WHERE provider = ? AND provider_user_id = ?",
+                (provider, provider_user_id),
+            ).fetchone()
         finally:
             conn.close()
 

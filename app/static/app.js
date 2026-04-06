@@ -1,3 +1,9 @@
+const state = {
+  authProvider: "guest",
+  telegramInitData: "",
+  lastPaymentId: "",
+};
+
 function setResult(id, text) {
   const node = document.getElementById(id);
   if (!node) {
@@ -7,7 +13,11 @@ function setResult(id, text) {
 }
 
 function getAuthHeaders() {
-  return { "Content-Type": "application/json" };
+  const headers = { "Content-Type": "application/json" };
+  if (state.telegramInitData) {
+    headers["X-Telegram-Init-Data"] = state.telegramInitData;
+  }
+  return headers;
 }
 
 async function apiRequest(url, method, bodyObj) {
@@ -27,6 +37,99 @@ async function refreshBalance() {
   const result = await apiRequest("/api/balance", "GET");
   document.getElementById("balance-view").textContent = String(result.balance);
 }
+
+function setAuthBadge(text) {
+  const node = document.getElementById("auth-provider");
+  if (!node) {
+    return;
+  }
+  node.textContent = text;
+}
+
+async function autoVerifyTelegram() {
+  if (!window.Telegram || !window.Telegram.WebApp) {
+    setAuthBadge("Гость");
+    return;
+  }
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  const initData = tg.initData || "";
+  if (!initData) {
+    setAuthBadge("Гость");
+    return;
+  }
+
+  try {
+    const result = await fetch("/api/auth/telegram/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ init_data: initData }),
+    }).then((res) => res.json().then((data) => ({ ok: res.ok, data })));
+    if (!result.ok) {
+      throw new Error(result.data.error || result.data.detail || "Не удалось авторизоваться через Telegram");
+    }
+    state.telegramInitData = initData;
+    state.authProvider = "telegram";
+    setAuthBadge(`Telegram: ${result.data.profile.username}`);
+    document.getElementById("balance-view").textContent = String(result.data.balance);
+  } catch (error) {
+    setAuthBadge("Гость");
+    setResult("payment-result", error.message);
+  }
+}
+
+async function loadPaymentPackages() {
+  const select = document.getElementById("payment-package");
+  if (!select) {
+    return;
+  }
+  try {
+    const result = await apiRequest("/api/payments/packages", "GET");
+    select.innerHTML = "";
+    result.packages.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = item.label;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    setResult("payment-result", error.message);
+  }
+}
+
+document.getElementById("payment-create-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setResult("payment-result", "Создаем платеж...");
+  try {
+    const packageId = document.getElementById("payment-package").value;
+    const result = await apiRequest("/api/payments/yookassa/create", "POST", { package_id: packageId });
+    state.lastPaymentId = result.payment_id;
+    document.getElementById("payment-id").value = result.payment_id;
+    setResult("payment-result", `Платеж создан: ${result.payment_id}`);
+    if (result.confirmation_url) {
+      window.open(result.confirmation_url, "_blank");
+    }
+  } catch (error) {
+    setResult("payment-result", error.message);
+  }
+});
+
+document.getElementById("payment-check-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setResult("payment-result", "Проверяем платеж...");
+  try {
+    const paymentId = document.getElementById("payment-id").value.trim() || state.lastPaymentId;
+    if (!paymentId) {
+      throw new Error("Укажите payment_id");
+    }
+    const result = await apiRequest(`/api/payments/yookassa/${paymentId}/check`, "POST");
+    const paidStatus = result.credited ? "Зачислено" : `Статус: ${result.status}`;
+    setResult("payment-result", `${paidStatus}. Баланс: ${result.balance}`);
+    document.getElementById("balance-view").textContent = String(result.balance);
+  } catch (error) {
+    setResult("payment-result", error.message);
+  }
+});
 
 document.getElementById("refresh-balance").addEventListener("click", async () => {
   try {
@@ -112,5 +215,11 @@ document.querySelectorAll(".tab-btn").forEach((button) => {
   });
 });
 
-refreshBalance().catch(() => {});
+async function boot() {
+  await autoVerifyTelegram();
+  await loadPaymentPackages();
+  await refreshBalance();
+}
+
+boot().catch(() => {});
 

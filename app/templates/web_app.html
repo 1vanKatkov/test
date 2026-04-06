@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Панель сервисов</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body class="app-shell">
   <header class="app-topbar">
@@ -25,7 +26,23 @@
         <h2>Баланс</h2>
         <button id="refresh-balance" type="button" class="primary-btn">Обновить</button>
       </div>
+      <div class="muted">Режим: <span id="auth-provider">Гость</span></div>
       <div id="balance-view" class="balance">-</div>
+    </section>
+
+    <section class="card">
+      <h2>Оплата YooKassa</h2>
+      <form id="payment-create-form" class="form-grid">
+        <label>Пакет искр
+          <select id="payment-package"></select>
+        </label>
+        <button type="submit" class="primary-btn">Создать платеж</button>
+      </form>
+      <form id="payment-check-form" class="form-grid">
+        <label>Payment ID <input id="payment-id" placeholder="2f8f6..." /></label>
+        <button type="submit" class="primary-btn">Проверить оплату</button>
+      </form>
+      <pre id="payment-result" class="result"></pre>
     </section>
 
     <section class="card">

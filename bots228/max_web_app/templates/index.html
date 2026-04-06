@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Max Web App</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>Max Web App</h1>
+      <p>Сервисы: Сонник, Нумерология, Совместимость, Таро</p>
+    </header>
+
+    <section class="card">
+      <h2>Авторизация Max</h2>
+      <p class="muted">Введите подписанные данные Max. После проверки запросы выполняются от авторизованного пользователя.</p>
+      <form id="auth-form" class="form-grid">
+        <label>User ID <input id="max-user-id" required /></label>
+        <label>Username <input id="max-username" value="max_user" /></label>
+        <label>Language <input id="max-language" value="ru" /></label>
+        <label>Timestamp <input id="max-timestamp" required /></label>
+        <label>Nonce <input id="max-nonce" value="web" /></label>
+        <label>Signature <input id="max-signature" required /></label>
+        <button type="submit">Проверить авторизацию</button>
+      </form>
+      <div id="auth-result" class="result"></div>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>Баланс</h2>
+        <button id="refresh-balance" type="button">Обновить</button>
+      </div>
+      <div id="balance-view" class="balance">-</div>
+    </section>
+
+    <section class="card">
+      <h2>Сонник</h2>
+      <form id="sonnik-form" class="form-grid">
+        <label>Описание сна
+          <textarea id="dream-text" rows="5" required></textarea>
+        </label>
+        <button type="submit">Получить интерпретацию</button>
+      </form>
+      <pre id="sonnik-result" class="result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Нумерология</h2>
+      <form id="numerology-form" class="form-grid">
+        <label>Полное имя <input id="full-name" required /></label>
+        <label>Дата рождения (ДД.ММ.ГГГГ) <input id="birth-date" placeholder="15.04.1985" required /></label>
+        <button type="submit">Сгенерировать PDF</button>
+      </form>
+      <div id="numerology-result" class="result"></div>
+    </section>
+
+    <section class="card">
+      <h2>Совместимость</h2>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="names-only" type="button">По именам</button>
+        <button class="tab-btn" data-tab="names-dates" type="button">По именам и датам</button>
+      </div>
+
+      <form id="compat-names-form" class="form-grid tab-content active">
+        <label>Имя 1 <input id="compat-name1" required /></label>
+        <label>Имя 2 <input id="compat-name2" required /></label>
+        <button type="submit">Рассчитать совместимость</button>
+      </form>
+
+      <form id="compat-names-dates-form" class="form-grid tab-content">
+        <label>Имя 1 <input id="compat-nd-name1" required /></label>
+        <label>Дата 1 (ДД.ММ.ГГГГ) <input id="compat-date1" required /></label>
+        <label>Имя 2 <input id="compat-nd-name2" required /></label>
+        <label>Дата 2 (ДД.ММ.ГГГГ) <input id="compat-date2" required /></label>
+        <button type="submit">Рассчитать совместимость</button>
+      </form>
+      <pre id="compat-result" class="result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Таро</h2>
+      <form id="tarot-form" class="form-grid">
+        <label>Вопрос
+          <textarea id="tarot-question" rows="3" required></textarea>
+        </label>
+        <label>Тип расклада
+          <select id="tarot-spread">
+            <option value="1">1 карта</option>
+            <option value="3" selected>3 карты</option>
+          </select>
+        </label>
+        <button type="submit">Выполнить гадание</button>
+      </form>
+      <div id="tarot-cards" class="chips"></div>
+      <pre id="tarot-result" class="result"></pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -21,3 +21,11 @@ class SovmestimostNamesDatesRequest(BaseModel):
     name2: str = Field(min_length=2, max_length=100)
     date2: str = Field(min_length=8, max_length=10)
 
+
+class TelegramVerifyRequest(BaseModel):
+    init_data: str = Field(min_length=20, max_length=8000)
+
+
+class YooKassaCreatePaymentRequest(BaseModel):
+    package_id: str = Field(min_length=3, max_length=64)
+

@@ -36,17 +36,21 @@ class Settings:
     run_max_bot: bool = _bool_from_env("RUN_MAX_BOT", True)
 
     # Web services settings (ported from bots228/max_web_app)
-    database_path: str = os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "web_app.db"))
+    database_path: str = os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "sonnik_users.db"))
     openrouter_url: str = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions")
     openrouter_api_key: str = os.getenv("OPENROUTER_API_KEY", "")
     model_sonnik: str = os.getenv("MODEL_SONNIK", "@preset/sonnik")
     model_sovmestimost: str = os.getenv("MODEL_SOVMESTIMOST", "@preset/sovmestimost")
-    starting_credits: int = int(os.getenv("STARTING_CREDITS", "5"))
+    starting_credits: int = int(os.getenv("STARTING_CREDITS", "10"))
     cost_sonnik: int = int(os.getenv("COST_SONNIK", "5"))
     cost_numerology: int = int(os.getenv("COST_NUMEROLOGY", "5"))
     cost_sovmestimost: int = int(os.getenv("COST_SOVMESTIMOST", "5"))
     max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
     max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))
+    telegram_auth_skew_seconds: int = int(os.getenv("TELEGRAM_AUTH_SKEW_SECONDS", "86400"))
+    yookassa_shop_id: str = os.getenv("YOOKASSA_SHOP_ID", "")
+    yookassa_secret_key: str = os.getenv("YOOKASSA_SECRET_KEY", "")
+    yookassa_return_url: str = os.getenv("YOOKASSA_RETURN_URL", "https://t.me/your_bot_username")
     numerology_dir: str = os.getenv("NUMEROLOGY_DIR", str(BASE_DIR / "bots228" / "numerology"))
     sovmestimost_messages_path: str = os.getenv(
         "SOVMESTIMOST_MESSAGES_PATH",
