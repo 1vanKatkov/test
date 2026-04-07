@@ -16,27 +16,6 @@ PACKAGE_CATALOG: dict[str, dict[str, Any]] = {
     "quick_10": {"sparks": 10, "amount": 10, "label": "10 искр - 10₽", "is_subscription": False},
     "topup_50": {"sparks": 50, "amount": 100, "label": "50 искр - 100₽", "is_subscription": False},
     "topup_100": {"sparks": 100, "amount": 200, "label": "100 искр - 200₽", "is_subscription": False},
-    "sub_150": {
-        "sparks": 150,
-        "amount": 149,
-        "label": "150 искр (1 месяц) - 149₽",
-        "is_subscription": True,
-        "subscription_days": 30,
-    },
-    "sub_450": {
-        "sparks": 450,
-        "amount": 399,
-        "label": "450 искр (3 месяца) - 399₽",
-        "is_subscription": True,
-        "subscription_days": 90,
-    },
-    "sub_900": {
-        "sparks": 900,
-        "amount": 749,
-        "label": "900 искр (6 месяцев) - 749₽",
-        "is_subscription": True,
-        "subscription_days": 180,
-    },
 }
 
 

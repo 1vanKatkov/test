@@ -1,6 +1,6 @@
 const state = {
   telegramInitData: sessionStorage.getItem("astrolhub.telegramInitData") || "",
-  lastPaymentId: "",
+  lastPaymentId: sessionStorage.getItem("astrolhub.lastPaymentId") || "",
 };
 const devAuthBypass = document.body.dataset.devAuthBypass === "true";
 const devAuthMockUsername = document.body.dataset.devAuthMockUsername || "Dev Tester";
@@ -16,6 +16,7 @@ const i18n = lang === "en"
     paymentCreated: "Payment created",
     checkingPayment: "Checking payment...",
     enterPaymentId: "Enter payment_id",
+    needCreatePaymentFirst: "Create a payment first",
     credited: "Credited",
     status: "Status",
     balance: "Balance",
@@ -34,6 +35,7 @@ const i18n = lang === "en"
     paymentCreated: "Платеж создан",
     checkingPayment: "Проверяем платеж...",
     enterPaymentId: "Укажите payment_id",
+    needCreatePaymentFirst: "Сначала создайте платеж",
     credited: "Зачислено",
     status: "Статус",
     balance: "Баланс",
@@ -225,13 +227,10 @@ function wirePaymentForms() {
         const packageId = element("payment-package").value;
         const result = await apiRequest("/api/payments/yookassa/create", "POST", { package_id: packageId });
         state.lastPaymentId = result.payment_id;
-        const paymentIdInput = element("payment-id");
-        if (paymentIdInput) {
-          paymentIdInput.value = result.payment_id;
-        }
+        sessionStorage.setItem("astrolhub.lastPaymentId", result.payment_id);
         setResult("payment-result", `${i18n.paymentCreated}: ${result.payment_id}`);
         if (result.confirmation_url) {
-          window.open(result.confirmation_url, "_blank");
+          window.location.href = result.confirmation_url;
         }
       } catch (error) {
         setResult("payment-result", error.message);
@@ -245,9 +244,9 @@ function wirePaymentForms() {
       event.preventDefault();
       setResult("payment-result", i18n.checkingPayment);
       try {
-        const paymentIdValue = (element("payment-id")?.value || "").trim() || state.lastPaymentId;
+        const paymentIdValue = state.lastPaymentId || sessionStorage.getItem("astrolhub.lastPaymentId") || "";
         if (!paymentIdValue) {
-          throw new Error(i18n.enterPaymentId);
+          throw new Error(i18n.needCreatePaymentFirst);
         }
         const result = await apiRequest(`/api/payments/yookassa/${paymentIdValue}/check`, "POST");
         const paidStatus = result.credited ? i18n.credited : `${i18n.status}: ${result.status}`;
