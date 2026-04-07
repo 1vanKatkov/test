@@ -16,18 +16,17 @@
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
       <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
-      <a class="ghost-btn" href="/client?lang={{ lang }}">{{ t.home }}</a>
+      <div class="user-chip">
+        <span id="auth-username">{{ t.guest }}</span>
+        <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
+      </div>
     </div>
   </header>
 
   <main class="mobile-client">
     <section class="card compact-card">
-      <div class="row">
-        <h2>{{ t.compatibility }}</h2>
-        <button id="refresh-balance" type="button" class="primary-btn">{{ t.refresh }}</button>
-      </div>
-      <div class="muted">{{ t.mode }}: <span id="auth-provider">{{ t.guest }}</span></div>
-      <div id="balance-view" class="balance">-</div>
+      <h2>{{ t.compatibility }}</h2>
+      <div class="muted"><span id="auth-provider">{{ t.guest }}</span></div>
     </section>
 
     <section class="card">

@@ -58,6 +58,10 @@ function setResult(id, text) {
 }
 
 function setBalance(value) {
+  const headerSparks = element("header-sparks");
+  if (headerSparks) {
+    headerSparks.textContent = String(value);
+  }
   const node = element("balance-view");
   if (node) {
     node.textContent = String(value);
@@ -68,6 +72,13 @@ function setAuthBadge(text) {
   const node = element("auth-provider");
   if (node) {
     node.textContent = text;
+  }
+}
+
+function setAuthUsername(username) {
+  const node = element("auth-username");
+  if (node) {
+    node.textContent = username || i18n.guest;
   }
 }
 
@@ -101,8 +112,12 @@ function hydrateUiFromCache() {
   const profile = readTimedCache(PROFILE_CACHE_KEY);
   if (profile?.provider === "max") {
     setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
+    setAuthUsername(profile.username);
   } else if (profile?.provider === "telegram") {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
+    setAuthUsername(profile.username);
+  } else {
+    setAuthUsername(i18n.guest);
   }
   const balance = readTimedCache(BALANCE_CACHE_KEY);
   if (typeof balance === "number") {
@@ -134,6 +149,7 @@ async function apiRequest(url, method, bodyObj) {
 async function autoVerifyTelegram() {
   if (devAuthBypass) {
     setAuthBadge(`${i18n.devBypassPrefix}: ${devAuthMockUsername}`);
+    setAuthUsername(devAuthMockUsername);
     return;
   }
   if (state.telegramInitData) {
@@ -158,15 +174,19 @@ async function loadProfile() {
     saveTimedCache(PROFILE_CACHE_KEY, profile);
     if (profile.provider === "max") {
       setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
+      setAuthUsername(profile.username);
       return;
     }
     if (profile.provider === "telegram") {
       setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
+      setAuthUsername(profile.username);
       return;
     }
     setAuthBadge(i18n.guest);
+    setAuthUsername(i18n.guest);
   } catch {
     setAuthBadge(i18n.guest);
+    setAuthUsername(i18n.guest);
   }
 }
 
@@ -193,21 +213,6 @@ async function loadPaymentPackages() {
   } catch (error) {
     setResult("payment-result", error.message);
   }
-}
-
-function wireRefreshBalance() {
-  const refreshButton = element("refresh-balance");
-  if (!refreshButton) {
-    return;
-  }
-  refreshButton.addEventListener("click", async () => {
-    try {
-      await refreshBalance();
-    } catch (error) {
-      setResult("compat-result", error.message);
-      setResult("payment-result", error.message);
-    }
-  });
 }
 
 function wirePaymentForms() {
@@ -354,7 +359,6 @@ function wireCompatibilityForms() {
 }
 
 async function boot() {
-  wireRefreshBalance();
   wirePaymentForms();
   wireSonnikForm();
   wireNumerologyForm();

@@ -75,6 +75,8 @@ def _translations(lang: str) -> dict:
             "spark_package": "Spark package",
             "create_payment": "Create payment",
             "check_payment": "Check payment",
+            "soon": "Soon",
+            "sparks": "Sparks",
         }
     return {
         "cabinet": "Кабинет",
@@ -103,6 +105,8 @@ def _translations(lang: str) -> dict:
         "spark_package": "Пакет искр",
         "create_payment": "Создать платеж",
         "check_payment": "Проверить оплату",
+        "soon": "Скоро",
+        "sparks": "Искры",
     }
 
 

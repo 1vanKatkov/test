@@ -16,18 +16,17 @@
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
       <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
-      <span class="muted">{{ t.cabinet }}</span>
+      <div class="user-chip">
+        <span id="auth-username">{{ t.guest }}</span>
+        <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
+      </div>
     </div>
   </header>
 
   <main class="mobile-client">
     <section class="card compact-card">
-      <div class="row">
-        <h2>{{ t.profile }}</h2>
-        <button id="refresh-balance" type="button" class="primary-btn">{{ t.refresh }}</button>
-      </div>
-      <div class="muted">{{ t.mode }}: <span id="auth-provider">{{ t.guest }}</span></div>
-      <div id="balance-view" class="balance">-</div>
+      <h2>{{ t.profile }}</h2>
+      <div class="muted"><span id="auth-provider">{{ t.guest }}</span></div>
     </section>
 
     <section class="icon-grid">
@@ -35,10 +34,11 @@
         <span class="tile-emoji">🌙</span>
         <span class="tile-title">{{ t.sonnik }}</span>
       </a>
-      <a class="feature-icon-tile" href="/client/numerology?lang={{ lang }}">
+      <div class="feature-icon-tile feature-icon-tile-disabled" aria-disabled="true">
         <span class="tile-emoji">🔢</span>
         <span class="tile-title">{{ t.numerology }}</span>
-      </a>
+        <span class="tile-soon">{{ t.soon }}</span>
+      </div>
       <a class="feature-icon-tile" href="/client/compatibility?lang={{ lang }}">
         <span class="tile-emoji">💞</span>
         <span class="tile-title">{{ t.compatibility }}</span>
