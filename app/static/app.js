@@ -1,15 +1,75 @@
 const state = {
-  authProvider: "guest",
-  telegramInitData: "",
+  telegramInitData: sessionStorage.getItem("astrolhub.telegramInitData") || "",
   lastPaymentId: "",
 };
+const devAuthBypass = document.body.dataset.devAuthBypass === "true";
+const devAuthMockUsername = document.body.dataset.devAuthMockUsername || "Dev Tester";
+const PROFILE_CACHE_KEY = "astrolhub.profileCache";
+const BALANCE_CACHE_KEY = "astrolhub.balanceCache";
+const CACHE_TTL_MS = 30000;
+
+function element(id) {
+  return document.getElementById(id);
+}
 
 function setResult(id, text) {
-  const node = document.getElementById(id);
-  if (!node) {
-    return;
+  const node = element(id);
+  if (node) {
+    node.textContent = text || "";
   }
-  node.textContent = text || "";
+}
+
+function setBalance(value) {
+  const node = element("balance-view");
+  if (node) {
+    node.textContent = String(value);
+  }
+}
+
+function setAuthBadge(text) {
+  const node = element("auth-provider");
+  if (node) {
+    node.textContent = text;
+  }
+}
+
+function saveTimedCache(key, value) {
+  sessionStorage.setItem(
+    key,
+    JSON.stringify({
+      ts: Date.now(),
+      value,
+    }),
+  );
+}
+
+function readTimedCache(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) {
+      return null;
+    }
+    const payload = JSON.parse(raw);
+    if (!payload?.ts || Date.now() - payload.ts > CACHE_TTL_MS) {
+      return null;
+    }
+    return payload.value;
+  } catch {
+    return null;
+  }
+}
+
+function hydrateUiFromCache() {
+  const profile = readTimedCache(PROFILE_CACHE_KEY);
+  if (profile?.provider === "max") {
+    setAuthBadge(`MAX: ${profile.username}`);
+  } else if (profile?.provider === "telegram") {
+    setAuthBadge(`Telegram: ${profile.username}`);
+  }
+  const balance = readTimedCache(BALANCE_CACHE_KEY);
+  if (typeof balance === "number") {
+    setBalance(balance);
+  }
 }
 
 function getAuthHeaders() {
@@ -33,53 +93,53 @@ async function apiRequest(url, method, bodyObj) {
   return data;
 }
 
-async function refreshBalance() {
-  const result = await apiRequest("/api/balance", "GET");
-  document.getElementById("balance-view").textContent = String(result.balance);
-}
-
-function setAuthBadge(text) {
-  const node = document.getElementById("auth-provider");
-  if (!node) {
+async function autoVerifyTelegram() {
+  if (devAuthBypass) {
+    setAuthBadge(`Dev bypass: ${devAuthMockUsername}`);
     return;
   }
-  node.textContent = text;
-}
-
-async function autoVerifyTelegram() {
+  if (state.telegramInitData) {
+    return;
+  }
   if (!window.Telegram || !window.Telegram.WebApp) {
-    setAuthBadge("Гость");
     return;
   }
   const tg = window.Telegram.WebApp;
   tg.ready();
   const initData = tg.initData || "";
   if (!initData) {
-    setAuthBadge("Гость");
     return;
   }
+  state.telegramInitData = initData;
+  sessionStorage.setItem("astrolhub.telegramInitData", initData);
+}
 
+async function loadProfile() {
   try {
-    const result = await fetch("/api/auth/telegram/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ init_data: initData }),
-    }).then((res) => res.json().then((data) => ({ ok: res.ok, data })));
-    if (!result.ok) {
-      throw new Error(result.data.error || result.data.detail || "Не удалось авторизоваться через Telegram");
+    const profile = await apiRequest("/api/profile", "GET");
+    saveTimedCache(PROFILE_CACHE_KEY, profile);
+    if (profile.provider === "max") {
+      setAuthBadge(`MAX: ${profile.username}`);
+      return;
     }
-    state.telegramInitData = initData;
-    state.authProvider = "telegram";
-    setAuthBadge(`Telegram: ${result.data.profile.username}`);
-    document.getElementById("balance-view").textContent = String(result.data.balance);
-  } catch (error) {
+    if (profile.provider === "telegram") {
+      setAuthBadge(`Telegram: ${profile.username}`);
+      return;
+    }
     setAuthBadge("Гость");
-    setResult("payment-result", error.message);
+  } catch {
+    setAuthBadge("Гость");
   }
 }
 
+async function refreshBalance() {
+  const result = await apiRequest("/api/balance", "GET");
+  setBalance(result.balance);
+  saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+}
+
 async function loadPaymentPackages() {
-  const select = document.getElementById("payment-package");
+  const select = element("payment-package");
   if (!select) {
     return;
   }
@@ -97,128 +157,173 @@ async function loadPaymentPackages() {
   }
 }
 
-document.getElementById("payment-create-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setResult("payment-result", "Создаем платеж...");
-  try {
-    const packageId = document.getElementById("payment-package").value;
-    const result = await apiRequest("/api/payments/yookassa/create", "POST", { package_id: packageId });
-    state.lastPaymentId = result.payment_id;
-    document.getElementById("payment-id").value = result.payment_id;
-    setResult("payment-result", `Платеж создан: ${result.payment_id}`);
-    if (result.confirmation_url) {
-      window.open(result.confirmation_url, "_blank");
-    }
-  } catch (error) {
-    setResult("payment-result", error.message);
+function wireRefreshBalance() {
+  const refreshButton = element("refresh-balance");
+  if (!refreshButton) {
+    return;
   }
-});
-
-document.getElementById("payment-check-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setResult("payment-result", "Проверяем платеж...");
-  try {
-    const paymentId = document.getElementById("payment-id").value.trim() || state.lastPaymentId;
-    if (!paymentId) {
-      throw new Error("Укажите payment_id");
-    }
-    const result = await apiRequest(`/api/payments/yookassa/${paymentId}/check`, "POST");
-    const paidStatus = result.credited ? "Зачислено" : `Статус: ${result.status}`;
-    setResult("payment-result", `${paidStatus}. Баланс: ${result.balance}`);
-    document.getElementById("balance-view").textContent = String(result.balance);
-  } catch (error) {
-    setResult("payment-result", error.message);
-  }
-});
-
-document.getElementById("refresh-balance").addEventListener("click", async () => {
-  try {
-    await refreshBalance();
-  } catch (error) {
-    setResult("compat-result", error.message);
-  }
-});
-
-document.getElementById("sonnik-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setResult("sonnik-result", "Выполняется анализ...");
-  try {
-    const result = await apiRequest("/api/sonnik/interpret", "POST", {
-      dream_text: document.getElementById("dream-text").value.trim(),
-    });
-    setResult("sonnik-result", result.interpretation);
-    document.getElementById("balance-view").textContent = String(result.balance);
-  } catch (error) {
-    setResult("sonnik-result", error.message);
-  }
-});
-
-document.getElementById("numerology-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setResult("numerology-result", "Генерация отчета...");
-  try {
-    const result = await apiRequest("/api/numerology/generate", "POST", {
-      full_name: document.getElementById("full-name").value.trim(),
-      birth_date: document.getElementById("birth-date").value.trim(),
-    });
-    document.getElementById(
-      "numerology-result",
-    ).innerHTML = `Отчет готов: <a href="${result.file_url}" target="_blank">${result.file_name}</a>`;
-    document.getElementById("balance-view").textContent = String(result.balance);
-  } catch (error) {
-    setResult("numerology-result", error.message);
-  }
-});
-
-document.getElementById("compat-names-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setResult("compat-result", "Выполняется расчет...");
-  try {
-    const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
-      name1: document.getElementById("compat-name1").value.trim(),
-      name2: document.getElementById("compat-name2").value.trim(),
-    });
-    setResult("compat-result", result.result);
-    document.getElementById("balance-view").textContent = String(result.balance);
-  } catch (error) {
-    setResult("compat-result", error.message);
-  }
-});
-
-document.getElementById("compat-names-dates-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setResult("compat-result", "Выполняется расчет...");
-  try {
-    const result = await apiRequest("/api/sovmestimost/by-names-dates", "POST", {
-      name1: document.getElementById("compat-nd-name1").value.trim(),
-      date1: document.getElementById("compat-date1").value.trim(),
-      name2: document.getElementById("compat-nd-name2").value.trim(),
-      date2: document.getElementById("compat-date2").value.trim(),
-    });
-    setResult("compat-result", result.result);
-    document.getElementById("balance-view").textContent = String(result.balance);
-  } catch (error) {
-    setResult("compat-result", error.message);
-  }
-});
-
-document.querySelectorAll(".tab-btn").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-    if (button.dataset.tab === "names-only") {
-      document.getElementById("compat-names-form").classList.add("active");
-    } else {
-      document.getElementById("compat-names-dates-form").classList.add("active");
+  refreshButton.addEventListener("click", async () => {
+    try {
+      await refreshBalance();
+    } catch (error) {
+      setResult("compat-result", error.message);
+      setResult("payment-result", error.message);
     }
   });
-});
+}
+
+function wirePaymentForms() {
+  const createForm = element("payment-create-form");
+  if (createForm) {
+    createForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("payment-result", "Создаем платеж...");
+      try {
+        const packageId = element("payment-package").value;
+        const result = await apiRequest("/api/payments/yookassa/create", "POST", { package_id: packageId });
+        state.lastPaymentId = result.payment_id;
+        const paymentIdInput = element("payment-id");
+        if (paymentIdInput) {
+          paymentIdInput.value = result.payment_id;
+        }
+        setResult("payment-result", `Платеж создан: ${result.payment_id}`);
+        if (result.confirmation_url) {
+          window.open(result.confirmation_url, "_blank");
+        }
+      } catch (error) {
+        setResult("payment-result", error.message);
+      }
+    });
+  }
+
+  const checkForm = element("payment-check-form");
+  if (checkForm) {
+    checkForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("payment-result", "Проверяем платеж...");
+      try {
+        const paymentIdValue = (element("payment-id")?.value || "").trim() || state.lastPaymentId;
+        if (!paymentIdValue) {
+          throw new Error("Укажите payment_id");
+        }
+        const result = await apiRequest(`/api/payments/yookassa/${paymentIdValue}/check`, "POST");
+        const paidStatus = result.credited ? "Зачислено" : `Статус: ${result.status}`;
+        setResult("payment-result", `${paidStatus}. Баланс: ${result.balance}`);
+        setBalance(result.balance);
+      } catch (error) {
+        setResult("payment-result", error.message);
+      }
+    });
+  }
+}
+
+function wireSonnikForm() {
+  const form = element("sonnik-form");
+  if (!form) {
+    return;
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setResult("sonnik-result", "Выполняется анализ...");
+    try {
+      const result = await apiRequest("/api/sonnik/interpret", "POST", {
+        dream_text: element("dream-text").value.trim(),
+      });
+      setResult("sonnik-result", result.interpretation);
+      setBalance(result.balance);
+    } catch (error) {
+      setResult("sonnik-result", error.message);
+    }
+  });
+}
+
+function wireNumerologyForm() {
+  const form = element("numerology-form");
+  if (!form) {
+    return;
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setResult("numerology-result", "Генерация отчета...");
+    try {
+      const result = await apiRequest("/api/numerology/generate", "POST", {
+        full_name: element("full-name").value.trim(),
+        birth_date: element("birth-date").value.trim(),
+      });
+      const resultNode = element("numerology-result");
+      if (resultNode) {
+        resultNode.innerHTML = `Отчет готов: <a href="${result.file_url}" target="_blank">${result.file_name}</a>`;
+      }
+      setBalance(result.balance);
+    } catch (error) {
+      setResult("numerology-result", error.message);
+    }
+  });
+}
+
+function wireCompatibilityForms() {
+  const namesForm = element("compat-names-form");
+  const namesDatesForm = element("compat-names-dates-form");
+
+  if (namesForm) {
+    namesForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("compat-result", "Выполняется расчет...");
+      try {
+        const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
+          name1: element("compat-name1").value.trim(),
+          name2: element("compat-name2").value.trim(),
+        });
+        setResult("compat-result", result.result);
+        setBalance(result.balance);
+      } catch (error) {
+        setResult("compat-result", error.message);
+      }
+    });
+  }
+
+  if (namesDatesForm) {
+    namesDatesForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("compat-result", "Выполняется расчет...");
+      try {
+        const result = await apiRequest("/api/sovmestimost/by-names-dates", "POST", {
+          name1: element("compat-nd-name1").value.trim(),
+          date1: element("compat-date1").value.trim(),
+          name2: element("compat-nd-name2").value.trim(),
+          date2: element("compat-date2").value.trim(),
+        });
+        setResult("compat-result", result.result);
+        setBalance(result.balance);
+      } catch (error) {
+        setResult("compat-result", error.message);
+      }
+    });
+  }
+
+  document.querySelectorAll(".tab-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((item) => item.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      if (button.dataset.tab === "names-only") {
+        element("compat-names-form")?.classList.add("active");
+      } else {
+        element("compat-names-dates-form")?.classList.add("active");
+      }
+    });
+  });
+}
 
 async function boot() {
+  wireRefreshBalance();
+  wirePaymentForms();
+  wireSonnikForm();
+  wireNumerologyForm();
+  wireCompatibilityForms();
+  hydrateUiFromCache();
   await autoVerifyTelegram();
-  await loadPaymentPackages();
-  await refreshBalance();
+  await Promise.all([loadProfile(), loadPaymentPackages(), refreshBalance().catch(() => {})]);
 }
 
 boot().catch(() => {});

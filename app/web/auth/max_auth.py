@@ -19,6 +19,21 @@ class MaxIdentity:
     internal_user_id: int
 
 
+def _build_dev_bypass_identity() -> MaxIdentity:
+    user = db.get_or_create_user(
+        provider="dev_bypass",
+        provider_user_id=settings.dev_auth_mock_provider_user_id,
+        username=settings.dev_auth_mock_username,
+        language=settings.dev_auth_mock_language,
+    )
+    return MaxIdentity(
+        user_id=settings.dev_auth_mock_provider_user_id,
+        username=user["username"],
+        language=user["language"],
+        internal_user_id=user["id"],
+    )
+
+
 def _payload_digest(raw_body: bytes) -> str:
     return hashlib.sha256(raw_body).hexdigest()
 
@@ -68,17 +83,24 @@ async def require_max_auth(
     x_max_language: str = Header(default="ru", alias="X-Max-Language"),
 ) -> MaxIdentity:
     if not x_max_user_id or not x_max_timestamp or not x_max_signature:
+        if settings.dev_auth_bypass:
+            return _build_dev_bypass_identity()
         raise HTTPException(status_code=401, detail="Missing Max auth headers")
 
     raw_body = await request.body()
     body_digest = _payload_digest(raw_body)
-    verify_max_signature(
-        user_id=x_max_user_id,
-        timestamp=x_max_timestamp,
-        nonce=x_max_nonce,
-        signature=x_max_signature,
-        body_digest=body_digest,
-    )
+    try:
+        verify_max_signature(
+            user_id=x_max_user_id,
+            timestamp=x_max_timestamp,
+            nonce=x_max_nonce,
+            signature=x_max_signature,
+            body_digest=body_digest,
+        )
+    except HTTPException:
+        if settings.dev_auth_bypass:
+            return _build_dev_bypass_identity()
+        raise
 
     user = db.get_or_create_user(
         provider="max",
@@ -104,6 +126,8 @@ async def optional_max_auth(
     x_max_language: str = Header(default="ru", alias="X-Max-Language"),
 ) -> MaxIdentity | None:
     if not x_max_user_id or not x_max_timestamp or not x_max_signature:
+        if settings.dev_auth_bypass:
+            return _build_dev_bypass_identity()
         return None
 
     try:
@@ -117,5 +141,7 @@ async def optional_max_auth(
             x_max_language=x_max_language,
         )
     except HTTPException:
+        if settings.dev_auth_bypass:
+            return _build_dev_bypass_identity()
         return None
 

@@ -34,6 +34,13 @@ Optional toggles:
 - `RUN_TELEGRAM_BOT=true|false`
 - `RUN_MAX_BOT=true|false`
 
+Dev auth bypass (for testing authorized flows without real auth):
+- `DEV_AUTH_BYPASS=true|false`
+- `DEV_AUTH_MOCK_PROVIDER_USER_ID=dev-bypass-user`
+- `DEV_AUTH_MOCK_USERNAME=Dev Tester`
+- `DEV_AUTH_MOCK_LANGUAGE=ru`
+- Keep `DEV_AUTH_BYPASS=false` in production.
+
 ## 3) One command run (web + bots)
 
 ```bash
@@ -69,6 +76,26 @@ Important env vars for web services:
   - `NUMEROLOGY_DIR` (defaults to `./bots228/numerology`)
   - `SOVMESTIMOST_MESSAGES_PATH` (defaults to `./bots228/sovmestimost/messages.json`)
   - `REPORTS_DIR` (defaults to `./app/reports`)
+
+## Dev Auth Bypass mode
+
+Use this mode to test API/UI as an authorized user without real MAX/Telegram signatures.
+
+Enable in `.env`:
+```env
+DEV_AUTH_BYPASS=true
+DEV_AUTH_MOCK_PROVIDER_USER_ID=dev-bypass-user
+DEV_AUTH_MOCK_USERNAME=Dev Tester
+DEV_AUTH_MOCK_LANGUAGE=ru
+```
+
+Behavior when enabled:
+- `/` treats user as recognized in landing logic.
+- `/api/profile` returns mock authorized identity.
+- Protected API endpoints (`/api/balance`, `/api/sonnik/interpret`, `/api/numerology/generate`, `/api/sovmestimost/*`) work without auth headers.
+
+Security note:
+- Never keep `DEV_AUTH_BYPASS=true` on public production.
 
 ## 4) Deploy on hosting
 

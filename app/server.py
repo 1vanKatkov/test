@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -41,12 +42,38 @@ app = FastAPI(title=settings.app_title, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+def _is_recognized_request(request: Request, name: str = "", platform: str = "") -> bool:
+    if settings.dev_auth_bypass:
+        return True
+    if name.strip() or platform.strip():
+        return True
+    if request.headers.get("X-Telegram-Init-Data"):
+        return True
+    if request.headers.get("X-Max-User-Id"):
+        return True
+    return False
+
+
+def _client_url_with_query(name: str = "", platform: str = "") -> str:
+    params = {}
+    if name.strip():
+        params["name"] = name.strip()
+    if platform.strip():
+        params["platform"] = platform.strip().lower()
+    if not params:
+        return "/client"
+    return f"/client?{urlencode(params)}"
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root(
     request: Request,
     name: str = Query(default=""),
     platform: str = Query(default=""),
 ):
+    if _is_recognized_request(request, name=name, platform=platform):
+        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform))
+
     initial_name = name.strip()
     initial_platform = platform.strip().lower()
     recognized_from_query = bool(initial_name or initial_platform)
@@ -60,16 +87,68 @@ async def root(
             "initial_name": initial_name,
             "initial_platform": initial_platform,
             "recognized_from_query": recognized_from_query,
+            "dev_auth_bypass": settings.dev_auth_bypass,
+            "dev_auth_mock_username": settings.dev_auth_mock_username,
         },
     )
 
 
 @app.get("/app", response_class=HTMLResponse, include_in_schema=False)
-async def web_app_page(request: Request):
+async def web_app_page():
+    return RedirectResponse(url="/client")
+
+
+def _client_template_context(request: Request) -> dict:
+    return {
+        "request": request,
+        "brand_name": "Astrolhub",
+        "dev_auth_bypass": settings.dev_auth_bypass,
+        "dev_auth_mock_username": settings.dev_auth_mock_username,
+    }
+
+
+@app.get("/client", response_class=HTMLResponse, include_in_schema=False)
+async def client_dashboard(request: Request):
     return templates.TemplateResponse(
         request=request,
-        name="web_app.html",
-        context={"brand_name": "Astrolhub"},
+        name="client_dashboard.html",
+        context=_client_template_context(request),
+    )
+
+
+@app.get("/client/sonnik", response_class=HTMLResponse, include_in_schema=False)
+async def client_sonnik(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_sonnik.html",
+        context=_client_template_context(request),
+    )
+
+
+@app.get("/client/numerology", response_class=HTMLResponse, include_in_schema=False)
+async def client_numerology(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_numerology.html",
+        context=_client_template_context(request),
+    )
+
+
+@app.get("/client/compatibility", response_class=HTMLResponse, include_in_schema=False)
+async def client_compatibility(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_compatibility.html",
+        context=_client_template_context(request),
+    )
+
+
+@app.get("/client/topup", response_class=HTMLResponse, include_in_schema=False)
+async def client_topup(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_topup.html",
+        context=_client_template_context(request),
     )
 
 
@@ -81,9 +160,12 @@ async def health() -> dict[str, str]:
 @app.get("/mini-app")
 async def mini_app(
     request: Request,
-    name: str = Query(default="Unknown user"),
-    platform: str = Query(default="unknown"),
+    name: str = Query(default=""),
+    platform: str = Query(default=""),
 ):
+    if _is_recognized_request(request, name=name, platform=platform):
+        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform))
+
     safe_platform = platform.lower().strip() or "unknown"
     safe_name = name.strip() or "Unknown user"
     return templates.TemplateResponse(

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} - Клиент</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body
+  class="app-shell mobile-client-shell"
+  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
+  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+>
+  <header class="app-topbar client-topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/client">{{ brand_name }}</a>
+      <span class="muted">Кабинет</span>
+    </div>
+  </header>
+
+  <main class="mobile-client">
+    <section class="card compact-card">
+      <div class="row">
+        <h2>Профиль</h2>
+        <button id="refresh-balance" type="button" class="primary-btn">Обновить</button>
+      </div>
+      <div class="muted">Режим: <span id="auth-provider">Гость</span></div>
+      <div id="balance-view" class="balance">-</div>
+    </section>
+
+    <section class="icon-grid">
+      <a class="feature-icon-tile" href="/client/sonnik">
+        <span class="tile-emoji">🌙</span>
+        <span class="tile-title">Сонник</span>
+      </a>
+      <a class="feature-icon-tile" href="/client/numerology">
+        <span class="tile-emoji">🔢</span>
+        <span class="tile-title">Нумерология</span>
+      </a>
+      <a class="feature-icon-tile" href="/client/compatibility">
+        <span class="tile-emoji">💞</span>
+        <span class="tile-title">Совместимость</span>
+      </a>
+      <a class="feature-icon-tile" href="/client/topup">
+        <span class="tile-emoji">💳</span>
+        <span class="tile-title">Пополнение</span>
+      </a>
+    </section>
+  </main>
+
+  <script defer src="/static/app.js"></script>
+</body>
+</html>
+

@@ -34,6 +34,10 @@ class Settings:
     max_polling_enabled: bool = _bool_from_env("MAX_POLLING_ENABLED", True)
     run_telegram_bot: bool = _bool_from_env("RUN_TELEGRAM_BOT", True)
     run_max_bot: bool = _bool_from_env("RUN_MAX_BOT", True)
+    dev_auth_bypass: bool = _bool_from_env("DEV_AUTH_BYPASS", False)
+    dev_auth_mock_provider_user_id: str = os.getenv("DEV_AUTH_MOCK_PROVIDER_USER_ID", "dev-bypass-user")
+    dev_auth_mock_username: str = os.getenv("DEV_AUTH_MOCK_USERNAME", "Dev Tester")
+    dev_auth_mock_language: str = os.getenv("DEV_AUTH_MOCK_LANGUAGE", "ru")
 
     # Web services settings (ported from bots228/max_web_app)
     database_path: str = os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "sonnik_users.db"))
