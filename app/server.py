@@ -42,6 +42,70 @@ app = FastAPI(title=settings.app_title, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+def _normalize_lang(lang: str = "") -> str:
+    return "en" if (lang or "").strip().lower() == "en" else "ru"
+
+
+def _translations(lang: str) -> dict:
+    if lang == "en":
+        return {
+            "cabinet": "Dashboard",
+            "profile": "Profile",
+            "refresh": "Refresh",
+            "mode": "Mode",
+            "guest": "Guest",
+            "sonnik": "Dreambook",
+            "numerology": "Numerology",
+            "compatibility": "Compatibility",
+            "topup": "Top Up",
+            "home": "Home",
+            "dream_description": "Dream description",
+            "get_interpretation": "Get interpretation",
+            "full_name": "Full name",
+            "birth_date": "Birth date (DD.MM.YYYY)",
+            "generate_pdf": "Generate PDF",
+            "by_names": "By names",
+            "by_names_dates": "By names and dates",
+            "name_1": "Name 1",
+            "name_2": "Name 2",
+            "date_1": "Date 1 (DD.MM.YYYY)",
+            "date_2": "Date 2 (DD.MM.YYYY)",
+            "calc_compatibility": "Calculate compatibility",
+            "yookassa_payment": "YooKassa payment",
+            "spark_package": "Spark package",
+            "create_payment": "Create payment",
+            "check_payment": "Check payment",
+        }
+    return {
+        "cabinet": "Кабинет",
+        "profile": "Профиль",
+        "refresh": "Обновить",
+        "mode": "Режим",
+        "guest": "Гость",
+        "sonnik": "Сонник",
+        "numerology": "Нумерология",
+        "compatibility": "Совместимость",
+        "topup": "Пополнение",
+        "home": "На главную",
+        "dream_description": "Описание сна",
+        "get_interpretation": "Получить интерпретацию",
+        "full_name": "Полное имя",
+        "birth_date": "Дата рождения (ДД.ММ.ГГГГ)",
+        "generate_pdf": "Сгенерировать PDF",
+        "by_names": "По именам",
+        "by_names_dates": "По именам и датам",
+        "name_1": "Имя 1",
+        "name_2": "Имя 2",
+        "date_1": "Дата 1 (ДД.ММ.ГГГГ)",
+        "date_2": "Дата 2 (ДД.ММ.ГГГГ)",
+        "calc_compatibility": "Рассчитать совместимость",
+        "yookassa_payment": "Оплата YooKassa",
+        "spark_package": "Пакет искр",
+        "create_payment": "Создать платеж",
+        "check_payment": "Проверить оплату",
+    }
+
+
 def _is_recognized_request(request: Request, name: str = "", platform: str = "") -> bool:
     if settings.dev_auth_bypass:
         return True
@@ -54,12 +118,13 @@ def _is_recognized_request(request: Request, name: str = "", platform: str = "")
     return False
 
 
-def _client_url_with_query(name: str = "", platform: str = "") -> str:
+def _client_url_with_query(name: str = "", platform: str = "", lang: str = "ru") -> str:
     params = {}
     if name.strip():
         params["name"] = name.strip()
     if platform.strip():
         params["platform"] = platform.strip().lower()
+    params["lang"] = _normalize_lang(lang)
     if not params:
         return "/client"
     return f"/client?{urlencode(params)}"
@@ -70,9 +135,11 @@ async def root(
     request: Request,
     name: str = Query(default=""),
     platform: str = Query(default=""),
+    lang: str = Query(default="ru"),
 ):
+    page_lang = _normalize_lang(lang)
     if _is_recognized_request(request, name=name, platform=platform):
-        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform))
+        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform, lang=page_lang))
 
     initial_name = name.strip()
     initial_platform = platform.strip().lower()
@@ -89,6 +156,8 @@ async def root(
             "recognized_from_query": recognized_from_query,
             "dev_auth_bypass": settings.dev_auth_bypass,
             "dev_auth_mock_username": settings.dev_auth_mock_username,
+            "lang": page_lang,
+            "t": _translations(page_lang),
         },
     )
 
@@ -98,57 +167,60 @@ async def web_app_page():
     return RedirectResponse(url="/client")
 
 
-def _client_template_context(request: Request) -> dict:
+def _client_template_context(request: Request, lang: str) -> dict:
+    page_lang = _normalize_lang(lang)
     return {
         "request": request,
         "brand_name": "Astrolhub",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
+        "lang": page_lang,
+        "t": _translations(page_lang),
     }
 
 
 @app.get("/client", response_class=HTMLResponse, include_in_schema=False)
-async def client_dashboard(request: Request):
+async def client_dashboard(request: Request, lang: str = Query(default="ru")):
     return templates.TemplateResponse(
         request=request,
         name="client_dashboard.html",
-        context=_client_template_context(request),
+        context=_client_template_context(request, lang),
     )
 
 
 @app.get("/client/sonnik", response_class=HTMLResponse, include_in_schema=False)
-async def client_sonnik(request: Request):
+async def client_sonnik(request: Request, lang: str = Query(default="ru")):
     return templates.TemplateResponse(
         request=request,
         name="client_sonnik.html",
-        context=_client_template_context(request),
+        context=_client_template_context(request, lang),
     )
 
 
 @app.get("/client/numerology", response_class=HTMLResponse, include_in_schema=False)
-async def client_numerology(request: Request):
+async def client_numerology(request: Request, lang: str = Query(default="ru")):
     return templates.TemplateResponse(
         request=request,
         name="client_numerology.html",
-        context=_client_template_context(request),
+        context=_client_template_context(request, lang),
     )
 
 
 @app.get("/client/compatibility", response_class=HTMLResponse, include_in_schema=False)
-async def client_compatibility(request: Request):
+async def client_compatibility(request: Request, lang: str = Query(default="ru")):
     return templates.TemplateResponse(
         request=request,
         name="client_compatibility.html",
-        context=_client_template_context(request),
+        context=_client_template_context(request, lang),
     )
 
 
 @app.get("/client/topup", response_class=HTMLResponse, include_in_schema=False)
-async def client_topup(request: Request):
+async def client_topup(request: Request, lang: str = Query(default="ru")):
     return templates.TemplateResponse(
         request=request,
         name="client_topup.html",
-        context=_client_template_context(request),
+        context=_client_template_context(request, lang),
     )
 
 
@@ -162,9 +234,11 @@ async def mini_app(
     request: Request,
     name: str = Query(default=""),
     platform: str = Query(default=""),
+    lang: str = Query(default="ru"),
 ):
+    page_lang = _normalize_lang(lang)
     if _is_recognized_request(request, name=name, platform=platform):
-        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform))
+        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform, lang=page_lang))
 
     safe_platform = platform.lower().strip() or "unknown"
     safe_name = name.strip() or "Unknown user"
@@ -174,6 +248,7 @@ async def mini_app(
         context={
             "name": safe_name,
             "platform": safe_platform,
+            "lang": page_lang,
         },
     )
 

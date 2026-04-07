@@ -4,9 +4,47 @@ const state = {
 };
 const devAuthBypass = document.body.dataset.devAuthBypass === "true";
 const devAuthMockUsername = document.body.dataset.devAuthMockUsername || "Dev Tester";
+const lang = document.body.dataset.lang === "en" ? "en" : "ru";
 const PROFILE_CACHE_KEY = "astrolhub.profileCache";
 const BALANCE_CACHE_KEY = "astrolhub.balanceCache";
 const CACHE_TTL_MS = 30000;
+const i18n = lang === "en"
+  ? {
+    guest: "Guest",
+    requestError: "Request failed",
+    creatingPayment: "Creating payment...",
+    paymentCreated: "Payment created",
+    checkingPayment: "Checking payment...",
+    enterPaymentId: "Enter payment_id",
+    credited: "Credited",
+    status: "Status",
+    balance: "Balance",
+    analyzingDream: "Analyzing dream...",
+    generatingReport: "Generating report...",
+    reportReady: "Report is ready",
+    calculating: "Calculating...",
+    maxPrefix: "MAX",
+    tgPrefix: "Telegram",
+    devBypassPrefix: "Dev bypass",
+  }
+  : {
+    guest: "Гость",
+    requestError: "Ошибка запроса",
+    creatingPayment: "Создаем платеж...",
+    paymentCreated: "Платеж создан",
+    checkingPayment: "Проверяем платеж...",
+    enterPaymentId: "Укажите payment_id",
+    credited: "Зачислено",
+    status: "Статус",
+    balance: "Баланс",
+    analyzingDream: "Выполняется анализ...",
+    generatingReport: "Генерация отчета...",
+    reportReady: "Отчет готов",
+    calculating: "Выполняется расчет...",
+    maxPrefix: "MAX",
+    tgPrefix: "Telegram",
+    devBypassPrefix: "Dev bypass",
+  };
 
 function element(id) {
   return document.getElementById(id);
@@ -62,9 +100,9 @@ function readTimedCache(key) {
 function hydrateUiFromCache() {
   const profile = readTimedCache(PROFILE_CACHE_KEY);
   if (profile?.provider === "max") {
-    setAuthBadge(`MAX: ${profile.username}`);
+    setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
   } else if (profile?.provider === "telegram") {
-    setAuthBadge(`Telegram: ${profile.username}`);
+    setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
   }
   const balance = readTimedCache(BALANCE_CACHE_KEY);
   if (typeof balance === "number") {
@@ -88,14 +126,14 @@ async function apiRequest(url, method, bodyObj) {
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error || data.detail || "Ошибка запроса");
+    throw new Error(data.error || data.detail || i18n.requestError);
   }
   return data;
 }
 
 async function autoVerifyTelegram() {
   if (devAuthBypass) {
-    setAuthBadge(`Dev bypass: ${devAuthMockUsername}`);
+    setAuthBadge(`${i18n.devBypassPrefix}: ${devAuthMockUsername}`);
     return;
   }
   if (state.telegramInitData) {
@@ -119,16 +157,16 @@ async function loadProfile() {
     const profile = await apiRequest("/api/profile", "GET");
     saveTimedCache(PROFILE_CACHE_KEY, profile);
     if (profile.provider === "max") {
-      setAuthBadge(`MAX: ${profile.username}`);
+      setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
       return;
     }
     if (profile.provider === "telegram") {
-      setAuthBadge(`Telegram: ${profile.username}`);
+      setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
       return;
     }
-    setAuthBadge("Гость");
+    setAuthBadge(i18n.guest);
   } catch {
-    setAuthBadge("Гость");
+    setAuthBadge(i18n.guest);
   }
 }
 
@@ -177,7 +215,7 @@ function wirePaymentForms() {
   if (createForm) {
     createForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      setResult("payment-result", "Создаем платеж...");
+      setResult("payment-result", i18n.creatingPayment);
       try {
         const packageId = element("payment-package").value;
         const result = await apiRequest("/api/payments/yookassa/create", "POST", { package_id: packageId });
@@ -186,7 +224,7 @@ function wirePaymentForms() {
         if (paymentIdInput) {
           paymentIdInput.value = result.payment_id;
         }
-        setResult("payment-result", `Платеж создан: ${result.payment_id}`);
+        setResult("payment-result", `${i18n.paymentCreated}: ${result.payment_id}`);
         if (result.confirmation_url) {
           window.open(result.confirmation_url, "_blank");
         }
@@ -200,15 +238,15 @@ function wirePaymentForms() {
   if (checkForm) {
     checkForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      setResult("payment-result", "Проверяем платеж...");
+      setResult("payment-result", i18n.checkingPayment);
       try {
         const paymentIdValue = (element("payment-id")?.value || "").trim() || state.lastPaymentId;
         if (!paymentIdValue) {
-          throw new Error("Укажите payment_id");
+          throw new Error(i18n.enterPaymentId);
         }
         const result = await apiRequest(`/api/payments/yookassa/${paymentIdValue}/check`, "POST");
-        const paidStatus = result.credited ? "Зачислено" : `Статус: ${result.status}`;
-        setResult("payment-result", `${paidStatus}. Баланс: ${result.balance}`);
+        const paidStatus = result.credited ? i18n.credited : `${i18n.status}: ${result.status}`;
+        setResult("payment-result", `${paidStatus}. ${i18n.balance}: ${result.balance}`);
         setBalance(result.balance);
       } catch (error) {
         setResult("payment-result", error.message);
@@ -224,7 +262,7 @@ function wireSonnikForm() {
   }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    setResult("sonnik-result", "Выполняется анализ...");
+    setResult("sonnik-result", i18n.analyzingDream);
     try {
       const result = await apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
@@ -244,7 +282,7 @@ function wireNumerologyForm() {
   }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    setResult("numerology-result", "Генерация отчета...");
+    setResult("numerology-result", i18n.generatingReport);
     try {
       const result = await apiRequest("/api/numerology/generate", "POST", {
         full_name: element("full-name").value.trim(),
@@ -252,7 +290,7 @@ function wireNumerologyForm() {
       });
       const resultNode = element("numerology-result");
       if (resultNode) {
-        resultNode.innerHTML = `Отчет готов: <a href="${result.file_url}" target="_blank">${result.file_name}</a>`;
+        resultNode.innerHTML = `${i18n.reportReady}: <a href="${result.file_url}" target="_blank">${result.file_name}</a>`;
       }
       setBalance(result.balance);
     } catch (error) {
@@ -268,7 +306,7 @@ function wireCompatibilityForms() {
   if (namesForm) {
     namesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      setResult("compat-result", "Выполняется расчет...");
+      setResult("compat-result", i18n.calculating);
       try {
         const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
           name1: element("compat-name1").value.trim(),
@@ -285,7 +323,7 @@ function wireCompatibilityForms() {
   if (namesDatesForm) {
     namesDatesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      setResult("compat-result", "Выполняется расчет...");
+      setResult("compat-result", i18n.calculating);
       try {
         const result = await apiRequest("/api/sovmestimost/by-names-dates", "POST", {
           name1: element("compat-nd-name1").value.trim(),

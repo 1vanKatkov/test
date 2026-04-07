@@ -16,35 +16,42 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def build_webapp_url() -> str:
-    return f"{settings.app_base_url}/?platform=telegram"
+def build_webapp_url(lang: str) -> str:
+    # Open the client route directly to avoid falling back to guest landing.
+    return f"{settings.app_base_url}/client?platform=telegram&lang={lang}"
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
 
+    button_text = context.bot_data["button_text"]
+    webapp_url = context.bot_data["webapp_url"]
+    start_text = context.bot_data["start_text"]
     keyboard = InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
-                    text=settings.telegram_button_text,
-                    web_app=WebAppInfo(url=build_webapp_url()),
+                    text=button_text,
+                    web_app=WebAppInfo(url=webapp_url),
                 )
             ]
         ]
     )
-    await update.message.reply_text("Open mini app:", reply_markup=keyboard)
+    await update.message.reply_text(start_text, reply_markup=keyboard)
 
 
-async def run() -> None:
-    if not settings.telegram_bot_token:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN is empty. Set it in .env first.")
+async def _run(token: str, button_text: str, lang: str, start_text: str) -> None:
+    if not token:
+        raise RuntimeError("Telegram bot token is empty. Set it in .env first.")
 
-    application = Application.builder().token(settings.telegram_bot_token).build()
+    application = Application.builder().token(token).build()
+    application.bot_data["button_text"] = button_text
+    application.bot_data["webapp_url"] = build_webapp_url(lang)
+    application.bot_data["start_text"] = start_text
     application.add_handler(CommandHandler("start", start_command))
 
-    logger.info("Telegram bot started")
+    logger.info("Telegram bot started (%s)", lang)
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
@@ -56,6 +63,24 @@ async def run() -> None:
         await application.updater.stop()
         await application.stop()
         await application.shutdown()
+
+
+async def run() -> None:
+    await _run(
+        token=settings.telegram_bot_token,
+        button_text=settings.telegram_button_text,
+        lang="ru",
+        start_text="Open mini app:",
+    )
+
+
+async def run_en() -> None:
+    await _run(
+        token=settings.telegram_bot_token_en,
+        button_text=settings.telegram_button_text_en,
+        lang="en",
+        start_text="Open app:",
+    )
 
 
 if __name__ == "__main__":

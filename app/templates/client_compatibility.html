@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - Совместимость</title>
+  <title>{{ brand_name }} - {{ t.compatibility }}</title>
   <link rel="stylesheet" href="/static/style.css" />
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -11,42 +11,43 @@
   class="app-shell mobile-client-shell"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  data-lang="{{ lang }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      <a class="ghost-btn" href="/client">На главную</a>
+      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="ghost-btn" href="/client?lang={{ lang }}">{{ t.home }}</a>
     </div>
   </header>
 
   <main class="mobile-client">
     <section class="card compact-card">
       <div class="row">
-        <h2>Совместимость</h2>
-        <button id="refresh-balance" type="button" class="primary-btn">Обновить</button>
+        <h2>{{ t.compatibility }}</h2>
+        <button id="refresh-balance" type="button" class="primary-btn">{{ t.refresh }}</button>
       </div>
-      <div class="muted">Режим: <span id="auth-provider">Гость</span></div>
+      <div class="muted">{{ t.mode }}: <span id="auth-provider">{{ t.guest }}</span></div>
       <div id="balance-view" class="balance">-</div>
     </section>
 
     <section class="card">
       <div class="tabs">
-        <button class="tab-btn active" data-tab="names-only" type="button">По именам</button>
-        <button class="tab-btn" data-tab="names-dates" type="button">По именам и датам</button>
+        <button class="tab-btn active" data-tab="names-only" type="button">{{ t.by_names }}</button>
+        <button class="tab-btn" data-tab="names-dates" type="button">{{ t.by_names_dates }}</button>
       </div>
 
       <form id="compat-names-form" class="form-grid tab-content active">
-        <label>Имя 1 <input id="compat-name1" required /></label>
-        <label>Имя 2 <input id="compat-name2" required /></label>
-        <button type="submit" class="primary-btn">Рассчитать совместимость</button>
+        <label>{{ t.name_1 }} <input id="compat-name1" required /></label>
+        <label>{{ t.name_2 }} <input id="compat-name2" required /></label>
+        <button type="submit" class="primary-btn">{{ t.calc_compatibility }}</button>
       </form>
 
       <form id="compat-names-dates-form" class="form-grid tab-content">
-        <label>Имя 1 <input id="compat-nd-name1" required /></label>
-        <label>Дата 1 (ДД.ММ.ГГГГ) <input id="compat-date1" required /></label>
-        <label>Имя 2 <input id="compat-nd-name2" required /></label>
-        <label>Дата 2 (ДД.ММ.ГГГГ) <input id="compat-date2" required /></label>
-        <button type="submit" class="primary-btn">Рассчитать совместимость</button>
+        <label>{{ t.name_1 }} <input id="compat-nd-name1" required /></label>
+        <label>{{ t.date_1 }} <input id="compat-date1" required /></label>
+        <label>{{ t.name_2 }} <input id="compat-nd-name2" required /></label>
+        <label>{{ t.date_2 }} <input id="compat-date2" required /></label>
+        <button type="submit" class="primary-btn">{{ t.calc_compatibility }}</button>
       </form>
       <pre id="compat-result" class="result"></pre>
     </section>

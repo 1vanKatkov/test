@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - Клиент</title>
+  <title>{{ brand_name }} - {{ t.cabinet }}</title>
   <link rel="stylesheet" href="/static/style.css" />
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -11,40 +11,41 @@
   class="app-shell mobile-client-shell"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  data-lang="{{ lang }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      <span class="muted">Кабинет</span>
+      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <span class="muted">{{ t.cabinet }}</span>
     </div>
   </header>
 
   <main class="mobile-client">
     <section class="card compact-card">
       <div class="row">
-        <h2>Профиль</h2>
-        <button id="refresh-balance" type="button" class="primary-btn">Обновить</button>
+        <h2>{{ t.profile }}</h2>
+        <button id="refresh-balance" type="button" class="primary-btn">{{ t.refresh }}</button>
       </div>
-      <div class="muted">Режим: <span id="auth-provider">Гость</span></div>
+      <div class="muted">{{ t.mode }}: <span id="auth-provider">{{ t.guest }}</span></div>
       <div id="balance-view" class="balance">-</div>
     </section>
 
     <section class="icon-grid">
-      <a class="feature-icon-tile" href="/client/sonnik">
+      <a class="feature-icon-tile" href="/client/sonnik?lang={{ lang }}">
         <span class="tile-emoji">🌙</span>
-        <span class="tile-title">Сонник</span>
+        <span class="tile-title">{{ t.sonnik }}</span>
       </a>
-      <a class="feature-icon-tile" href="/client/numerology">
+      <a class="feature-icon-tile" href="/client/numerology?lang={{ lang }}">
         <span class="tile-emoji">🔢</span>
-        <span class="tile-title">Нумерология</span>
+        <span class="tile-title">{{ t.numerology }}</span>
       </a>
-      <a class="feature-icon-tile" href="/client/compatibility">
+      <a class="feature-icon-tile" href="/client/compatibility?lang={{ lang }}">
         <span class="tile-emoji">💞</span>
-        <span class="tile-title">Совместимость</span>
+        <span class="tile-title">{{ t.compatibility }}</span>
       </a>
-      <a class="feature-icon-tile" href="/client/topup">
+      <a class="feature-icon-tile" href="/client/topup?lang={{ lang }}">
         <span class="tile-emoji">💳</span>
-        <span class="tile-title">Пополнение</span>
+        <span class="tile-title">{{ t.topup }}</span>
       </a>
     </section>
   </main>

@@ -27,12 +27,15 @@ class Settings:
 
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     telegram_button_text: str = os.getenv("TELEGRAM_BUTTON_TEXT", "Open mini app")
+    telegram_bot_token_en: str = os.getenv("TELEGRAM_BOT_TOKEN_EN", "")
+    telegram_button_text_en: str = os.getenv("TELEGRAM_BUTTON_TEXT_EN", "Open app")
 
     max_bot_token: str = os.getenv("MAX_BOT_TOKEN", "")
     max_api_base_url: str = os.getenv("MAX_API_BASE_URL", "https://api.max.example").rstrip("/")
     max_button_text: str = os.getenv("MAX_BUTTON_TEXT", "Open mini app")
     max_polling_enabled: bool = _bool_from_env("MAX_POLLING_ENABLED", True)
     run_telegram_bot: bool = _bool_from_env("RUN_TELEGRAM_BOT", True)
+    run_telegram_bot_en: bool = _bool_from_env("RUN_TELEGRAM_BOT_EN", True)
     run_max_bot: bool = _bool_from_env("RUN_MAX_BOT", True)
     dev_auth_bypass: bool = _bool_from_env("DEV_AUTH_BYPASS", False)
     dev_auth_mock_provider_user_id: str = os.getenv("DEV_AUTH_MOCK_PROVIDER_USER_ID", "dev-bypass-user")

@@ -8,6 +8,7 @@ Project includes:
   - Sovmestimost (compatibility by names and by names+dates).
 - API endpoints for web services under `/api/*` with MAX signature auth and balance charging/refund.
 - Telegram bot with one `WebApp` button.
+- Optional English Telegram bot running in parallel with its own token.
 - MAX bot with one button opening the same mini app URL.
 - Single launcher script `run_all.py` that starts web server + both bots together.
 
@@ -32,7 +33,12 @@ pip install -r requirements.txt
 
 Optional toggles:
 - `RUN_TELEGRAM_BOT=true|false`
+- `RUN_TELEGRAM_BOT_EN=true|false`
 - `RUN_MAX_BOT=true|false`
+
+English Telegram bot vars:
+- `TELEGRAM_BOT_TOKEN_EN=...`
+- `TELEGRAM_BUTTON_TEXT_EN=Open app`
 
 Dev auth bypass (for testing authorized flows without real auth):
 - `DEV_AUTH_BYPASS=true|false`
@@ -51,6 +57,7 @@ Healthcheck and local test:
 - `http://127.0.0.1:8000/health`
 - `http://127.0.0.1:8000/mini-app?platform=telegram&name=Ivan`
 - `http://127.0.0.1:8000/` (web interface)
+- `http://127.0.0.1:8000/client?lang=en` (English client)
 
 ## Web services API
 
@@ -109,6 +116,7 @@ The app is prepared for common hostings in two formats:
 
 - `APP_BASE_URL=https://your-domain.tld`
 - `TELEGRAM_BOT_TOKEN=...`
+- `TELEGRAM_BOT_TOKEN_EN=...` (optional)
 - `MAX_BOT_TOKEN=...`
 - `MAX_API_BASE_URL=...`
 - `OPENROUTER_API_KEY=...`

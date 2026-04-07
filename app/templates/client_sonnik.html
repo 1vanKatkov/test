@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - Сонник</title>
+  <title>{{ brand_name }} - {{ t.sonnik }}</title>
   <link rel="stylesheet" href="/static/style.css" />
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -11,30 +11,31 @@
   class="app-shell mobile-client-shell"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  data-lang="{{ lang }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      <a class="ghost-btn" href="/client">На главную</a>
+      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="ghost-btn" href="/client?lang={{ lang }}">{{ t.home }}</a>
     </div>
   </header>
 
   <main class="mobile-client">
     <section class="card compact-card">
       <div class="row">
-        <h2>Сонник</h2>
-        <button id="refresh-balance" type="button" class="primary-btn">Обновить</button>
+        <h2>{{ t.sonnik }}</h2>
+        <button id="refresh-balance" type="button" class="primary-btn">{{ t.refresh }}</button>
       </div>
-      <div class="muted">Режим: <span id="auth-provider">Гость</span></div>
+      <div class="muted">{{ t.mode }}: <span id="auth-provider">{{ t.guest }}</span></div>
       <div id="balance-view" class="balance">-</div>
     </section>
 
     <section class="card">
       <form id="sonnik-form" class="form-grid">
-        <label>Описание сна
+        <label>{{ t.dream_description }}
           <textarea id="dream-text" rows="6" required></textarea>
         </label>
-        <button type="submit" class="primary-btn">Получить интерпретацию</button>
+        <button type="submit" class="primary-btn">{{ t.get_interpretation }}</button>
       </form>
       <pre id="sonnik-result" class="result"></pre>
     </section>

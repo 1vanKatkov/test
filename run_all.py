@@ -8,6 +8,7 @@ import uvicorn
 
 from bots.max_bot import run_polling as run_max_polling
 from bots.telegram_bot import run as run_telegram_bot
+from bots.telegram_bot import run_en as run_telegram_bot_en
 from config import settings
 
 
@@ -26,6 +27,14 @@ async def main() -> None:
         tasks.append(asyncio.create_task(run_telegram_bot(), name="telegram-bot"))
     else:
         logger.info("Telegram bot is disabled by RUN_TELEGRAM_BOT=false")
+
+    if settings.run_telegram_bot_en and settings.telegram_bot_token_en:
+        logger.info("Starting English Telegram bot in-process")
+        tasks.append(asyncio.create_task(run_telegram_bot_en(), name="telegram-bot-en"))
+    elif settings.run_telegram_bot_en:
+        logger.info("English Telegram bot is enabled but TELEGRAM_BOT_TOKEN_EN is empty")
+    else:
+        logger.info("English Telegram bot is disabled by RUN_TELEGRAM_BOT_EN=false")
 
     if settings.run_max_bot:
         logger.info("Starting MAX bot in daemon thread")
