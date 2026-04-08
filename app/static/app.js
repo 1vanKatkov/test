@@ -14,9 +14,17 @@ const i18n = lang === "en"
     requestError: "Request failed",
     creatingPayment: "Creating payment...",
     paymentCreated: "Payment created",
-    checkingPayment: "Checking payment...",
-    enterPaymentId: "Enter payment_id",
     needCreatePaymentFirst: "Create a payment first",
+    enterEmail: "Enter a valid email",
+    paymentPending: "Payment is pending",
+    paymentsHistoryEmpty: "No payments yet",
+    cancelPayment: "Cancel",
+    cancellingPayment: "Cancelling payment...",
+    canceled: "Canceled",
+    statusPending: "Pending",
+    statusSucceeded: "Succeeded",
+    statusCanceled: "Canceled",
+    statusWaitingCapture: "Waiting for capture",
     credited: "Credited",
     status: "Status",
     balance: "Balance",
@@ -33,9 +41,17 @@ const i18n = lang === "en"
     requestError: "Ошибка запроса",
     creatingPayment: "Создаем платеж...",
     paymentCreated: "Платеж создан",
-    checkingPayment: "Проверяем платеж...",
-    enterPaymentId: "Укажите payment_id",
     needCreatePaymentFirst: "Сначала создайте платеж",
+    enterEmail: "Введите корректный email",
+    paymentPending: "Платеж еще в обработке",
+    paymentsHistoryEmpty: "Платежей пока нет",
+    cancelPayment: "Отменить",
+    cancellingPayment: "Отменяем платеж...",
+    canceled: "Отменен",
+    statusPending: "Ожидает оплату",
+    statusSucceeded: "Оплачен",
+    statusCanceled: "Отменен",
+    statusWaitingCapture: "Ожидает подтверждение",
     credited: "Зачислено",
     status: "Статус",
     balance: "Баланс",
@@ -141,7 +157,13 @@ async function apiRequest(url, method, bodyObj) {
     headers: getAuthHeaders(),
     body: bodyObj ? JSON.stringify(bodyObj) : undefined,
   });
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    const text = await response.text();
+    throw new Error(text || i18n.requestError);
+  }
   if (!response.ok) {
     throw new Error(data.error || data.detail || i18n.requestError);
   }
@@ -225,7 +247,14 @@ function wirePaymentForms() {
       setResult("payment-result", i18n.creatingPayment);
       try {
         const packageId = element("payment-package").value;
-        const result = await apiRequest("/api/payments/yookassa/create", "POST", { package_id: packageId });
+        const receiptEmail = (element("payment-email")?.value || "").trim();
+        if (!receiptEmail.includes("@")) {
+          throw new Error(i18n.enterEmail);
+        }
+        const result = await apiRequest("/api/payments/yookassa/create", "POST", {
+          package_id: packageId,
+          receipt_email: receiptEmail,
+        });
         state.lastPaymentId = result.payment_id;
         sessionStorage.setItem("astrolhub.lastPaymentId", result.payment_id);
         setResult("payment-result", `${i18n.paymentCreated}: ${result.payment_id}`);
@@ -237,26 +266,92 @@ function wirePaymentForms() {
       }
     });
   }
+}
 
-  const checkForm = element("payment-check-form");
-  if (checkForm) {
-    checkForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      setResult("payment-result", i18n.checkingPayment);
-      try {
-        const paymentIdValue = state.lastPaymentId || sessionStorage.getItem("astrolhub.lastPaymentId") || "";
-        if (!paymentIdValue) {
-          throw new Error(i18n.needCreatePaymentFirst);
-        }
-        const result = await apiRequest(`/api/payments/yookassa/${paymentIdValue}/check`, "POST");
-        const paidStatus = result.credited ? i18n.credited : `${i18n.status}: ${result.status}`;
-        setResult("payment-result", `${paidStatus}. ${i18n.balance}: ${result.balance}`);
-        setBalance(result.balance);
-      } catch (error) {
-        setResult("payment-result", error.message);
-      }
-    });
+function paymentStatusLabel(status) {
+  if (status === "pending") {
+    return i18n.statusPending;
   }
+  if (status === "succeeded") {
+    return i18n.statusSucceeded;
+  }
+  if (status === "canceled") {
+    return i18n.statusCanceled;
+  }
+  if (status === "waiting_for_capture") {
+    return i18n.statusWaitingCapture;
+  }
+  return status;
+}
+
+function renderPaymentsHistory(payments) {
+  const container = element("payments-history");
+  if (!container) {
+    return;
+  }
+  if (!payments.length) {
+    container.textContent = i18n.paymentsHistoryEmpty;
+    return;
+  }
+  container.innerHTML = payments
+    .map((payment) => {
+      const createdAt = new Date(payment.created_at).toLocaleString();
+      const cancelButton = payment.can_cancel
+        ? `<button class="secondary-btn payment-cancel-btn" data-payment-id="${payment.payment_id}" type="button">${i18n.cancelPayment}</button>`
+        : "";
+      return `<article class="payment-row">
+        <div class="payment-row-top">
+          <strong>${payment.sparks} ${lang === "en" ? "sparks" : "искр"}</strong>
+          <span class="payment-status">${paymentStatusLabel(payment.status)}</span>
+        </div>
+        <div class="muted">${payment.amount}₽ • ${createdAt}</div>
+        <div class="payment-row-actions">${cancelButton}</div>
+      </article>`;
+    })
+    .join("");
+}
+
+async function loadPaymentsHistory() {
+  const container = element("payments-history");
+  if (!container) {
+    return;
+  }
+  try {
+    const result = await apiRequest("/api/payments/yookassa/history", "GET");
+    renderPaymentsHistory(result.payments || []);
+    setBalance(result.balance);
+  } catch (error) {
+    setResult("payment-result", error.message);
+  }
+}
+
+function wirePaymentsHistoryActions() {
+  const container = element("payments-history");
+  if (!container) {
+    return;
+  }
+  container.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const button = target.closest(".payment-cancel-btn");
+    if (!button) {
+      return;
+    }
+    const paymentId = button.dataset.paymentId;
+    if (!paymentId) {
+      return;
+    }
+    setResult("payment-result", i18n.cancellingPayment);
+    try {
+      const result = await apiRequest(`/api/payments/yookassa/${paymentId}/cancel`, "POST");
+      setResult("payment-result", `${i18n.canceled}. ${i18n.status}: ${paymentStatusLabel(result.status)}`);
+      await loadPaymentsHistory();
+    } catch (error) {
+      setResult("payment-result", error.message);
+    }
+  });
 }
 
 function wireSonnikForm() {
@@ -359,12 +454,19 @@ function wireCompatibilityForms() {
 
 async function boot() {
   wirePaymentForms();
+  wirePaymentsHistoryActions();
   wireSonnikForm();
   wireNumerologyForm();
   wireCompatibilityForms();
   hydrateUiFromCache();
   await autoVerifyTelegram();
   await Promise.all([loadProfile(), loadPaymentPackages(), refreshBalance().catch(() => {})]);
+  await loadPaymentsHistory();
+  if (element("payments-history")) {
+    setInterval(() => {
+      loadPaymentsHistory().catch(() => {});
+    }, 7000);
+  }
 }
 
 boot().catch(() => {});

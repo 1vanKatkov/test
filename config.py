@@ -58,6 +58,8 @@ class Settings:
     yookassa_shop_id: str = os.getenv("YOOKASSA_SHOP_ID", "")
     yookassa_secret_key: str = os.getenv("YOOKASSA_SECRET_KEY", "")
     yookassa_return_url: str = os.getenv("YOOKASSA_RETURN_URL", "https://t.me/your_bot_username")
+    yookassa_receipt_email: str = os.getenv("YOOKASSA_RECEIPT_EMAIL", "")
+    yookassa_vat_code: int = int(os.getenv("YOOKASSA_VAT_CODE", "1"))
     numerology_dir: str = os.getenv("NUMEROLOGY_DIR", str(BASE_DIR / "bots228" / "numerology"))
     sovmestimost_messages_path: str = os.getenv(
         "SOVMESTIMOST_MESSAGES_PATH",

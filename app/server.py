@@ -22,7 +22,7 @@ from app.web.schemas import (
 )
 from app.web.services import compatibility, numerology, sonnik
 from app.web.services.balance import charge, get_balance, record_transaction, refund
-from app.web.services.payments import check_payment, create_payment, get_payment_packages
+from app.web.services.payments import cancel_payment, check_payment, create_payment, get_payment_packages, list_user_payments
 from config import settings
 
 
@@ -173,6 +173,10 @@ async def web_app_page():
 
 def _client_template_context(request: Request, lang: str) -> dict:
     page_lang = _normalize_lang(lang)
+    initial_auth_username = settings.dev_auth_mock_username if settings.dev_auth_bypass else _translations(page_lang)["guest"]
+    initial_auth_provider = (
+        f"Dev bypass: {settings.dev_auth_mock_username}" if settings.dev_auth_bypass else _translations(page_lang)["guest"]
+    )
     return {
         "request": request,
         "brand_name": "Astrolhub",
@@ -180,6 +184,8 @@ def _client_template_context(request: Request, lang: str) -> dict:
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
         "t": _translations(page_lang),
+        "initial_auth_username": initial_auth_username,
+        "initial_auth_provider": initial_auth_provider,
     }
 
 
@@ -353,7 +359,7 @@ async def api_create_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
 ):
     user_id, provider = _require_authenticated_user(max_identity, telegram_identity)
-    payment = create_payment(user_id=user_id, package_id=payload.package_id)
+    payment = create_payment(user_id=user_id, package_id=payload.package_id, receipt_email=payload.receipt_email)
     return {"success": True, "provider": provider, **payment}
 
 
@@ -367,6 +373,28 @@ async def api_check_yookassa_payment(
     result = check_payment(payment_id, requester_user_id=user_id)
     owner_balance = get_balance(user_id)
     result["balance"] = owner_balance
+    return {"success": True, **result}
+
+
+@app.get("/api/payments/yookassa/history")
+async def api_payments_history(
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    payments = list_user_payments(user_id=user_id)
+    return {"success": True, "payments": payments, "balance": get_balance(user_id)}
+
+
+@app.post("/api/payments/yookassa/{payment_id}/cancel")
+async def api_cancel_yookassa_payment(
+    payment_id: str,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    result = cancel_payment(payment_id=payment_id, requester_user_id=user_id)
+    result["balance"] = get_balance(user_id)
     return {"success": True, **result}
 
 

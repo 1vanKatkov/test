@@ -28,4 +28,5 @@ class TelegramVerifyRequest(BaseModel):
 
 class YooKassaCreatePaymentRequest(BaseModel):
     package_id: str = Field(min_length=3, max_length=64)
+    receipt_email: str = Field(min_length=5, max_length=254)
 

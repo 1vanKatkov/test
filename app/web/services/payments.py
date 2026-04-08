@@ -29,6 +29,17 @@ def _configure_yookassa() -> None:
     Configuration.configure(settings.yookassa_shop_id, settings.yookassa_secret_key)
 
 
+def _extract_yookassa_error(exc: Exception) -> str:
+    if exc.args and isinstance(exc.args[0], dict):
+        payload = exc.args[0]
+        description = payload.get("description") or "Unknown YooKassa error"
+        parameter = payload.get("parameter")
+        code = payload.get("code")
+        suffix = ", ".join(filter(None, [f"code={code}" if code else "", f"parameter={parameter}" if parameter else ""]))
+        return f"{description}{f' ({suffix})' if suffix else ''}"
+    return str(exc)
+
+
 def get_payment_packages() -> list[dict[str, Any]]:
     result = []
     for package_id, package in PACKAGE_CATALOG.items():
@@ -45,7 +56,7 @@ def get_payment_packages() -> list[dict[str, Any]]:
     return result
 
 
-def create_payment(user_id: int, package_id: str) -> dict[str, Any]:
+def create_payment(user_id: int, package_id: str, receipt_email: str) -> dict[str, Any]:
     package = PACKAGE_CATALOG.get(package_id)
     if not package:
         raise HTTPException(status_code=404, detail="Payment package is not found")
@@ -73,7 +84,26 @@ def create_payment(user_id: int, package_id: str) -> dict[str, Any]:
         "metadata": metadata,
         "description": f"Пополнение искр: {package['sparks']}",
     }
-    payment = Payment.create(payload, uuid.uuid4().hex)
+    email_for_receipt = (receipt_email or "").strip() or settings.yookassa_receipt_email.strip()
+    if email_for_receipt:
+        payload["receipt"] = {
+            "customer": {"email": email_for_receipt},
+            "items": [
+                {
+                    "description": f"Пополнение искр: {package['sparks']}",
+                    "quantity": "1.00",
+                    "amount": {"value": f"{package['amount']:.2f}", "currency": "RUB"},
+                    "vat_code": settings.yookassa_vat_code,
+                    "payment_mode": "full_payment",
+                    "payment_subject": "service",
+                }
+            ],
+        }
+
+    try:
+        payment = Payment.create(payload, uuid.uuid4().hex)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"YooKassa create payment error: {_extract_yookassa_error(exc)}") from exc
 
     with db.transaction() as conn:
         conn.execute(
@@ -123,10 +153,8 @@ def _add_transaction(
     )
 
 
-def check_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
-    _configure_yookassa()
-    payment = Payment.find_one(payment_id)
-    payment_status = payment.status
+def _apply_payment_status(payment_id: str, requester_user_id: int, payment_status: str) -> dict[str, Any]:
+    now = _now()
 
     with db.transaction() as conn:
         row = conn.execute(
@@ -158,7 +186,7 @@ def check_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
                 end_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
                 conn.execute(
                     "UPDATE users SET credits = ?, subscription_end = ?, updated_at = ? WHERE id = ?",
-                    (sparks, end_at, _now(), user_id),
+                    (sparks, end_at, now, user_id),
                 )
                 _add_transaction(
                     conn,
@@ -172,7 +200,7 @@ def check_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
                 updated_balance = int(row["credits"]) + sparks
                 conn.execute(
                     "UPDATE users SET credits = ?, updated_at = ? WHERE id = ?",
-                    (updated_balance, _now(), user_id),
+                    (updated_balance, now, user_id),
                 )
                 _add_transaction(conn, user_id, sparks, "payment_credit", "yookassa_topup", metadata)
 
@@ -182,11 +210,86 @@ def check_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
             "SELECT credits, subscription_end FROM users WHERE id = ?",
             (row["user_id"],),
         ).fetchone()
+        payment_row = conn.execute(
+            "SELECT credited FROM payments WHERE payment_id = ?",
+            (payment_id,),
+        ).fetchone()
 
     return {
         "payment_id": payment_id,
         "status": payment_status,
-        "credited": payment_status == "succeeded",
+        "credited": int(payment_row["credited"]) == 1,
         "balance": int(current_balance_row["credits"]),
         "subscription_end": current_balance_row["subscription_end"],
     }
+
+
+def check_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
+    _configure_yookassa()
+    try:
+        payment = Payment.find_one(payment_id)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"YooKassa check payment error: {_extract_yookassa_error(exc)}") from exc
+    return _apply_payment_status(payment_id=payment_id, requester_user_id=requester_user_id, payment_status=payment.status)
+
+
+def list_user_payments(user_id: int, limit: int = 30) -> list[dict[str, Any]]:
+    _configure_yookassa()
+    conn = db.connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT payment_id, sparks, amount, status, credited, created_at
+            FROM payments
+            WHERE user_id = ?
+            ORDER BY datetime(created_at) DESC
+            LIMIT ?
+            """,
+            (user_id, limit),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    result: list[dict[str, Any]] = []
+    terminal_statuses = {"succeeded", "canceled"}
+    for row in rows:
+        payment_id = row["payment_id"]
+        status = row["status"]
+        credited = int(row["credited"]) == 1
+        if status not in terminal_statuses or (status == "succeeded" and not credited):
+            try:
+                sync = check_payment(payment_id=payment_id, requester_user_id=user_id)
+                status = sync["status"]
+                credited = bool(sync["credited"])
+            except HTTPException:
+                pass
+        result.append(
+            {
+                "payment_id": payment_id,
+                "sparks": int(row["sparks"]),
+                "amount": int(row["amount"]),
+                "status": status,
+                "credited": credited,
+                "created_at": row["created_at"],
+                "can_cancel": status in {"pending", "waiting_for_capture"},
+            }
+        )
+    return result
+
+
+def cancel_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
+    _configure_yookassa()
+    current = check_payment(payment_id=payment_id, requester_user_id=requester_user_id)
+    if current["status"] in {"succeeded", "canceled"}:
+        return current
+
+    try:
+        canceled = Payment.cancel(payment_id, uuid.uuid4().hex)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"YooKassa cancel payment error: {_extract_yookassa_error(exc)}") from exc
+
+    return _apply_payment_status(
+        payment_id=payment_id,
+        requester_user_id=requester_user_id,
+        payment_status=getattr(canceled, "status", "canceled"),
+    )

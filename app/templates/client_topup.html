@@ -17,7 +17,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
       <div class="user-chip">
-        <span id="auth-username">{{ t.guest }}</span>
+        <span id="auth-username">{{ initial_auth_username }}</span>
         <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
       </div>
     </div>
@@ -26,7 +26,7 @@
   <main class="mobile-client">
     <section class="card compact-card">
       <h2>{{ t.topup }}</h2>
-      <div class="muted"><span id="auth-provider">{{ t.guest }}</span></div>
+      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
     </section>
 
     <section class="card">
@@ -35,12 +35,17 @@
         <label>{{ t.spark_package }}
           <select id="payment-package"></select>
         </label>
+        <label>Email
+          <input id="payment-email" type="email" placeholder="name@example.com" required />
+        </label>
         <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
       </form>
-      <form id="payment-check-form" class="form-grid">
-        <button type="submit" class="primary-btn">{{ t.check_payment }}</button>
-      </form>
       <pre id="payment-result" class="result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>История платежей</h2>
+      <div id="payments-history" class="payments-history"></div>
     </section>
   </main>
 
