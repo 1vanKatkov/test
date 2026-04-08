@@ -234,7 +234,7 @@ def check_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:
 
 
 def list_user_payments(user_id: int, limit: int = 30) -> list[dict[str, Any]]:
-    _configure_yookassa()
+    # Fast DB-only read for UI history. No external YooKassa calls here to avoid timeouts.
     conn = db.connect()
     try:
         rows = conn.execute(
@@ -251,21 +251,12 @@ def list_user_payments(user_id: int, limit: int = 30) -> list[dict[str, Any]]:
         conn.close()
 
     result: list[dict[str, Any]] = []
-    terminal_statuses = {"succeeded", "canceled"}
     for row in rows:
-        payment_id = row["payment_id"]
         status = row["status"]
         credited = int(row["credited"]) == 1
-        if status not in terminal_statuses or (status == "succeeded" and not credited):
-            try:
-                sync = check_payment(payment_id=payment_id, requester_user_id=user_id)
-                status = sync["status"]
-                credited = bool(sync["credited"])
-            except HTTPException:
-                pass
         result.append(
             {
-                "payment_id": payment_id,
+                "payment_id": row["payment_id"],
                 "sparks": int(row["sparks"]),
                 "amount": int(row["amount"]),
                 "status": status,
@@ -275,6 +266,32 @@ def list_user_payments(user_id: int, limit: int = 30) -> list[dict[str, Any]]:
             }
         )
     return result
+
+
+def sync_pending_payments(user_id: int, limit: int = 2) -> list[dict[str, Any]]:
+    conn = db.connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT payment_id
+            FROM payments
+            WHERE user_id = ? AND status IN ('pending', 'waiting_for_capture')
+            ORDER BY datetime(created_at) DESC
+            LIMIT ?
+            """,
+            (user_id, limit),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    synced: list[dict[str, Any]] = []
+    for row in rows:
+        payment_id = row["payment_id"]
+        try:
+            synced.append(check_payment(payment_id=payment_id, requester_user_id=user_id))
+        except HTTPException:
+            continue
+    return synced
 
 
 def cancel_payment(payment_id: str, requester_user_id: int) -> dict[str, Any]:

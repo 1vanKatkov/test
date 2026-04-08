@@ -329,6 +329,20 @@ async function loadPaymentsHistory() {
   }
 }
 
+async function syncPendingPayments() {
+  const container = element("payments-history");
+  if (!container) {
+    return;
+  }
+  try {
+    const result = await apiRequest("/api/payments/yookassa/sync-pending", "POST");
+    setBalance(result.balance);
+    await loadPaymentsHistory();
+  } catch (error) {
+    setResult("payment-result", error.message);
+  }
+}
+
 function wirePaymentsHistoryActions() {
   const container = element("payments-history");
   if (!container) {
@@ -469,7 +483,10 @@ async function boot() {
   if (element("payments-history")) {
     setInterval(() => {
       loadPaymentsHistory().catch(() => {});
-    }, 7000);
+    }, 30000);
+    setInterval(() => {
+      syncPendingPayments().catch(() => {});
+    }, 15000);
   }
 }
 

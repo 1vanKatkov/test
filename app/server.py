@@ -22,7 +22,14 @@ from app.web.schemas import (
 )
 from app.web.services import compatibility, numerology, sonnik
 from app.web.services.balance import charge, get_balance, record_transaction, refund
-from app.web.services.payments import cancel_payment, check_payment, create_payment, get_payment_packages, list_user_payments
+from app.web.services.payments import (
+    cancel_payment,
+    check_payment,
+    create_payment,
+    get_payment_packages,
+    list_user_payments,
+    sync_pending_payments,
+)
 from config import settings
 
 
@@ -396,6 +403,16 @@ async def api_cancel_yookassa_payment(
     result = cancel_payment(payment_id=payment_id, requester_user_id=user_id)
     result["balance"] = get_balance(user_id)
     return {"success": True, **result}
+
+
+@app.post("/api/payments/yookassa/sync-pending")
+async def api_sync_pending_yookassa_payments(
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    synced = sync_pending_payments(user_id=user_id, limit=2)
+    return {"success": True, "synced": synced, "balance": get_balance(user_id)}
 
 
 @app.post("/api/sonnik/interpret")
