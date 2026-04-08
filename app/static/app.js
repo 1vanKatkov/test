@@ -157,17 +157,21 @@ async function apiRequest(url, method, bodyObj) {
     headers: getAuthHeaders(),
     body: bodyObj ? JSON.stringify(bodyObj) : undefined,
   });
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    const text = await response.text();
-    throw new Error(text || i18n.requestError);
+  const rawText = await response.text();
+  let data = null;
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      if (!response.ok) {
+        throw new Error(rawText || i18n.requestError);
+      }
+    }
   }
   if (!response.ok) {
-    throw new Error(data.error || data.detail || i18n.requestError);
+    throw new Error((data && (data.error || data.detail)) || rawText || i18n.requestError);
   }
-  return data;
+  return data || {};
 }
 
 async function autoVerifyTelegram() {
