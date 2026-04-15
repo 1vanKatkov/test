@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from datetime import date
@@ -687,7 +688,12 @@ async def api_create_yookassa_payment(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    payment = create_payment(user_id=user_id, package_id=payload.package_id, receipt_email=payload.receipt_email)
+    payment = await asyncio.to_thread(
+        create_payment,
+        user_id=user_id,
+        package_id=payload.package_id,
+        receipt_email=payload.receipt_email,
+    )
     return {"success": True, "provider": provider, **payment}
 
 
@@ -699,7 +705,7 @@ async def api_check_yookassa_payment(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    result = check_payment(payment_id, requester_user_id=user_id)
+    result = await asyncio.to_thread(check_payment, payment_id, requester_user_id=user_id)
     owner_balance = get_balance(user_id)
     result["balance"] = owner_balance
     return {"success": True, **result}
@@ -724,7 +730,7 @@ async def api_cancel_yookassa_payment(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    result = cancel_payment(payment_id=payment_id, requester_user_id=user_id)
+    result = await asyncio.to_thread(cancel_payment, payment_id=payment_id, requester_user_id=user_id)
     result["balance"] = get_balance(user_id)
     return {"success": True, **result}
 
@@ -736,7 +742,7 @@ async def api_sync_pending_yookassa_payments(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    synced = sync_pending_payments(user_id=user_id, limit=2)
+    synced = await asyncio.to_thread(sync_pending_payments, user_id=user_id, limit=2)
     return {"success": True, "synced": synced, "balance": get_balance(user_id)}
 
 
