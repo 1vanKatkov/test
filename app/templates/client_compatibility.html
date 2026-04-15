@@ -17,7 +17,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
       <div class="user-chip">
-        <span id="auth-username">{{ initial_auth_username }}</span>
+        <a class="auth-username-link" href="/client/profile?lang={{ lang }}"><span id="auth-username">{{ initial_auth_username }}</span></a>
         <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
       </div>
     </div>
@@ -50,7 +50,33 @@
       </form>
       <pre id="compat-result" class="result"></pre>
     </section>
+
+    <section class="card" id="email-auth-entry">
+      <h2>{{ t.email_auth }}</h2>
+      <button id="open-email-auth-modal" class="primary-btn" type="button">{{ t.login }}</button>
+    </section>
   </main>
+
+  <div id="email-auth-modal" class="modal-overlay">
+    <section class="modal-card">
+      <div class="payment-row-top">
+        <h3>{{ t.email_auth }}</h3>
+        <button id="close-email-auth-modal" class="ghost-btn" type="button">×</button>
+      </div>
+      <form id="email-register-form" class="form-grid">
+        <label>{{ t.email }} <input id="register-email" type="email" required /></label>
+        <label>{{ t.password }} <input id="register-password" type="password" required /></label>
+        <label>{{ t.username }} <input id="register-username" /></label>
+        <button type="submit" class="primary-btn">{{ t.register }}</button>
+      </form>
+      <form id="email-login-form" class="form-grid">
+        <label>{{ t.email }} <input id="login-email" type="email" required /></label>
+        <label>{{ t.password }} <input id="login-password" type="password" required /></label>
+        <button type="submit" class="secondary-btn">{{ t.login }}</button>
+      </form>
+      <pre id="auth-result" class="result"></pre>
+    </section>
+  </div>
 
   <script defer src="/static/app.js"></script>
 </body>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} - {{ t.admin_panel }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body
+  class="app-shell mobile-client-shell"
+  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
+  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  data-lang="{{ lang }}"
+>
+  <header class="app-topbar client-topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <div class="user-chip">
+        <a class="auth-username-link" href="/client/profile?lang={{ lang }}"><span id="auth-username">{{ initial_auth_username }}</span></a>
+        <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="mobile-client">
+    <section class="card compact-card">
+      <h2>{{ t.admin_panel }}</h2>
+      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Overview</h2>
+      <div id="admin-overview" class="history-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Module stats</h2>
+      <div id="admin-modules" class="history-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Support tickets</h2>
+      <div id="admin-tickets" class="history-list"></div>
+      <div id="admin-ticket-messages" class="history-list"></div>
+      <pre id="admin-result" class="result"></pre>
+    </section>
+  </main>
+
+  <script defer src="/static/app.js"></script>
+</body>
+</html>

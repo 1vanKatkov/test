@@ -27,6 +27,9 @@ def _configure_yookassa() -> None:
     if not settings.yookassa_shop_id or not settings.yookassa_secret_key:
         raise HTTPException(status_code=500, detail="YooKassa credentials are not configured")
     Configuration.configure(settings.yookassa_shop_id, settings.yookassa_secret_key)
+    # Prevent long blocking calls that can freeze upstream and trigger nginx 504.
+    Configuration.timeout = max(5, settings.yookassa_timeout_seconds)
+    Configuration.max_attempts = max(1, settings.yookassa_max_attempts)
 
 
 def _extract_yookassa_error(exc: Exception) -> str:

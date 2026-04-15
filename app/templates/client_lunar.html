@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.cabinet }}</title>
+  <title>{{ brand_name }} - {{ t.lunar_calendar }}</title>
   <link rel="stylesheet" href="/static/style.css" />
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -25,33 +25,18 @@
 
   <main class="mobile-client">
     <section class="card compact-card">
-      <div class="compact-actions">
-        <a class="secondary-btn compact-action-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
-        <a class="secondary-btn compact-action-btn" href="/client/topup?lang={{ lang }}">{{ t.topup }}</a>
-      </div>
+      <h2>{{ t.lunar_calendar }}</h2>
+      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
     </section>
 
-    <section id="admin-panel-entry" class="card" hidden>
-      <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin?lang={{ lang }}">{{ t.admin_panel }}</a>
-    </section>
-
-    <section class="icon-grid">
-      <a class="feature-icon-tile" href="/client/sonnik?lang={{ lang }}">
-        <span class="tile-emoji">🌙</span>
-        <span class="tile-title">{{ t.sonnik }}</span>
-      </a>
-      <a class="feature-icon-tile" href="/client/numerology?lang={{ lang }}">
-        <span class="tile-emoji">🔢</span>
-        <span class="tile-title">{{ t.numerology }}</span>
-      </a>
-      <a class="feature-icon-tile" href="/client/compatibility?lang={{ lang }}">
-        <span class="tile-emoji">💞</span>
-        <span class="tile-title">{{ t.compatibility }}</span>
-      </a>
-      <a class="feature-icon-tile" href="/client/lunar?lang={{ lang }}">
-        <span class="tile-emoji">🗓️</span>
-        <span class="tile-title">{{ t.lunar_calendar }}</span>
-      </a>
+    <section class="card">
+      <form id="lunar-form" class="form-grid">
+        <label>{{ t.year }} <input id="lunar-year" type="number" min="1970" max="2100" /></label>
+        <label>{{ t.month }} <input id="lunar-month" type="number" min="1" max="12" /></label>
+        <button type="submit" class="primary-btn">{{ t.load }}</button>
+      </form>
+      <div id="lunar-calendar" class="lunar-grid"></div>
+      <pre id="lunar-result" class="result"></pre>
     </section>
 
     <section class="card" id="email-auth-entry">
@@ -84,4 +69,3 @@
   <script defer src="/static/app.js"></script>
 </body>
 </html>
-

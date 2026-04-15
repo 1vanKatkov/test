@@ -6,8 +6,6 @@
 
   function detectRecognizedUser() {
     const fromQuery = body.dataset.recognizedFromQuery === "true";
-    const devAuthBypass = body.dataset.devAuthBypass === "true";
-    const devMockUsername = body.dataset.devAuthMockUsername || "";
     const queryName = body.dataset.initialName || "";
     const queryPlatform = body.dataset.initialPlatform || "";
 
@@ -27,9 +25,9 @@
     const lastAuthUser = localStorage.getItem("astrolhub.lastAuthUser") || "";
     const lastAuthPlatform = localStorage.getItem("astrolhub.lastAuthPlatform") || "";
 
-    const isRecognized = devAuthBypass || fromQuery || Boolean(telegramName) || maxVerified;
-    const recognizedName = devAuthBypass ? devMockUsername : (queryName || telegramName || lastAuthUser);
-    const recognizedPlatform = devAuthBypass ? "dev-bypass" : (queryPlatform || telegramPlatform || lastAuthPlatform);
+    const isRecognized = fromQuery || Boolean(telegramName) || maxVerified;
+    const recognizedName = queryName || telegramName || lastAuthUser;
+    const recognizedPlatform = queryPlatform || telegramPlatform || lastAuthPlatform;
 
     return { isRecognized, recognizedName, recognizedPlatform };
   }

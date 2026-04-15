@@ -41,6 +41,13 @@ class Settings:
     dev_auth_mock_provider_user_id: str = os.getenv("DEV_AUTH_MOCK_PROVIDER_USER_ID", "dev-bypass-user")
     dev_auth_mock_username: str = os.getenv("DEV_AUTH_MOCK_USERNAME", "Dev Tester")
     dev_auth_mock_language: str = os.getenv("DEV_AUTH_MOCK_LANGUAGE", "ru")
+    email_auth_secret: str = os.getenv("EMAIL_AUTH_SECRET", "")
+    email_auth_ttl_seconds: int = int(os.getenv("EMAIL_AUTH_TTL_SECONDS", "2592000"))
+    seed_admin_email: str = os.getenv("SEED_ADMIN_EMAIL", "")
+    seed_admin_password: str = os.getenv("SEED_ADMIN_PASSWORD", "")
+    seed_user_email: str = os.getenv("SEED_USER_EMAIL", "")
+    seed_user_password: str = os.getenv("SEED_USER_PASSWORD", "")
+    seed_user_name: str = os.getenv("SEED_USER_NAME", "User")
 
     # Web services settings (ported from bots228/max_web_app)
     database_path: str = os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "sonnik_users.db"))
@@ -60,6 +67,8 @@ class Settings:
     yookassa_return_url: str = os.getenv("YOOKASSA_RETURN_URL", "https://t.me/your_bot_username")
     yookassa_receipt_email: str = os.getenv("YOOKASSA_RECEIPT_EMAIL", "")
     yookassa_vat_code: int = int(os.getenv("YOOKASSA_VAT_CODE", "1"))
+    yookassa_timeout_seconds: int = int(os.getenv("YOOKASSA_TIMEOUT_SECONDS", "20"))
+    yookassa_max_attempts: int = int(os.getenv("YOOKASSA_MAX_ATTEMPTS", "1"))
     numerology_dir: str = os.getenv("NUMEROLOGY_DIR", str(BASE_DIR / "bots228" / "numerology"))
     sovmestimost_messages_path: str = os.getenv(
         "SOVMESTIMOST_MESSAGES_PATH",
