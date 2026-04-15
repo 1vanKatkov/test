@@ -20,7 +20,12 @@ from app.web.auth.email_auth import (
     register_email_user,
 )
 from app.web.auth.max_auth import MaxIdentity, optional_max_auth, require_max_auth
-from app.web.auth.telegram_auth import TelegramIdentity, optional_telegram_auth, resolve_telegram_identity
+from app.web.auth.telegram_auth import (
+    TelegramIdentity,
+    issue_telegram_auth_token,
+    optional_telegram_auth,
+    resolve_telegram_identity,
+)
 from app.web.db import db
 from app.web.schemas import (
     EmailLoginRequest,
@@ -412,6 +417,7 @@ async def verify_auth(identity: MaxIdentity = Depends(require_max_auth)):
 @app.post("/api/auth/telegram/verify")
 async def verify_telegram_auth(payload: TelegramVerifyRequest):
     identity, is_new_user = resolve_telegram_identity(payload.init_data)
+    token = issue_telegram_auth_token(identity)
     if is_new_user:
         record_transaction(
             identity.internal_user_id,
@@ -420,8 +426,9 @@ async def verify_telegram_auth(payload: TelegramVerifyRequest):
             "telegram_welcome_bonus",
             {"provider": "telegram"},
         )
-    return {
+    response_data = {
         "success": True,
+        "token": token,
         "profile": {
             "provider": "telegram",
             "provider_user_id": identity.user_id,
@@ -430,6 +437,17 @@ async def verify_telegram_auth(payload: TelegramVerifyRequest):
         },
         "balance": get_balance(identity.internal_user_id),
     }
+    response = JSONResponse(content=response_data)
+    response.set_cookie(
+        key="telegram_auth_token",
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.email_auth_ttl_seconds,
+        path="/",
+    )
+    return response
 
 
 @app.post("/api/auth/email/register")

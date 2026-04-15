@@ -111,9 +111,6 @@ def register_email_user(email: str, password: str, username: str = "", language:
     password_hash = _hash_password(password)
     with db.transaction() as conn:
         conn.execute("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?", (password_hash, _now(), user["id"]))
-    if db.count_admin_users() == 0:
-        db.set_user_role(user["id"], "admin")
-
     return EmailIdentity(
         user_id=normalized_email,
         username=resolved_username,

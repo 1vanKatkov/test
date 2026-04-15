@@ -1,5 +1,10 @@
+const TELEGRAM_INIT_DATA_KEY = "astrolhub.telegramInitData";
+const TELEGRAM_AUTH_TOKEN_KEY = "astrolhub.telegramAuthToken";
+
 const state = {
-  telegramInitData: sessionStorage.getItem("astrolhub.telegramInitData") || "",
+  telegramInitData: localStorage.getItem(TELEGRAM_INIT_DATA_KEY) || sessionStorage.getItem(TELEGRAM_INIT_DATA_KEY) || "",
+  telegramAuthToken:
+    localStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || sessionStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || "",
   emailAuthToken: localStorage.getItem("astrolhub.emailAuthToken") || "",
   lastPaymentId: sessionStorage.getItem("astrolhub.lastPaymentId") || "",
   selectedSupportTicketId: null,
@@ -221,6 +226,28 @@ function readTimedCache(key) {
   }
 }
 
+function persistTelegramInitData(initData) {
+  state.telegramInitData = initData || "";
+  if (!state.telegramInitData) {
+    sessionStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
+    localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
+    return;
+  }
+  sessionStorage.setItem(TELEGRAM_INIT_DATA_KEY, state.telegramInitData);
+  localStorage.setItem(TELEGRAM_INIT_DATA_KEY, state.telegramInitData);
+}
+
+function persistTelegramAuthToken(token) {
+  state.telegramAuthToken = token || "";
+  if (!state.telegramAuthToken) {
+    sessionStorage.removeItem(TELEGRAM_AUTH_TOKEN_KEY);
+    localStorage.removeItem(TELEGRAM_AUTH_TOKEN_KEY);
+    return;
+  }
+  sessionStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
+  localStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
+}
+
 function hydrateUiFromCache() {
   const profile = readTimedCache(PROFILE_CACHE_KEY);
   state.profileProvider = profile?.provider || "guest";
@@ -245,6 +272,9 @@ function hydrateUiFromCache() {
 
 function getAuthHeaders() {
   const headers = { "Content-Type": "application/json" };
+  if (state.telegramAuthToken) {
+    headers["X-Telegram-Auth-Token"] = state.telegramAuthToken;
+  }
   if (state.telegramInitData) {
     headers["X-Telegram-Init-Data"] = state.telegramInitData;
   }
@@ -278,20 +308,31 @@ async function apiRequest(url, method, bodyObj) {
 }
 
 async function autoVerifyTelegram() {
-  if (state.telegramInitData) {
+  if (window.Telegram && window.Telegram.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    const initData = tg.initData || "";
+    if (initData) {
+      persistTelegramInitData(initData);
+    }
+  }
+  if (state.telegramAuthToken || !state.telegramInitData) {
     return;
   }
-  if (!window.Telegram || !window.Telegram.WebApp) {
-    return;
+  try {
+    const result = await apiRequest("/api/auth/telegram/verify", "POST", {
+      init_data: state.telegramInitData,
+    });
+    if (result.token) {
+      persistTelegramAuthToken(result.token);
+    }
+    if (result.profile) {
+      saveTimedCache(PROFILE_CACHE_KEY, result.profile);
+      saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+    }
+  } catch {
+    persistTelegramAuthToken("");
   }
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  const initData = tg.initData || "";
-  if (!initData) {
-    return;
-  }
-  state.telegramInitData = initData;
-  sessionStorage.setItem("astrolhub.telegramInitData", initData);
 }
 
 async function loadProfile() {
@@ -1096,8 +1137,8 @@ async function boot() {
   wireNumerologyForm();
   wireCompatibilityForms();
   hydrateUiFromCache();
-  autoVerifyTelegram().catch(() => {});
-  loadProfile().catch(() => {});
+  await autoVerifyTelegram();
+  await loadProfile();
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();
