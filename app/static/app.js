@@ -308,13 +308,24 @@ async function apiRequest(url, method, bodyObj) {
 }
 
 async function autoVerifyTelegram() {
-  if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    const initData = tg.initData || "";
-    if (initData) {
-      persistTelegramInitData(initData);
+  async function waitForTelegramInitData(maxAttempts = 20, delayMs = 120) {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        const initData = tg.initData || "";
+        if (initData) {
+          return initData;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
+    return "";
+  }
+
+  const initData = await waitForTelegramInitData();
+  if (initData) {
+    persistTelegramInitData(initData);
   }
   if (state.telegramAuthToken || !state.telegramInitData) {
     return;

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from contextlib import asynccontextmanager
 from datetime import date
@@ -42,14 +41,6 @@ from app.web.schemas import (
 )
 from app.web.services import compatibility, lunar, numerology, sonnik
 from app.web.services.balance import charge, get_balance, record_transaction, refund
-from app.web.services.payments import (
-    cancel_payment,
-    check_payment,
-    create_payment,
-    get_payment_packages,
-    list_user_payments,
-    sync_pending_payments,
-)
 from config import settings
 
 
@@ -675,9 +666,13 @@ def _require_admin_email_user(email_identity: EmailIdentity | None) -> int:
     return email_identity.internal_user_id
 
 
+def _raise_web_payments_disabled() -> None:
+    raise HTTPException(status_code=403, detail="Payments are available only via Telegram bot")
+
+
 @app.get("/api/payments/packages")
 async def payment_packages():
-    return {"packages": get_payment_packages()}
+    _raise_web_payments_disabled()
 
 
 @app.post("/api/payments/yookassa/create")
@@ -687,14 +682,7 @@ async def api_create_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    payment = await asyncio.to_thread(
-        create_payment,
-        user_id=user_id,
-        package_id=payload.package_id,
-        receipt_email=payload.receipt_email,
-    )
-    return {"success": True, "provider": provider, **payment}
+    _raise_web_payments_disabled()
 
 
 @app.post("/api/payments/yookassa/{payment_id}/check")
@@ -704,11 +692,7 @@ async def api_check_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    result = await asyncio.to_thread(check_payment, payment_id, requester_user_id=user_id)
-    owner_balance = get_balance(user_id)
-    result["balance"] = owner_balance
-    return {"success": True, **result}
+    _raise_web_payments_disabled()
 
 
 @app.get("/api/payments/yookassa/history")
@@ -717,9 +701,7 @@ async def api_payments_history(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    payments = list_user_payments(user_id=user_id)
-    return {"success": True, "payments": payments, "balance": get_balance(user_id)}
+    _raise_web_payments_disabled()
 
 
 @app.post("/api/payments/yookassa/{payment_id}/cancel")
@@ -729,10 +711,7 @@ async def api_cancel_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    result = await asyncio.to_thread(cancel_payment, payment_id=payment_id, requester_user_id=user_id)
-    result["balance"] = get_balance(user_id)
-    return {"success": True, **result}
+    _raise_web_payments_disabled()
 
 
 @app.post("/api/payments/yookassa/sync-pending")
@@ -741,9 +720,7 @@ async def api_sync_pending_yookassa_payments(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    synced = await asyncio.to_thread(sync_pending_payments, user_id=user_id, limit=2)
-    return {"success": True, "synced": synced, "balance": get_balance(user_id)}
+    _raise_web_payments_disabled()
 
 
 @app.get("/api/admin/stats/overview")
@@ -796,9 +773,10 @@ async def api_sonnik(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    language = email_identity.language if email_identity else (max_identity.language if max_identity else telegram_identity.language)
     charge(user_id, settings.cost_sonnik, "sonnik", {"module": "sonnik"})
     try:
-        interpretation = sonnik.interpret_dream(payload.dream_text)
+        interpretation = sonnik.interpret_dream(payload.dream_text, language)
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
         return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})

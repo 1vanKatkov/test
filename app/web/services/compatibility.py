@@ -89,6 +89,12 @@ def _load_prompt(language: str, key: str) -> str:
         return "{expression_data}"
 
 
+def _resolve_model(language: str) -> str:
+    if (language or "").strip().lower() == "en":
+        return settings.model_sovmestimost_en
+    return settings.model_sovmestimost
+
+
 def calculate_expression_number(name: str) -> int:
     total = 0
     for char in name.upper().strip():
@@ -155,7 +161,7 @@ def by_names(name1: str, name2: str, language: str = "ru") -> str:
     expression_data = f"Name 1: {name1}\nExpression number: {expr1}\nName 2: {name2}\nExpression number: {expr2}"
     prompt_template = _load_prompt(language, "prompt_names_only_ai")
     prompt = prompt_template.format(user_input=f"{name1} and {name2}", expression_data=expression_data)
-    return chat_completion(settings.model_sovmestimost, prompt)
+    return chat_completion(_resolve_model(language), prompt)
 
 
 def by_names_dates(name1: str, date1: str, name2: str, date2: str, language: str = "ru") -> str:
@@ -176,5 +182,5 @@ def by_names_dates(name1: str, date1: str, name2: str, date2: str, language: str
         user_input=f"{name1}, {first_date.strftime('%d.%m.%Y')} and {name2}, {second_date.strftime('%d.%m.%Y')}",
         compatibility_data=compatibility_data,
     )
-    return chat_completion(settings.model_sovmestimost, prompt)
+    return chat_completion(_resolve_model(language), prompt)
 
