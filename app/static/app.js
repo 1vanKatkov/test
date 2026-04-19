@@ -64,6 +64,9 @@ const i18n = lang === "en"
     hideAnswer: "Hide answer",
     authCellTitle: "Email authorization",
     authCellOpen: "Sign in with email",
+    loginViaTelegram: "Log in with Telegram",
+    telegramOnlyMiniApp: "Open this page inside Telegram Mini App to sign in with Telegram.",
+    telegramAuthFailed: "Telegram authorization failed. Try opening from the bot again.",
     close: "Close",
     chooseTicketFirst: "Choose ticket first",
   }
@@ -115,6 +118,9 @@ const i18n = lang === "en"
     hideAnswer: "Скрыть ответ",
     authCellTitle: "Авторизация по email",
     authCellOpen: "Войти по email",
+    loginViaTelegram: "Войти через Telegram",
+    telegramOnlyMiniApp: "Откройте эту страницу внутри Telegram Mini App, чтобы войти через Telegram.",
+    telegramAuthFailed: "Не удалось авторизоваться через Telegram. Попробуйте снова открыть приложение из бота.",
     close: "Закрыть",
     chooseTicketFirst: "Сначала выберите обращение",
   };
@@ -172,6 +178,26 @@ function setEmailAuthModalOpen(isOpen) {
     return;
   }
   modal.classList.toggle("is-open", isOpen);
+}
+
+function ensureTelegramLoginButton() {
+  const modal = element("email-auth-modal");
+  const authResultNode = element("auth-result");
+  if (!modal || !authResultNode || element("telegram-login-btn")) {
+    return;
+  }
+  const button = document.createElement("button");
+  button.id = "telegram-login-btn";
+  button.type = "button";
+  button.className = "secondary-btn";
+  button.textContent = i18n.loginViaTelegram;
+
+  const firstForm = modal.querySelector("form");
+  if (firstForm && firstForm.parentNode) {
+    firstForm.parentNode.insertBefore(button, firstForm);
+  } else {
+    authResultNode.parentNode?.insertBefore(button, authResultNode);
+  }
 }
 
 function setAdminTileVisible(isVisible) {
@@ -444,6 +470,7 @@ function wireEmailAuthForms() {
 }
 
 function wireEmailAuthModal() {
+  ensureTelegramLoginButton();
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
@@ -455,6 +482,29 @@ function wireEmailAuthModal() {
     }
     if (target.closest("#close-email-auth-modal")) {
       setEmailAuthModalOpen(false);
+      return;
+    }
+    if (target.closest("#telegram-login-btn")) {
+      if (!(window.Telegram && window.Telegram.WebApp)) {
+        setResult("auth-result", i18n.telegramOnlyMiniApp);
+        return;
+      }
+      setResult("auth-result", i18n.loading);
+      autoVerifyTelegram()
+        .then(() => loadProfile())
+        .then(() => refreshBalance().catch(() => {}))
+        .then(() => {
+          if (state.profileProvider === "telegram") {
+            setResult("auth-result", i18n.authSuccess);
+            setEmailAuthModalOpen(false);
+            window.location.href = `/client?lang=${lang}`;
+            return;
+          }
+          setResult("auth-result", i18n.telegramAuthFailed);
+        })
+        .catch(() => {
+          setResult("auth-result", i18n.telegramAuthFailed);
+        });
     }
   });
   const overlay = element("email-auth-modal");
