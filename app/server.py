@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlencode
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,8 +23,11 @@ from app.web.auth.max_auth import MaxIdentity, optional_max_auth, require_max_au
 from app.web.auth.telegram_auth import (
     TelegramIdentity,
     issue_telegram_auth_token,
+    issue_telegram_username_login_url,
     optional_telegram_auth,
     resolve_telegram_identity,
+    resolve_telegram_username_link_to_identity,
+    verify_telegram_bot_bearer,
 )
 from app.web.db import db
 from app.web.schemas import (
@@ -36,6 +39,8 @@ from app.web.schemas import (
     SupportCreateTicketRequest,
     SovmestimostNamesDatesRequest,
     SovmestimostNamesRequest,
+    TelegramLinkVerifyRequest,
+    TelegramMintUsernameLinkRequest,
     TelegramVerifyRequest,
     YooKassaCreatePaymentRequest,
 )
@@ -433,6 +438,59 @@ async def verify_telegram_auth(payload: TelegramVerifyRequest):
     response.set_cookie(
         key="telegram_auth_token",
         value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.email_auth_ttl_seconds,
+        path="/",
+    )
+    return response
+
+
+@app.post("/api/auth/telegram/mint-username-link")
+async def mint_telegram_username_link(
+    payload: TelegramMintUsernameLinkRequest,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Build a one-time style login URL for a Telegram user already stored with this @username.
+    Requires Authorization: Bearer <TELEGRAM_BOT_TOKEN> (same as the main bot).
+    """
+    verify_telegram_bot_bearer(authorization)
+    row = db.get_telegram_user_by_username_ci(payload.username)
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    uname = (row["username"] or "").strip().lstrip("@") or payload.username.strip().lstrip("@")
+    return {
+        "success": True,
+        "url": issue_telegram_username_login_url(uname),
+    }
+
+
+@app.post("/api/auth/telegram/verify-link")
+async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest):
+    """
+    Exchange a signed tglink=… token (see issue_telegram_username_login_url) for a session.
+    The user must already exist with provider=telegram and matching username in the database
+    (typically after a prior Mini App login that stored their @username).
+    """
+    identity = resolve_telegram_username_link_to_identity(payload.link_token)
+    session_token = issue_telegram_auth_token(identity)
+    response_data = {
+        "success": True,
+        "token": session_token,
+        "profile": {
+            "provider": "telegram",
+            "provider_user_id": identity.user_id,
+            "username": identity.username,
+            "language": identity.language,
+        },
+        "balance": get_balance(identity.internal_user_id),
+    }
+    response = JSONResponse(content=response_data)
+    response.set_cookie(
+        key="telegram_auth_token",
+        value=session_token,
         httponly=True,
         secure=False,
         samesite="lax",

@@ -217,6 +217,20 @@ class Database:
         finally:
             conn.close()
 
+    def get_telegram_user_by_username_ci(self, username: str) -> Optional[sqlite3.Row]:
+        """Lookup Telegram account by @username (case-insensitive, without leading @)."""
+        raw = (username or "").strip().lstrip("@").lower()
+        if not raw:
+            return None
+        conn = self.connect()
+        try:
+            return conn.execute(
+                "SELECT * FROM users WHERE provider = 'telegram' AND lower(username) = ?",
+                (raw,),
+            ).fetchone()
+        finally:
+            conn.close()
+
     def is_user_admin(self, user_id: int) -> bool:
         row = self.get_user_by_id(user_id)
         return bool(row and (row["role"] or "user") == "admin")

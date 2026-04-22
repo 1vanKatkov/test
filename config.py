@@ -64,6 +64,9 @@ class Settings:
     max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
     max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))
     telegram_auth_skew_seconds: int = int(os.getenv("TELEGRAM_AUTH_SKEW_SECONDS", "86400"))
+    # If empty, derived from TELEGRAM_BOT_TOKEN (see app.web.auth.telegram_auth).
+    telegram_link_secret: str = os.getenv("TELEGRAM_LINK_SECRET", "")
+    telegram_link_ttl_seconds: int = int(os.getenv("TELEGRAM_LINK_TTL_SECONDS", "604800"))
     yookassa_shop_id: str = os.getenv("YOOKASSA_SHOP_ID", "")
     yookassa_secret_key: str = os.getenv("YOOKASSA_SECRET_KEY", "")
     yookassa_return_url: str = os.getenv("YOOKASSA_RETURN_URL", "https://t.me/your_bot_username")

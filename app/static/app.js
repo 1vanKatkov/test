@@ -66,6 +66,7 @@ const i18n = lang === "en"
     authCellOpen: "Sign in with email",
     loginViaTelegram: "Log in with Telegram",
     telegramOnlyMiniApp: "Open this page inside Telegram Mini App to sign in with Telegram.",
+    telegramLinkAuthFailed: "Telegram link login failed. The link may be invalid, expired, or the account is unknown.",
     telegramAuthFailed: "Telegram authorization failed. Try opening from the bot again.",
     close: "Close",
     chooseTicketFirst: "Choose ticket first",
@@ -120,6 +121,7 @@ const i18n = lang === "en"
     authCellOpen: "Войти по email",
     loginViaTelegram: "Войти через Telegram",
     telegramOnlyMiniApp: "Откройте эту страницу внутри Telegram Mini App, чтобы войти через Telegram.",
+    telegramLinkAuthFailed: "Вход по ссылке не удался. Ссылка неверна, срок истёк или такого пользователя нет в системе.",
     telegramAuthFailed: "Не удалось авторизоваться через Telegram. Попробуйте снова открыть приложение из бота.",
     close: "Закрыть",
     chooseTicketFirst: "Сначала выберите обращение",
@@ -331,6 +333,61 @@ async function apiRequest(url, method, bodyObj) {
     throw new Error((data && (data.error || data.detail)) || rawText || i18n.requestError);
   }
   return data || {};
+}
+
+async function verifyTelegramUsernameLinkFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const linkToken = params.get("tglink");
+  if (!linkToken) {
+    return;
+  }
+  let errMsg = "";
+  try {
+    const response = await fetch("/api/auth/telegram/verify-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ link_token: linkToken }),
+    });
+    const rawText = await response.text();
+    let data = null;
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!response.ok) {
+      const detail = data && data.detail;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : i18n.telegramLinkAuthFailed;
+      throw new Error(msg);
+    }
+    if (data.token) {
+      persistTelegramAuthToken(data.token);
+    }
+    if (data.profile) {
+      saveTimedCache(PROFILE_CACHE_KEY, data.profile);
+      saveTimedCache(BALANCE_CACHE_KEY, data.balance);
+    }
+  } catch (e) {
+    errMsg = e && e.message ? e.message : i18n.telegramLinkAuthFailed;
+  }
+  {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tglink");
+    const next = url.search ? `${url.pathname}${url.search}` : url.pathname;
+    window.history.replaceState({}, "", next);
+  }
+  if (errMsg) {
+    const n = element("auth-result");
+    if (n) {
+      n.textContent = errMsg;
+    }
+  }
 }
 
 async function autoVerifyTelegram() {
@@ -1198,6 +1255,7 @@ async function boot() {
   wireNumerologyForm();
   wireCompatibilityForms();
   hydrateUiFromCache();
+  await verifyTelegramUsernameLinkFromQuery();
   await autoVerifyTelegram();
   await loadProfile();
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);

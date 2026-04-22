@@ -4,10 +4,11 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, urlencode
 
 from fastapi import Cookie, Header, HTTPException
 
@@ -30,6 +31,31 @@ def _secret() -> str:
     if settings.max_auth_secret:
         return settings.max_auth_secret
     return "change-me-telegram-auth-secret"
+
+
+def _link_secret_material() -> str:
+    if settings.telegram_link_secret:
+        return settings.telegram_link_secret
+    for tok in (settings.telegram_bot_token, settings.telegram_bot_token_en):
+        if tok:
+            return hashlib.sha256(
+                (tok + "\nastrolhub_tg_username_link_v1").encode("utf-8")
+            ).hexdigest()
+    return ""
+
+
+def is_telegram_username_link_configured() -> bool:
+    return bool(_link_secret_material())
+
+
+_tg_username_re = re.compile(r"^[a-zA-Z0-9_]{1,32}$")
+
+
+def normalize_telegram_username(username: str) -> str:
+    u = (username or "").strip().lstrip("@")
+    if not u or not _tg_username_re.match(u):
+        raise HTTPException(status_code=400, detail="Invalid Telegram username")
+    return u.lower()
 
 
 def _encode_token(payload: dict[str, str | int]) -> str:
@@ -158,6 +184,86 @@ def issue_telegram_auth_token(identity: TelegramIdentity) -> str:
             "iat": now,
         }
     )
+
+
+def _encode_link_token(payload: dict[str, str | int]) -> str:
+    material = _link_secret_material()
+    if not material:
+        raise HTTPException(status_code=503, detail="Telegram username link auth is not configured")
+    body = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode().rstrip("=")
+    signature = hmac.new(material.encode(), body.encode(), hashlib.sha256).hexdigest()
+    return f"{body}.{signature}"
+
+
+def _decode_link_token(token: str) -> dict[str, str | int]:
+    material = _link_secret_material()
+    if not material:
+        raise HTTPException(status_code=503, detail="Telegram username link auth is not configured")
+    try:
+        body, signature = token.split(".", 1)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Invalid Telegram username link token") from exc
+    expected = hmac.new(material.encode(), body.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise HTTPException(status_code=401, detail="Invalid Telegram username link token signature")
+    padded = body + "=" * (-len(body) % 4)
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode()).decode())
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid Telegram username link token payload") from exc
+    if payload.get("typ") != "tg_uname":
+        raise HTTPException(status_code=401, detail="Invalid Telegram username link token type")
+    expires_at = int(payload.get("exp", 0))
+    if expires_at <= int(time.time()):
+        raise HTTPException(status_code=401, detail="Telegram username link token expired")
+    return payload
+
+
+def issue_telegram_username_link_token(username: str) -> str:
+    u = normalize_telegram_username(username)
+    now = int(time.time())
+    return _encode_link_token(
+        {
+            "typ": "tg_uname",
+            "u": u,
+            "exp": now + settings.telegram_link_ttl_seconds,
+            "iat": now,
+        }
+    )
+
+
+def issue_telegram_username_login_url(username: str) -> str:
+    token = issue_telegram_username_link_token(username)
+    base = settings.app_base_url.rstrip("/")
+    return f"{base}/client?{urlencode({'tglink': token})}"
+
+
+def resolve_telegram_username_link_to_identity(token: str) -> TelegramIdentity:
+    payload = _decode_link_token(token)
+    u = str(payload.get("u", "")).strip().lower()
+    if not u:
+        raise HTTPException(status_code=401, detail="Telegram username link payload is invalid")
+    row = db.get_telegram_user_by_username_ci(u)
+    if not row:
+        raise HTTPException(status_code=401, detail="Telegram username link is invalid or expired")
+    provider_user_id = str(row["provider_user_id"])
+    return TelegramIdentity(
+        user_id=provider_user_id,
+        username=row["username"] or u,
+        language=row["language"] or "ru",
+        internal_user_id=row["id"],
+        init_data="",
+    )
+
+
+def verify_telegram_bot_bearer(authorization: str | None) -> None:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    got = authorization.split(None, 1)[1].strip()
+    for tok in (settings.telegram_bot_token, settings.telegram_bot_token_en):
+        if tok and hmac.compare_digest(got, tok):
+            return
+    raise HTTPException(status_code=401, detail="Invalid bot token")
 
 
 def resolve_telegram_identity_by_token(token: str) -> TelegramIdentity:
