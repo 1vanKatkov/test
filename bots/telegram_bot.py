@@ -21,20 +21,18 @@ def build_webapp_url(lang: str) -> str:
     return f"{settings.app_base_url}/client?platform=telegram&lang={lang}"
 
 
-def _web_login_url_for_user(telegram_user_id: int) -> str | None:
+def _web_login_url_for_user(username: str | None) -> str | None:
     from app.web.auth.telegram_auth import (
         is_telegram_username_link_configured,
         issue_telegram_username_login_url,
     )
-    from app.web.db import db
 
     if not is_telegram_username_link_configured():
         return None
-    row = db.get_user_by_provider("telegram", str(telegram_user_id))
-    if not row or not row["username"]:
+    if not username:
         return None
     try:
-        return issue_telegram_username_login_url(row["username"])
+        return issue_telegram_username_login_url(username)
     except Exception as exc:  # noqa: BLE001 — invalid stored username, etc.
         logger.info("Web login link skipped: %s", exc)
         return None
@@ -48,9 +46,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     start_text = context.bot_data["start_text"]
 
     user = update.effective_user
-    link_url = _web_login_url_for_user(user.id) if user else None
+    link_url = _web_login_url_for_user(user.username if user else None)
     target_url = link_url if link_url else webapp_url
-    # Подпись приветствия на кнопке; URL с tglink внутри Telegram (WebApp), не внешний браузер.
+    # Ссылка на кнопку генерируется по @username; если username отсутствует, используем обычный webapp URL.
     button_text = start_text
 
     keyboard = InlineKeyboardMarkup(
@@ -63,8 +61,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             ]
         ]
     )
-    # Подпись вынесена на кнопку; в чате оставляем пустой видимый текст.
-    await update.message.reply_text("\u2060", reply_markup=keyboard)
+    await update.message.reply_text(start_text, reply_markup=keyboard)
 
 
 async def _run(
@@ -98,7 +95,7 @@ async def run() -> None:
     await _run(
         token=settings.telegram_bot_token,
         lang="ru",
-        start_text="Добро пожаловать!",
+        start_text="открыть мини-приложение",
     )
 
 
