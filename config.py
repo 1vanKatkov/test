@@ -74,6 +74,8 @@ class Settings:
     yookassa_vat_code: int = int(os.getenv("YOOKASSA_VAT_CODE", "1"))
     yookassa_timeout_seconds: int = int(os.getenv("YOOKASSA_TIMEOUT_SECONDS", "20"))
     yookassa_max_attempts: int = int(os.getenv("YOOKASSA_MAX_ATTEMPTS", "1"))
+    # Optional outbound proxy for YooKassa API only (example: http://user:pass@host:port).
+    yookassa_proxy_url: str = os.getenv("YOOKASSA_PROXY_URL", "").strip()
     numerology_dir: str = os.getenv("NUMEROLOGY_DIR", str(BASE_DIR / "bots228" / "numerology"))
     sovmestimost_messages_path: str = os.getenv(
         "SOVMESTIMOST_MESSAGES_PATH",

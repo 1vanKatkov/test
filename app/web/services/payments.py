@@ -23,9 +23,45 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _patch_yookassa_client() -> None:
+    """
+    Patch YooKassa SDK HTTP session so that:
+    - timeout is always set (SDK 3.8.0 doesn't pass Configuration.timeout to request),
+    - optional proxy applies only to YooKassa calls.
+    """
+    from yookassa.client import ApiClient
+
+    if getattr(ApiClient, "_astrolhub_http_patched", False):
+        return
+
+    original_get_session = ApiClient.get_session
+
+    def _patched_get_session(self):
+        session = original_get_session(self)
+        # Make behavior deterministic for YooKassa requests regardless of global proxy env.
+        session.trust_env = False
+        proxy_url = (settings.yookassa_proxy_url or "").strip()
+        if proxy_url:
+            session.proxies = {"http": proxy_url, "https": proxy_url}
+
+        timeout_seconds = max(5, int(settings.yookassa_timeout_seconds))
+        original_request = session.request
+
+        def _request_with_timeout(method, url, **kwargs):
+            kwargs.setdefault("timeout", timeout_seconds)
+            return original_request(method, url, **kwargs)
+
+        session.request = _request_with_timeout
+        return session
+
+    ApiClient.get_session = _patched_get_session
+    ApiClient._astrolhub_http_patched = True
+
+
 def _configure_yookassa() -> None:
     if not settings.yookassa_shop_id or not settings.yookassa_secret_key:
         raise HTTPException(status_code=500, detail="YooKassa credentials are not configured")
+    _patch_yookassa_client()
     Configuration.configure(settings.yookassa_shop_id, settings.yookassa_secret_key)
     # Prevent long blocking calls that can freeze upstream and trigger nginx 504.
     Configuration.timeout = max(5, settings.yookassa_timeout_seconds)
