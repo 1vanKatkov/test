@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from app.web.auth.email_auth import (
     EmailIdentity,
@@ -44,7 +45,7 @@ from app.web.schemas import (
     TelegramVerifyRequest,
     YooKassaCreatePaymentRequest,
 )
-from app.web.services import compatibility, lunar, numerology, sonnik
+from app.web.services import compatibility, lunar, numerology, payments, sonnik
 from app.web.services.balance import charge, get_balance, record_transaction, refund
 from config import settings
 
@@ -724,13 +725,9 @@ def _require_admin_email_user(email_identity: EmailIdentity | None) -> int:
     return email_identity.internal_user_id
 
 
-def _raise_web_payments_disabled() -> None:
-    raise HTTPException(status_code=403, detail="Payments are available only via Telegram bot")
-
-
 @app.get("/api/payments/packages")
 async def payment_packages():
-    _raise_web_payments_disabled()
+    return {"success": True, "packages": payments.get_payment_packages()}
 
 
 @app.post("/api/payments/yookassa/create")
@@ -740,7 +737,9 @@ async def api_create_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _raise_web_payments_disabled()
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    result = await run_in_threadpool(payments.create_payment, user_id, payload.package_id, payload.receipt_email)
+    return {"success": True, **result, "balance": get_balance(user_id)}
 
 
 @app.post("/api/payments/yookassa/{payment_id}/check")
@@ -750,7 +749,9 @@ async def api_check_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _raise_web_payments_disabled()
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    result = await run_in_threadpool(payments.check_payment, payment_id, user_id)
+    return {"success": True, **result}
 
 
 @app.get("/api/payments/yookassa/history")
@@ -759,7 +760,9 @@ async def api_payments_history(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _raise_web_payments_disabled()
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    result = await run_in_threadpool(payments.list_user_payments, user_id)
+    return {"success": True, "payments": result, "balance": get_balance(user_id)}
 
 
 @app.post("/api/payments/yookassa/{payment_id}/cancel")
@@ -769,7 +772,9 @@ async def api_cancel_yookassa_payment(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _raise_web_payments_disabled()
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    result = await run_in_threadpool(payments.cancel_payment, payment_id, user_id)
+    return {"success": True, **result}
 
 
 @app.post("/api/payments/yookassa/sync-pending")
@@ -778,7 +783,9 @@ async def api_sync_pending_yookassa_payments(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _raise_web_payments_disabled()
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    synced = await run_in_threadpool(payments.sync_pending_payments, user_id)
+    return {"success": True, "synced": synced, "balance": get_balance(user_id)}
 
 
 @app.get("/api/admin/stats/overview")

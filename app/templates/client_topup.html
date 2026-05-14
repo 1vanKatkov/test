@@ -31,10 +31,21 @@
 
     <section class="card">
       <h2>{{ t.yookassa_payment }}</h2>
-      <div class="muted">
-        Оплата в мини-приложении отключена.<br />
-        Пополнение выполняется только через Telegram-бота.
-      </div>
+      <form id="payment-create-form" class="form-grid">
+        <label>{{ t.spark_package }}
+          <select id="payment-package" required></select>
+        </label>
+        <label>Email для чека
+          <input id="payment-email" type="email" required placeholder="name@example.com" />
+        </label>
+        <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
+      </form>
+      <pre id="payment-result" class="result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>{{ "Payment history" if lang == "en" else "История платежей" }}</h2>
+      <div id="payments-history" class="history-list"></div>
     </section>
 
     <section class="card" id="email-auth-entry">
