@@ -32,6 +32,8 @@
       </div>
     </section>
 
+    {% include "partials/email_auth_entry.html" %}
+
     <section id="admin-panel-entry" class="card" hidden>
       <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin?lang={{ lang }}">{{ t.admin_panel }}</a>
     </section>
@@ -58,9 +60,9 @@
 
   </main>
 
-  {% include "partials/email_auth_panel.html" %}
+  {% include "partials/email_auth_modal.html" %}
 
-  <script defer src="/static/app.js"></script>
+  <script defer src="/static/app.js?v=6400703"></script>
 </body>
 </html>
 

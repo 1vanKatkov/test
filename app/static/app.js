@@ -266,7 +266,11 @@ function setTelegramAuthStatus(message) {
 
 function isTelegramWebAppContext() {
   const platform = new URLSearchParams(window.location.search).get("platform");
-  return platform === "telegram" || Boolean(window.Telegram && window.Telegram.WebApp);
+  if (platform === "telegram") {
+    return true;
+  }
+  const initData = readTelegramInitData();
+  return Boolean(initData);
 }
 
 function hydrateUiFromCache() {
