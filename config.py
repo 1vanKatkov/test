@@ -60,6 +60,7 @@ class Settings:
     smtp_host: str = os.getenv("SMTP_HOST", "").strip()
     smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
     smtp_use_tls: bool = _bool_from_env("SMTP_USE_TLS", True)
+    smtp_use_ssl: bool = _bool_from_env("SMTP_USE_SSL", False)
     smtp_user: str = os.getenv("SMTP_USER", "").strip()
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
     smtp_from: str = os.getenv("SMTP_FROM", "").strip()

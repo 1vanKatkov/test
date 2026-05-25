@@ -1,5 +1,7 @@
 <section class="card" id="email-auth-entry" hidden>
   <h2>{{ t.email_auth }}</h2>
-  <p class="muted">{{ t.auth_cell_open }}</p>
-  <button id="open-email-auth-modal" class="primary-btn" type="button">{{ t.auth_cell_open }}</button>
+  <div class="compact-actions">
+    <a class="secondary-btn compact-action-btn" href="/client/register?lang={{ lang }}">{{ t.register }}</a>
+    <a class="secondary-btn compact-action-btn" href="/client/login?lang={{ lang }}">{{ t.login }}</a>
+  </div>
 </section>

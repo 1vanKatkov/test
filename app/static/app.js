@@ -341,27 +341,6 @@ function toggleEmailAuthEntry() {
   entry.hidden = hide;
 }
 
-function setEmailAuthModalOpen(isOpen) {
-  const modal = element("email-auth-modal");
-  if (!modal) {
-    return;
-  }
-  modal.classList.toggle("is-open", isOpen);
-  if (!isOpen) {
-    setResult("auth-result", "");
-  }
-}
-
-function showAuthTab(tabName) {
-  document.querySelectorAll(".auth-tab").forEach((tab) => {
-    tab.classList.toggle("is-active", tab.dataset.authTab === tabName);
-  });
-  document.querySelectorAll(".auth-panel").forEach((panel) => {
-    const panelName = panel.dataset.authPanel;
-    panel.hidden = panelName !== tabName;
-  });
-}
-
 function applyEmailAuthResult(result) {
   if (result.token) {
     persistEmailAuthToken(result.token);
@@ -594,105 +573,104 @@ async function loadProfile() {
   }
 }
 
-function wireEmailAuthForms() {
-  const openBtn = element("open-email-auth-modal");
-  const closeBtn = element("close-email-auth-modal");
-  const modal = element("email-auth-modal");
-  if (openBtn) {
-    openBtn.addEventListener("click", () => {
-      showAuthTab("register");
-      setEmailAuthModalOpen(true);
-    });
+function wireRegisterPage() {
+  const registerForm = element("email-register-form");
+  if (!registerForm) {
+    return;
   }
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => setEmailAuthModalOpen(false));
-  }
-  if (modal) {
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        setEmailAuthModalOpen(false);
+  registerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setResult("auth-result", i18n.loading);
+    try {
+      const password = element("register-password")?.value || "";
+      const passwordConfirm = element("register-password-confirm")?.value || "";
+      if (password !== passwordConfirm) {
+        throw new Error(i18n.passwordsMismatch);
       }
-    });
+      const email = element("register-email")?.value.trim() || "";
+      const result = await apiRequest("/api/auth/email/register/start", "POST", {
+        email,
+        password,
+        password_confirm: passwordConfirm,
+        language: lang,
+      });
+      const targetEmail = encodeURIComponent(result.email || email);
+      window.location.href = `/client/register/verify?email=${targetEmail}&lang=${lang}`;
+    } catch (error) {
+      setResult("auth-result", error.message);
+    }
+  });
+}
+
+function wireRegisterVerifyPage() {
+  const registerVerifyForm = element("email-register-verify-form");
+  if (!registerVerifyForm) {
+    return;
   }
-  document.querySelectorAll(".auth-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      showAuthTab(tab.dataset.authTab || "register");
-      setResult("auth-result", "");
-    });
+  const email = document.body.dataset.registerEmail || element("register-email")?.value || "";
+
+  registerVerifyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setResult("auth-result", i18n.loading);
+    try {
+      const result = await apiRequest("/api/auth/email/register/verify", "POST", {
+        email: email.trim(),
+        code: element("register-code")?.value.trim(),
+        language: lang,
+      });
+      applyEmailAuthResult(result);
+      window.location.href = `/client?lang=${lang}`;
+    } catch (error) {
+      setResult("auth-result", error.message);
+    }
   });
 
-  const registerForm = element("email-register-form");
-  if (registerForm) {
-    registerForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
+  const resendBtn = element("register-resend-btn");
+  if (resendBtn) {
+    resendBtn.addEventListener("click", async () => {
       setResult("auth-result", i18n.loading);
       try {
-        const password = element("register-password")?.value || "";
-        const passwordConfirm = element("register-password-confirm")?.value || "";
-        if (password !== passwordConfirm) {
-          throw new Error(i18n.passwordsMismatch);
-        }
-        const email = element("register-email")?.value.trim() || "";
-        await apiRequest("/api/auth/email/register/start", "POST", {
-          email,
-          password,
-          password_confirm: passwordConfirm,
+        await apiRequest("/api/auth/email/register/resend", "POST", {
+          email: email.trim(),
           language: lang,
         });
-        state.pendingRegisterEmail = email;
-        showAuthTab("register-verify");
         setResult("auth-result", i18n.codeSent);
       } catch (error) {
         setResult("auth-result", error.message);
       }
     });
   }
+}
 
-  const registerVerifyForm = element("email-register-verify-form");
-  if (registerVerifyForm) {
-    registerVerifyForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      setResult("auth-result", i18n.loading);
-      try {
-        const result = await apiRequest("/api/auth/email/register/verify", "POST", {
-          email: state.pendingRegisterEmail || element("register-email")?.value.trim(),
-          code: element("register-code")?.value.trim(),
-          language: lang,
-        });
-        applyEmailAuthResult(result);
-        setResult("auth-result", i18n.authSuccess);
-        setEmailAuthModalOpen(false);
-      } catch (error) {
-        setResult("auth-result", error.message);
-      }
-    });
-  }
-
-  const registerBackBtn = element("register-back-btn");
-  if (registerBackBtn) {
-    registerBackBtn.addEventListener("click", () => {
-      showAuthTab("register");
-      setResult("auth-result", "");
-    });
-  }
-
+function wireLoginPage() {
   const loginForm = element("email-login-form");
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      setResult("auth-result", i18n.loading);
-      try {
-        const result = await apiRequest("/api/auth/email/login", "POST", {
-          email: element("login-email")?.value.trim(),
-          password: element("login-password")?.value,
-        });
-        applyEmailAuthResult(result);
-        setResult("auth-result", i18n.authSuccess);
-        setEmailAuthModalOpen(false);
-      } catch (error) {
-        setResult("auth-result", error.message);
-      }
-    });
+  if (!loginForm) {
+    return;
+  }
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setResult("auth-result", i18n.loading);
+    try {
+      const result = await apiRequest("/api/auth/email/login", "POST", {
+        email: element("login-email")?.value.trim(),
+        password: element("login-password")?.value,
+      });
+      applyEmailAuthResult(result);
+      window.location.href = `/client?lang=${lang}`;
+    } catch (error) {
+      setResult("auth-result", error.message);
+    }
+  });
+}
+
+function wireAuthPages() {
+  const page = document.body.dataset.page || "";
+  if (page === "register") {
+    wireRegisterPage();
+  } else if (page === "register-verify") {
+    wireRegisterVerifyPage();
+  } else if (page === "login") {
+    wireLoginPage();
   }
 }
 
@@ -1403,7 +1381,7 @@ function wireCompatibilityForms() {
 
 async function boot() {
   wirePaymentForms();
-  wireEmailAuthForms();
+  wireAuthPages();
   wirePasswordResetForm();
   wireRequestHistory();
   wirePaymentsHistoryActions();

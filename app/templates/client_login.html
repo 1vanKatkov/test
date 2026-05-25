@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.numerology_report }}</title>
+  <title>{{ brand_name }} - {{ t.login }}</title>
   <link rel="stylesheet" href="/static/style.css" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  class="app-shell mobile-client-shell auth-page"
+  data-page="login"
   data-lang="{{ lang }}"
-  data-report-id="{{ report_id }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
@@ -25,13 +22,19 @@
   </header>
 
   <main class="mobile-client">
-    <section class="card compact-card">
-      <h2>{{ t.numerology_report }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+    <section class="card">
+      <h2>{{ t.login }}</h2>
+      <form id="email-login-form" class="form-grid">
+        <label>{{ t.email }} <input id="login-email" type="email" autocomplete="email" required /></label>
+        <label>{{ t.password }} <input id="login-password" type="password" autocomplete="current-password" required minlength="8" /></label>
+        <button type="submit" class="primary-btn">{{ t.login }}</button>
+      </form>
+      <p class="muted auth-switch-line">
+        {{ t.no_account }}
+        <a href="/client/register?lang={{ lang }}">{{ t.go_to_register }}</a>
+      </p>
+      <pre id="auth-result" class="result"></pre>
     </section>
-    <section id="numerology-report-view" class="card"></section>
-    <pre id="numerology-result" class="result"></pre>
-
   </main>
 
   <script defer src="/static/app.js?v=6400704"></script>

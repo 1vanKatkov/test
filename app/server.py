@@ -15,10 +15,13 @@ from app.web.auth.email_auth import (
     EmailIdentity,
     confirm_password_reset,
     ensure_seed_accounts,
+    has_pending_registration,
     issue_email_auth_token,
     login_email_user,
+    normalize_email,
     optional_email_auth,
     request_password_reset,
+    resend_registration_code,
     start_email_registration,
     verify_email_registration,
 )
@@ -36,6 +39,7 @@ from app.web.db import db
 from app.web.schemas import (
     EmailLoginRequest,
     EmailPasswordResetConfirmRequest,
+    EmailResendRequest,
     EmailRegisterStartRequest,
     EmailRegisterVerifyRequest,
     NumerologyRequest,
@@ -183,6 +187,11 @@ def _translations(lang: str) -> dict:
             "password_reset": "Change password",
             "code_sent": "Code sent to your email",
             "auth_cell_open": "Sign in with email",
+            "have_account": "Already have an account?",
+            "no_account": "No account yet?",
+            "go_to_login": "Log in",
+            "go_to_register": "Register",
+            "verify_registration": "Confirm registration",
             "back": "Back",
             "close": "Close",
             "username": "Username",
@@ -247,6 +256,11 @@ def _translations(lang: str) -> dict:
         "password_reset": "Смена пароля",
         "code_sent": "Код отправлен на почту",
         "auth_cell_open": "Войти по email",
+        "have_account": "Уже есть аккаунт?",
+        "no_account": "Нет аккаунта?",
+        "go_to_login": "Войти",
+        "go_to_register": "Регистрация",
+        "verify_registration": "Подтверждение регистрации",
         "back": "Назад",
         "close": "Закрыть",
         "username": "Ник",
@@ -362,6 +376,47 @@ async def client_dashboard(request: Request, lang: str = Query(default="ru")):
     return templates.TemplateResponse(
         request=request,
         name="client_dashboard.html",
+        context=_client_template_context(request, lang),
+    )
+
+
+@app.get("/client/register", response_class=HTMLResponse, include_in_schema=False)
+async def client_register(request: Request, lang: str = Query(default="ru")):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_register.html",
+        context=_client_template_context(request, lang),
+    )
+
+
+@app.get("/client/register/verify", response_class=HTMLResponse, include_in_schema=False)
+async def client_register_verify(
+    request: Request,
+    lang: str = Query(default="ru"),
+    email: str = Query(default=""),
+):
+    page_lang = _normalize_lang(lang)
+    normalized = ""
+    try:
+        normalized = normalize_email(email)
+    except HTTPException:
+        return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
+    if not has_pending_registration(normalized):
+        return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
+    context = _client_template_context(request, page_lang)
+    context["register_email"] = normalized
+    return templates.TemplateResponse(
+        request=request,
+        name="client_register_verify.html",
+        context=context,
+    )
+
+
+@app.get("/client/login", response_class=HTMLResponse, include_in_schema=False)
+async def client_login(request: Request, lang: str = Query(default="ru")):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_login.html",
         context=_client_template_context(request, lang),
     )
 
@@ -589,6 +644,19 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
+@app.get("/api/auth/email/health")
+async def api_email_health():
+    return {
+        "smtp_configured": bool(settings.smtp_host and settings.smtp_from),
+        "smtp_host_set": bool(settings.smtp_host),
+        "smtp_from_set": bool(settings.smtp_from),
+        "smtp_user_set": bool(settings.smtp_user),
+        "smtp_port": settings.smtp_port,
+        "smtp_use_tls": settings.smtp_use_tls,
+        "smtp_use_ssl": settings.smtp_use_ssl,
+    }
+
+
 @app.post("/api/auth/email/register/start")
 async def api_email_register_start(payload: EmailRegisterStartRequest):
     lang = _normalize_lang(payload.language)
@@ -600,6 +668,12 @@ async def api_email_register_start(payload: EmailRegisterStartRequest):
         lang,
     )
     return result
+
+
+@app.post("/api/auth/email/register/resend")
+async def api_email_register_resend(payload: EmailResendRequest):
+    lang = _normalize_lang(payload.language)
+    return await run_in_threadpool(resend_registration_code, payload.email, lang)
 
 
 @app.post("/api/auth/email/register/verify")

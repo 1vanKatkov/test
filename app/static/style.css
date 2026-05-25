@@ -692,6 +692,15 @@ button {
   background: #1a2b57;
 }
 
+.auth-switch-line {
+  margin-top: 12px;
+}
+
+.auth-switch-line a {
+  color: #9fc2ff;
+  font-weight: 600;
+}
+
 .compact-actions {
   margin-top: 10px;
   display: flex;

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} - {{ t.register }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body
+  class="app-shell mobile-client-shell auth-page"
+  data-page="register"
+  data-lang="{{ lang }}"
+>
+  <header class="app-topbar client-topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <div class="user-chip">
+        <a class="auth-username-link" href="/client/profile?lang={{ lang }}"><span id="auth-username">{{ initial_auth_username }}</span></a>
+        <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="mobile-client">
+    <section class="card">
+      <h2>{{ t.register }}</h2>
+      <p class="muted">{{ t.no_account }}</p>
+      <form id="email-register-form" class="form-grid">
+        <label>{{ t.email }} <input id="register-email" type="email" autocomplete="email" required /></label>
+        <label>{{ t.password }} <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
+        <label>{{ t.repeat_password }} <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
+        <button type="submit" class="primary-btn">{{ t.send_code }}</button>
+      </form>
+      <p class="muted auth-switch-line">
+        {{ t.have_account }}
+        <a href="/client/login?lang={{ lang }}">{{ t.go_to_login }}</a>
+      </p>
+      <pre id="auth-result" class="result"></pre>
+    </section>
+  </main>
+
+  <script defer src="/static/app.js?v=6400704"></script>
+</body>
+</html>

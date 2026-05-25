@@ -183,6 +183,18 @@ def issue_email_auth_token(identity: EmailIdentity) -> str:
     return _encode_token({"sub": identity.user_id, "exp": now + settings.email_auth_ttl_seconds, "iat": now})
 
 
+def has_pending_registration(email: str) -> bool:
+    normalized_email = normalize_email(email)
+    row = db.get_email_verification(normalized_email, "register")
+    if not row:
+        return False
+    try:
+        expires_at = datetime.fromisoformat(row["expires_at"])
+    except ValueError:
+        return False
+    return datetime.now(timezone.utc) <= expires_at
+
+
 def start_email_registration(email: str, password: str, password_confirm: str, lang: str = "ru") -> dict:
     normalized_email = normalize_email(email)
     _validate_password_pair(password, password_confirm)
@@ -197,7 +209,11 @@ def start_email_registration(email: str, password: str, password_confirm: str, l
         {"password_hash": _hash_password(password)},
         lang,
     )
-    return {"success": True, "message": "Verification code sent"}
+    return {
+        "success": True,
+        "message": "Verification code sent",
+        "email": normalized_email,
+    }
 
 
 def verify_email_registration(email: str, code: str, lang: str = "ru") -> tuple[EmailIdentity, bool]:
@@ -244,6 +260,21 @@ def login_email_user(email: str, password: str) -> EmailIdentity:
         language=user["language"] or "ru",
         internal_user_id=int(user["id"]),
     )
+
+
+def resend_registration_code(email: str, lang: str = "ru") -> dict:
+    normalized_email = normalize_email(email)
+    row = db.get_email_verification(normalized_email, "register")
+    if not row:
+        raise HTTPException(status_code=400, detail="No pending registration. Start registration again.")
+    try:
+        payload = json.loads(row["payload_json"] or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    if not payload.get("password_hash"):
+        raise HTTPException(status_code=400, detail="No pending registration. Start registration again.")
+    _issue_and_store_code(normalized_email, "register", payload, lang)
+    return {"success": True, "message": "Verification code sent", "email": normalized_email}
 
 
 def request_password_reset(identity: EmailIdentity, lang: str = "ru") -> dict:

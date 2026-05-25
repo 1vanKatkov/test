@@ -40,6 +40,11 @@ class EmailLoginRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class EmailResendRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    language: str = Field(default="ru", max_length=8)
+
+
 class EmailPasswordResetConfirmRequest(BaseModel):
     code: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=8, max_length=128)
