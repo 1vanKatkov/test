@@ -403,6 +403,13 @@ async def verify_auth(identity: MaxIdentity = Depends(require_max_auth)):
     }
 
 
+@app.get("/api/auth/telegram/health")
+async def telegram_auth_health():
+    from app.web.auth.telegram_auth import telegram_auth_health as _health
+
+    return _health()
+
+
 @app.post("/api/auth/telegram/verify")
 async def verify_telegram_auth(payload: TelegramVerifyRequest):
     identity, is_new_user = resolve_telegram_identity(payload.init_data)

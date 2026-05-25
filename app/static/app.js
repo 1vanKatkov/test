@@ -68,6 +68,9 @@ const i18n = lang === "en"
     showAnswer: "Show answer",
     hideAnswer: "Hide answer",
     telegramLinkAuthFailed: "Telegram link login failed. The link may be invalid, expired, or the account is unknown.",
+    telegramAuthFailed: "Telegram sign-in failed",
+    telegramNoInitData: "Telegram did not provide initData. Open the app from the bot button.",
+    telegramTokenMismatchHint: "Check TELEGRAM_BOT_TOKEN on the server matches your bot token.",
     close: "Close",
     chooseTicketFirst: "Choose ticket first",
   }
@@ -117,6 +120,9 @@ const i18n = lang === "en"
     showAnswer: "Показать ответ",
     hideAnswer: "Скрыть ответ",
     telegramLinkAuthFailed: "Вход по ссылке не удался. Ссылка неверна, срок истёк или такого пользователя нет в системе.",
+    telegramAuthFailed: "Не удалось войти через Telegram",
+    telegramNoInitData: "Telegram не передал initData. Откройте приложение кнопкой из бота.",
+    telegramTokenMismatchHint: "На сервере TELEGRAM_BOT_TOKEN должен совпадать с токеном бота.",
     close: "Закрыть",
     chooseTicketFirst: "Сначала выберите обращение",
   };
@@ -231,6 +237,20 @@ function persistTelegramAuthToken(token) {
   }
   sessionStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
   localStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
+}
+
+function setTelegramAuthStatus(message) {
+  const node = element("telegram-auth-status");
+  if (!node) {
+    return;
+  }
+  if (!message) {
+    node.hidden = true;
+    node.textContent = "";
+    return;
+  }
+  node.hidden = false;
+  node.textContent = message;
 }
 
 function isTelegramWebAppContext() {
@@ -378,8 +398,12 @@ async function waitForTelegramInitData(maxAttempts = 50, delayMs = 100) {
 }
 
 async function autoVerifyTelegram() {
+  if (!isTelegramWebAppContext()) {
+    return false;
+  }
   const initData = await waitForTelegramInitData();
   if (!initData) {
+    setTelegramAuthStatus(i18n.telegramNoInitData);
     return false;
   }
   persistTelegramInitData(initData);
@@ -417,11 +441,17 @@ async function autoVerifyTelegram() {
       saveTimedCache(BALANCE_CACHE_KEY, result.balance);
       setBalance(result.balance);
     }
+    setTelegramAuthStatus("");
     return true;
-  } catch {
+  } catch (error) {
     persistTelegramAuthToken("");
     sessionStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
     state.telegramInitData = "";
+    const message = error && error.message ? error.message : i18n.telegramAuthFailed;
+    const hint = message.includes("signature") || message.includes("initData")
+      ? ` ${i18n.telegramTokenMismatchHint}`
+      : "";
+    setTelegramAuthStatus(`${message}${hint}`);
     return false;
   }
 }
@@ -1139,9 +1169,8 @@ async function boot() {
   hydrateUiFromCache();
   await verifyTelegramUsernameLinkFromQuery();
   const telegramVerified = await autoVerifyTelegram();
-  if (!telegramVerified) {
-    await loadProfile();
-  } else {
+  await loadProfile();
+  if (telegramVerified) {
     updateAdminTileVisibility().catch(() => {});
   }
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);

@@ -127,7 +127,13 @@ def _verify_init_data_signature(data: dict[str, str]) -> None:
         ).hexdigest()
         if hmac.compare_digest(expected_hash, received_hash):
             return
-    raise HTTPException(status_code=401, detail="Telegram initData signature is invalid")
+    raise HTTPException(
+        status_code=401,
+        detail=(
+            "Telegram initData signature is invalid. "
+            "TELEGRAM_BOT_TOKEN on this server must match the bot that opened the Mini App."
+        ),
+    )
 
 
 def _verify_auth_date(data: dict[str, str]) -> None:
@@ -155,6 +161,14 @@ def _extract_user(data: dict[str, str]) -> dict[str, Any]:
     if "id" not in user_data:
         raise HTTPException(status_code=401, detail="Telegram user id is missing")
     return user_data
+
+
+def telegram_auth_health() -> dict[str, bool | int]:
+    tokens = _bot_tokens()
+    return {
+        "configured": len(tokens) > 0,
+        "bot_tokens_count": len(tokens),
+    }
 
 
 def resolve_telegram_identity(init_data: str) -> tuple[TelegramIdentity, bool]:
