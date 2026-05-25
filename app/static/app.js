@@ -1,5 +1,6 @@
 const TELEGRAM_INIT_DATA_KEY = "astrolhub.telegramInitData";
 const TELEGRAM_AUTH_TOKEN_KEY = "astrolhub.telegramAuthToken";
+const EMAIL_AUTH_TOKEN_KEY = "astrolhub.emailAuthToken";
 
 if (window.Telegram && window.Telegram.WebApp) {
   window.Telegram.WebApp.ready();
@@ -12,6 +13,8 @@ const state = {
   telegramInitData: "",
   telegramAuthToken:
     localStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || sessionStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || "",
+  emailAuthToken: localStorage.getItem(EMAIL_AUTH_TOKEN_KEY) || "",
+  pendingRegisterEmail: "",
   lastPaymentId: sessionStorage.getItem("astrolhub.lastPaymentId") || "",
   selectedSupportTicketId: null,
   profileProvider: "guest",
@@ -47,8 +50,12 @@ const i18n = lang === "en"
     calculating: "Calculating...",
     maxPrefix: "MAX",
     tgPrefix: "Telegram",
+    emailPrefix: "Email",
     devBypassPrefix: "Dev bypass",
     authSuccess: "Authentication successful",
+    codeSent: "Code sent to your email",
+    passwordsMismatch: "Passwords do not match",
+    passwordResetSuccess: "Password updated",
     loading: "Loading...",
     noHistory: "No request history yet",
     noTickets: "No tickets yet",
@@ -99,8 +106,12 @@ const i18n = lang === "en"
     calculating: "Выполняется расчет...",
     maxPrefix: "MAX",
     tgPrefix: "Telegram",
+    emailPrefix: "Email",
     devBypassPrefix: "Dev bypass",
     authSuccess: "Авторизация успешна",
+    codeSent: "Код отправлен на почту",
+    passwordsMismatch: "Пароли не совпадают",
+    passwordResetSuccess: "Пароль обновлён",
     loading: "Загрузка...",
     noHistory: "История запросов пока пуста",
     noTickets: "Обращений пока нет",
@@ -275,9 +286,13 @@ function hydrateUiFromCache() {
   } else if (profile?.provider === "telegram") {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
+  } else if (profile?.provider === "email") {
+    setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
+    setAuthUsername(profile.username);
   } else {
     setAuthUsername(i18n.guest);
   }
+  toggleEmailAuthEntry();
   const balance = readTimedCache(BALANCE_CACHE_KEY);
   if (typeof balance === "number") {
     setBalance(balance);
@@ -290,10 +305,73 @@ function getAuthHeaders() {
     headers["X-Telegram-Auth-Token"] = state.telegramAuthToken;
     return headers;
   }
+  if (state.emailAuthToken) {
+    headers["X-Email-Auth-Token"] = state.emailAuthToken;
+    return headers;
+  }
   if (state.telegramInitData) {
     headers["X-Telegram-Init-Data"] = state.telegramInitData;
   }
   return headers;
+}
+
+function persistEmailAuthToken(token) {
+  state.emailAuthToken = token || "";
+  if (token) {
+    localStorage.setItem(EMAIL_AUTH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(EMAIL_AUTH_TOKEN_KEY);
+  }
+}
+
+function toggleEmailAuthEntry() {
+  const entry = element("email-auth-entry");
+  if (!entry) {
+    return;
+  }
+  const hide =
+    isTelegramWebAppContext() ||
+    state.profileProvider === "telegram" ||
+    state.profileProvider === "max" ||
+    state.profileProvider === "email";
+  entry.hidden = hide;
+}
+
+function setEmailAuthModalOpen(isOpen) {
+  const modal = element("email-auth-modal");
+  if (!modal) {
+    return;
+  }
+  modal.classList.toggle("is-open", isOpen);
+  if (!isOpen) {
+    setResult("auth-result", "");
+  }
+}
+
+function showAuthTab(tabName) {
+  document.querySelectorAll(".auth-tab").forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.authTab === tabName);
+  });
+  document.querySelectorAll(".auth-panel").forEach((panel) => {
+    const panelName = panel.dataset.authPanel;
+    panel.hidden = panelName !== tabName;
+  });
+}
+
+function applyEmailAuthResult(result) {
+  if (result.token) {
+    persistEmailAuthToken(result.token);
+  }
+  if (result.profile) {
+    saveTimedCache(PROFILE_CACHE_KEY, result.profile);
+    applyProfileUi(result.profile);
+  }
+  if (typeof result.balance === "number") {
+    saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+    setBalance(result.balance);
+  }
+  toggleEmailAuthEntry();
+  updateAdminTileVisibility().catch(() => {});
 }
 
 async function apiRequest(url, method, bodyObj) {
@@ -460,15 +538,35 @@ function applyProfileUi(profile) {
   if (profile.provider === "max") {
     setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
+    toggleEmailAuthEntry();
+    togglePasswordResetPanel(false);
     return;
   }
   if (profile.provider === "telegram") {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
+    toggleEmailAuthEntry();
+    togglePasswordResetPanel(false);
+    return;
+  }
+  if (profile.provider === "email") {
+    setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
+    setAuthUsername(profile.username);
+    toggleEmailAuthEntry();
+    togglePasswordResetPanel(true);
     return;
   }
   setAuthBadge(i18n.guest);
   setAuthUsername(i18n.guest);
+  toggleEmailAuthEntry();
+  togglePasswordResetPanel(false);
+}
+
+function togglePasswordResetPanel(isVisible) {
+  const panel = element("email-password-reset-panel");
+  if (panel) {
+    panel.hidden = !isVisible;
+  }
 }
 
 async function loadProfile() {
@@ -485,8 +583,149 @@ async function loadProfile() {
     state.profileProvider = "guest";
     setAuthBadge(i18n.guest);
     setAuthUsername(i18n.guest);
+    toggleEmailAuthEntry();
+    togglePasswordResetPanel(false);
     updateAdminTileVisibility().catch(() => {});
     return null;
+  }
+}
+
+function wireEmailAuthForms() {
+  const openBtn = element("open-email-auth-modal");
+  const closeBtn = element("close-email-auth-modal");
+  const modal = element("email-auth-modal");
+  if (openBtn) {
+    openBtn.addEventListener("click", () => {
+      showAuthTab("register");
+      setEmailAuthModalOpen(true);
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => setEmailAuthModalOpen(false));
+  }
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        setEmailAuthModalOpen(false);
+      }
+    });
+  }
+  document.querySelectorAll(".auth-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      showAuthTab(tab.dataset.authTab || "register");
+      setResult("auth-result", "");
+    });
+  });
+
+  const registerForm = element("email-register-form");
+  if (registerForm) {
+    registerForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("auth-result", i18n.loading);
+      try {
+        const password = element("register-password")?.value || "";
+        const passwordConfirm = element("register-password-confirm")?.value || "";
+        if (password !== passwordConfirm) {
+          throw new Error(i18n.passwordsMismatch);
+        }
+        const email = element("register-email")?.value.trim() || "";
+        await apiRequest("/api/auth/email/register/start", "POST", {
+          email,
+          password,
+          password_confirm: passwordConfirm,
+          language: lang,
+        });
+        state.pendingRegisterEmail = email;
+        showAuthTab("register-verify");
+        setResult("auth-result", i18n.codeSent);
+      } catch (error) {
+        setResult("auth-result", error.message);
+      }
+    });
+  }
+
+  const registerVerifyForm = element("email-register-verify-form");
+  if (registerVerifyForm) {
+    registerVerifyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("auth-result", i18n.loading);
+      try {
+        const result = await apiRequest("/api/auth/email/register/verify", "POST", {
+          email: state.pendingRegisterEmail || element("register-email")?.value.trim(),
+          code: element("register-code")?.value.trim(),
+          language: lang,
+        });
+        applyEmailAuthResult(result);
+        setResult("auth-result", i18n.authSuccess);
+        setEmailAuthModalOpen(false);
+      } catch (error) {
+        setResult("auth-result", error.message);
+      }
+    });
+  }
+
+  const registerBackBtn = element("register-back-btn");
+  if (registerBackBtn) {
+    registerBackBtn.addEventListener("click", () => {
+      showAuthTab("register");
+      setResult("auth-result", "");
+    });
+  }
+
+  const loginForm = element("email-login-form");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("auth-result", i18n.loading);
+      try {
+        const result = await apiRequest("/api/auth/email/login", "POST", {
+          email: element("login-email")?.value.trim(),
+          password: element("login-password")?.value,
+        });
+        applyEmailAuthResult(result);
+        setResult("auth-result", i18n.authSuccess);
+        setEmailAuthModalOpen(false);
+      } catch (error) {
+        setResult("auth-result", error.message);
+      }
+    });
+  }
+}
+
+function wirePasswordResetForm() {
+  const requestBtn = element("password-reset-request-btn");
+  const form = element("email-password-reset-form");
+  if (requestBtn) {
+    requestBtn.addEventListener("click", async () => {
+      setResult("password-reset-result", i18n.loading);
+      try {
+        await apiRequest("/api/auth/email/password-reset/request", "POST");
+        setResult("password-reset-result", i18n.codeSent);
+      } catch (error) {
+        setResult("password-reset-result", error.message);
+      }
+    });
+  }
+  if (form) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("password-reset-result", i18n.loading);
+      try {
+        const newPassword = element("password-reset-new")?.value || "";
+        const passwordConfirm = element("password-reset-confirm")?.value || "";
+        if (newPassword !== passwordConfirm) {
+          throw new Error(i18n.passwordsMismatch);
+        }
+        await apiRequest("/api/auth/email/password-reset/confirm", "POST", {
+          code: element("password-reset-code")?.value.trim(),
+          new_password: newPassword,
+          password_confirm: passwordConfirm,
+        });
+        setResult("password-reset-result", i18n.passwordResetSuccess);
+      } catch (error) {
+        setResult("password-reset-result", error.message);
+      }
+    });
   }
 }
 
@@ -1159,8 +1398,9 @@ function wireCompatibilityForms() {
 }
 
 async function boot() {
-  localStorage.removeItem("astrolhub.emailAuthToken");
   wirePaymentForms();
+  wireEmailAuthForms();
+  wirePasswordResetForm();
   wireRequestHistory();
   wirePaymentsHistoryActions();
   wireSupportForms();
@@ -1183,6 +1423,7 @@ async function boot() {
         `${i18n.telegramAuthFailed}. ${i18n.telegramTokenMismatchHint}`,
     );
   }
+  toggleEmailAuthEntry();
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();

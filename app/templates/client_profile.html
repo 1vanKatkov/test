@@ -29,6 +29,18 @@
       <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
     </section>
 
+    <section class="card" id="email-password-reset-panel" hidden>
+      <h2>{{ t.password_reset }}</h2>
+      <form id="email-password-reset-form" class="form-grid">
+        <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
+        <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" /></label>
+        <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" /></label>
+        <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" /></label>
+        <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
+      </form>
+      <pre id="password-reset-result" class="result"></pre>
+    </section>
+
     <section class="card">
       <h2>{{ t.request_history }}</h2>
       <div id="request-history" class="history-list"></div>
@@ -36,6 +48,8 @@
     </section>
 
   </main>
+
+  {% include "partials/email_auth_panel.html" %}
 
   <script defer src="/static/app.js"></script>
 </body>

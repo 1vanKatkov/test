@@ -11,6 +11,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
+from app.web.auth.email_auth import (
+    EmailIdentity,
+    confirm_password_reset,
+    ensure_seed_accounts,
+    issue_email_auth_token,
+    login_email_user,
+    optional_email_auth,
+    request_password_reset,
+    start_email_registration,
+    verify_email_registration,
+)
 from app.web.auth.max_auth import MaxIdentity, optional_max_auth, require_max_auth
 from app.web.auth.telegram_auth import (
     TelegramIdentity,
@@ -23,6 +34,10 @@ from app.web.auth.telegram_auth import (
 )
 from app.web.db import db
 from app.web.schemas import (
+    EmailLoginRequest,
+    EmailPasswordResetConfirmRequest,
+    EmailRegisterStartRequest,
+    EmailRegisterVerifyRequest,
     NumerologyRequest,
     SonnikRequest,
     SupportAddMessageRequest,
@@ -48,6 +63,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.init()
+    ensure_seed_accounts()
     yield
 
 
@@ -77,6 +93,51 @@ def _set_telegram_auth_cookie(response: JSONResponse, token: str) -> None:
         max_age=settings.telegram_auth_ttl_seconds,
         path="/",
     )
+
+
+def _set_email_auth_cookie(response: JSONResponse, token: str) -> None:
+    response.set_cookie(
+        key="email_auth_token",
+        value=token,
+        httponly=True,
+        secure=_auth_cookie_secure(),
+        samesite=_auth_cookie_samesite(),
+        max_age=settings.email_auth_ttl_seconds,
+        path="/",
+    )
+
+
+def _email_auth_response(identity: EmailIdentity, is_new_user: bool = False) -> JSONResponse:
+    token = issue_email_auth_token(identity)
+    response_data = {
+        "success": True,
+        "is_new_user": is_new_user,
+        "token": token,
+        "profile": {
+            "provider": "email",
+            "provider_user_id": identity.user_id,
+            "username": identity.username,
+            "language": identity.language,
+        },
+        "balance": get_balance(identity.internal_user_id),
+    }
+    response = JSONResponse(content=response_data)
+    _set_email_auth_cookie(response, token)
+    return response
+
+
+def _resolve_language(
+    email_identity: EmailIdentity | None,
+    max_identity: MaxIdentity | None,
+    telegram_identity: TelegramIdentity | None,
+) -> str:
+    if email_identity:
+        return email_identity.language
+    if max_identity:
+        return max_identity.language
+    if telegram_identity:
+        return telegram_identity.language
+    return "ru"
 
 
 def _translations(lang: str) -> dict:
@@ -115,6 +176,15 @@ def _translations(lang: str) -> dict:
             "login": "Login",
             "email": "Email",
             "password": "Password",
+            "repeat_password": "Repeat password",
+            "verification_code": "Verification code",
+            "send_code": "Send code",
+            "confirm_registration": "Confirm registration",
+            "password_reset": "Change password",
+            "code_sent": "Code sent to your email",
+            "auth_cell_open": "Sign in with email",
+            "back": "Back",
+            "close": "Close",
             "username": "Username",
             "support": "Support",
             "history": "History",
@@ -170,6 +240,15 @@ def _translations(lang: str) -> dict:
         "login": "Вход",
         "email": "Email",
         "password": "Пароль",
+        "repeat_password": "Повтор пароля",
+        "verification_code": "Код из письма",
+        "send_code": "Отправить код",
+        "confirm_registration": "Подтвердить регистрацию",
+        "password_reset": "Смена пароля",
+        "code_sent": "Код отправлен на почту",
+        "auth_cell_open": "Войти по email",
+        "back": "Назад",
+        "close": "Закрыть",
         "username": "Ник",
         "support": "Поддержка",
         "history": "История",
@@ -510,11 +589,89 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
+@app.post("/api/auth/email/register/start")
+async def api_email_register_start(payload: EmailRegisterStartRequest):
+    lang = _normalize_lang(payload.language)
+    result = await run_in_threadpool(
+        start_email_registration,
+        payload.email,
+        payload.password,
+        payload.password_confirm,
+        lang,
+    )
+    return result
+
+
+@app.post("/api/auth/email/register/verify")
+async def api_email_register_verify(payload: EmailRegisterVerifyRequest):
+    identity, is_new_user = await run_in_threadpool(
+        verify_email_registration,
+        payload.email,
+        payload.code,
+        _normalize_lang(payload.language),
+    )
+    if is_new_user:
+        record_transaction(
+            identity.internal_user_id,
+            settings.starting_credits,
+            "signup_bonus",
+            "email_welcome_bonus",
+            {"provider": "email"},
+        )
+    return _email_auth_response(identity, is_new_user=is_new_user)
+
+
+@app.post("/api/auth/email/login")
+async def api_email_login(payload: EmailLoginRequest):
+    identity = await run_in_threadpool(login_email_user, payload.email, payload.password)
+    return _email_auth_response(identity)
+
+
+@app.post("/api/auth/email/password-reset/request")
+async def api_email_password_reset_request(
+    email_identity: EmailIdentity = Depends(optional_email_auth),
+):
+    if not email_identity:
+        raise HTTPException(status_code=401, detail="Email authentication is required")
+    lang = email_identity.language
+    return await run_in_threadpool(request_password_reset, email_identity, lang)
+
+
+@app.post("/api/auth/email/password-reset/confirm")
+async def api_email_password_reset_confirm(
+    payload: EmailPasswordResetConfirmRequest,
+    email_identity: EmailIdentity = Depends(optional_email_auth),
+):
+    if not email_identity:
+        raise HTTPException(status_code=401, detail="Email authentication is required")
+    identity = await run_in_threadpool(
+        confirm_password_reset,
+        email_identity,
+        payload.code,
+        payload.new_password,
+        payload.password_confirm,
+    )
+    return {"success": True, "message": "Password updated", "profile": {
+        "provider": "email",
+        "provider_user_id": identity.user_id,
+        "username": identity.username,
+        "language": identity.language,
+    }}
+
+
 @app.get("/api/profile")
 async def profile(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
+    if email_identity:
+        return {
+            "provider": "email",
+            "provider_user_id": email_identity.user_id,
+            "username": email_identity.username,
+            "language": email_identity.language,
+        }
     if max_identity:
         return {
             "provider": "max",
@@ -541,8 +698,9 @@ async def profile(
 async def balance(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     return {"balance": get_balance(user_id)}
 
 
@@ -553,8 +711,9 @@ async def api_request_history(
     module: str = Query(default=""),
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     rows = db.list_request_history(user_id=user_id, limit=limit, offset=offset, module=module.strip() or None)
     items = []
     for row in rows:
@@ -572,8 +731,9 @@ async def api_create_support_ticket(
     payload: SupportCreateTicketRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     ticket_id = db.create_support_ticket(
         user_id=user_id,
         subject=payload.subject.strip(),
@@ -586,8 +746,9 @@ async def api_create_support_ticket(
 async def api_list_support_tickets(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     rows = db.list_support_tickets_for_user(user_id=user_id)
     return {"success": True, "tickets": [dict(row) for row in rows]}
 
@@ -597,8 +758,9 @@ async def api_support_ticket_details(
     ticket_id: int,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     ticket = db.get_support_ticket(ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -614,8 +776,9 @@ async def api_support_ticket_add_message(
     payload: SupportAddMessageRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     ticket = db.get_support_ticket(ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -629,7 +792,10 @@ async def api_support_ticket_add_message(
 def _require_authenticated_user(
     max_identity: MaxIdentity | None,
     telegram_identity: TelegramIdentity | None,
+    email_identity: EmailIdentity | None = None,
 ) -> tuple[int, str]:
+    if email_identity:
+        return email_identity.internal_user_id, "email"
     if max_identity:
         return max_identity.internal_user_id, "max"
     if telegram_identity:
@@ -637,14 +803,12 @@ def _require_authenticated_user(
     raise HTTPException(status_code=401, detail="Authentication is required")
 
 
-def _require_admin_user(
-    max_identity: MaxIdentity | None,
-    telegram_identity: TelegramIdentity | None,
-) -> int:
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
-    if not db.is_user_admin(user_id):
+def _require_admin_email_user(email_identity: EmailIdentity | None) -> int:
+    if not email_identity:
+        raise HTTPException(status_code=401, detail="Admin access requires email authentication")
+    if not db.is_user_admin(email_identity.internal_user_id):
         raise HTTPException(status_code=403, detail="Admin access denied")
-    return user_id
+    return email_identity.internal_user_id
 
 
 @app.get("/api/payments/packages")
@@ -657,8 +821,9 @@ async def api_create_yookassa_payment(
     payload: YooKassaCreatePaymentRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     result = await run_in_threadpool(payments.create_payment, user_id, payload.package_id, payload.receipt_email)
     return {"success": True, **result, "balance": get_balance(user_id)}
 
@@ -668,8 +833,9 @@ async def api_check_yookassa_payment(
     payment_id: str,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     result = await run_in_threadpool(payments.check_payment, payment_id, user_id)
     return {"success": True, **result}
 
@@ -678,8 +844,9 @@ async def api_check_yookassa_payment(
 async def api_payments_history(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     result = await run_in_threadpool(payments.list_user_payments, user_id)
     return {"success": True, "payments": result, "balance": get_balance(user_id)}
 
@@ -689,8 +856,9 @@ async def api_cancel_yookassa_payment(
     payment_id: str,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     result = await run_in_threadpool(payments.cancel_payment, payment_id, user_id)
     return {"success": True, **result}
 
@@ -699,8 +867,9 @@ async def api_cancel_yookassa_payment(
 async def api_sync_pending_yookassa_payments(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     synced = await run_in_threadpool(payments.sync_pending_payments, user_id)
     return {"success": True, "synced": synced, "balance": get_balance(user_id)}
 
@@ -709,39 +878,37 @@ async def api_sync_pending_yookassa_payments(
 async def api_admin_stats_overview(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _admin_user_id = _require_admin_user(max_identity, telegram_identity)
+    _admin_user_id = _require_admin_email_user(email_identity)
     return {"success": True, **db.get_admin_overview_stats()}
 
 
 @app.get("/api/admin/me")
 async def api_admin_me(
-    max_identity: MaxIdentity | None = Depends(optional_max_auth),
-    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    try:
-        user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
-        return {"is_admin": db.is_user_admin(user_id)}
-    except HTTPException:
+    if not email_identity:
         return {"is_admin": False}
+    return {"is_admin": db.is_user_admin(email_identity.internal_user_id)}
 
 
 @app.get("/api/admin/stats/modules")
 async def api_admin_stats_modules(
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _admin_user_id = _require_admin_user(max_identity, telegram_identity)
+    _admin_user_id = _require_admin_email_user(email_identity)
     return {"success": True, "modules": [dict(row) for row in db.get_admin_module_stats()]}
 
 
 @app.get("/api/admin/support/tickets")
 async def api_admin_support_tickets(
-    max_identity: MaxIdentity | None = Depends(optional_max_auth),
-    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
     status: str = Query(default=""),
 ):
-    _admin_user_id = _require_admin_user(max_identity, telegram_identity)
+    _admin_user_id = _require_admin_email_user(email_identity)
     rows = db.list_support_tickets_admin(status=status.strip() or None)
     return {"success": True, "tickets": [dict(row) for row in rows]}
 
@@ -751,8 +918,9 @@ async def api_admin_support_ticket_details(
     ticket_id: int,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _admin_user_id = _require_admin_user(max_identity, telegram_identity)
+    _admin_user_id = _require_admin_email_user(email_identity)
     ticket = db.get_support_ticket(ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -765,9 +933,10 @@ async def api_sonnik(
     payload: SonnikRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
-    language = max_identity.language if max_identity else telegram_identity.language
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    language = _resolve_language(email_identity, max_identity, telegram_identity)
     charge(user_id, settings.cost_sonnik, "sonnik", {"module": "sonnik"})
     try:
         interpretation = sonnik.interpret_dream(payload.dream_text, language)
@@ -787,8 +956,9 @@ async def api_numerology(
     payload: NumerologyRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     charge(user_id, settings.cost_numerology, "numerology", {"module": "numerology"})
     try:
         report_payload = numerology.generate_web_report(payload.full_name, payload.birth_date)
@@ -824,8 +994,9 @@ async def api_numerology_report(
     report_id: int,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     row = db.get_html_report(report_id=report_id, user_id=user_id)
     if not row:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -846,9 +1017,10 @@ async def api_sovmestimost_names(
     payload: SovmestimostNamesRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
-    language = max_identity.language if max_identity else telegram_identity.language
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    language = _resolve_language(email_identity, max_identity, telegram_identity)
     charge(user_id, settings.cost_sovmestimost, "sovmestimost_names", {"module": "sovmestimost"})
     try:
         result = compatibility.by_names(payload.name1, payload.name2, language)
@@ -878,9 +1050,10 @@ async def api_sovmestimost_names_dates(
     payload: SovmestimostNamesDatesRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity)
-    language = max_identity.language if max_identity else telegram_identity.language
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    language = _resolve_language(email_identity, max_identity, telegram_identity)
     charge(
         user_id,
         settings.cost_sovmestimost,

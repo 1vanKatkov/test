@@ -22,6 +22,30 @@ class SovmestimostNamesDatesRequest(BaseModel):
     date2: str = Field(min_length=8, max_length=10)
 
 
+class EmailRegisterStartRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+    password_confirm: str = Field(min_length=8, max_length=128)
+    language: str = Field(default="ru", max_length=8)
+
+
+class EmailRegisterVerifyRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    code: str = Field(min_length=6, max_length=6)
+    language: str = Field(default="ru", max_length=8)
+
+
+class EmailLoginRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class EmailPasswordResetConfirmRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=8, max_length=128)
+    password_confirm: str = Field(min_length=8, max_length=128)
+
+
 class TelegramVerifyRequest(BaseModel):
     init_data: str = Field(min_length=20, max_length=8000)
 

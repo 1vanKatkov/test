@@ -666,6 +666,32 @@ button {
   gap: 10px;
 }
 
+.auth-modal-card {
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-tab {
+  flex: 1;
+  border: 1px solid #2f3c66;
+  background: #111a34;
+  color: #dbe6ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-tab.is-active {
+  border-color: #5f7cff;
+  background: #1a2b57;
+}
+
 .compact-actions {
   margin-top: 10px;
   display: flex;
@@ -711,6 +737,53 @@ button {
   margin-top: 8px;
   display: flex;
   justify-content: flex-end;
+}
+
+@media (min-width: 481px) and (max-width: 767px) {
+  .mobile-client-shell .topbar-inner,
+  .mobile-client {
+    max-width: min(640px, 92vw);
+  }
+
+  .icon-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-client-shell .topbar-inner,
+  .mobile-client {
+    max-width: min(960px, 92vw);
+  }
+
+  .icon-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .modal-card,
+  .auth-modal-card {
+    width: min(520px, 100%);
+  }
+
+  .auth-modal-card .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-modal-card .form-grid label:last-of-type,
+  .auth-modal-card .form-grid button,
+  .auth-modal-card .form-grid .muted,
+  .auth-modal-card .form-grid pre {
+    grid-column: 1 / -1;
+  }
+
+  .compact-actions {
+    justify-content: center;
+  }
+
+  .compact-action-btn {
+    max-width: none;
+    min-width: 180px;
+  }
 }
 
 @media (max-width: 960px) {

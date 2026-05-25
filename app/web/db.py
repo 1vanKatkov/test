@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from config import settings
 
@@ -152,6 +153,24 @@ class Database:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_support_messages_ticket_id ON support_messages(ticket_id)")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS email_verification_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT NOT NULL,
+                    purpose TEXT NOT NULL,
+                    code_hash TEXT NOT NULL,
+                    payload_json TEXT NOT NULL DEFAULT '{}',
+                    expires_at TEXT NOT NULL,
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(email, purpose)
+                )
+                """
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_email_verification_email_purpose ON email_verification_codes(email, purpose)"
+            )
 
     def _ensure_column(self, conn: sqlite3.Connection, table_name: str, column_name: str, column_def: str) -> None:
         columns = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
@@ -206,6 +225,64 @@ class Database:
             return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         finally:
             conn.close()
+
+    def upsert_email_verification(
+        self,
+        email: str,
+        purpose: str,
+        code_hash: str,
+        payload: dict[str, Any],
+        expires_at: str,
+    ) -> None:
+        now = self._now()
+        payload_json = json.dumps(payload, ensure_ascii=False)
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO email_verification_codes
+                    (email, purpose, code_hash, payload_json, expires_at, attempts, created_at)
+                VALUES (?, ?, ?, ?, ?, 0, ?)
+                ON CONFLICT(email, purpose) DO UPDATE SET
+                    code_hash = excluded.code_hash,
+                    payload_json = excluded.payload_json,
+                    expires_at = excluded.expires_at,
+                    attempts = 0,
+                    created_at = excluded.created_at
+                """,
+                (email, purpose, code_hash, payload_json, expires_at, now),
+            )
+
+    def get_email_verification(self, email: str, purpose: str) -> Optional[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                "SELECT * FROM email_verification_codes WHERE email = ? AND purpose = ?",
+                (email, purpose),
+            ).fetchone()
+        finally:
+            conn.close()
+
+    def increment_email_verification_attempts(self, verification_id: int) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                "UPDATE email_verification_codes SET attempts = attempts + 1 WHERE id = ?",
+                (verification_id,),
+            )
+
+    def delete_email_verification(self, email: str, purpose: str) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                "DELETE FROM email_verification_codes WHERE email = ? AND purpose = ?",
+                (email, purpose),
+            )
+
+    def update_user_password_hash(self, user_id: int, password_hash: str) -> None:
+        now = self._now()
+        with self.transaction() as conn:
+            conn.execute(
+                "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                (password_hash, now, user_id),
+            )
 
     def get_user_by_provider(self, provider: str, provider_user_id: str) -> Optional[sqlite3.Row]:
         conn = self.connect()
