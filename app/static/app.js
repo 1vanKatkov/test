@@ -357,8 +357,34 @@ function applyEmailAuthResult(result) {
   updateAdminTileVisibility().catch(() => {});
 }
 
+function resolveApiUrl(path) {
+  const base = (document.body?.dataset?.apiBase || "").replace(/\/$/, "");
+  if (!path.startsWith("/")) {
+    return `${base}/${path}`;
+  }
+  return `${base}${path}`;
+}
+
+function formatApiError(data, rawText, status, url) {
+  if (data?.error) {
+    return String(data.error);
+  }
+  const detail = data?.detail;
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail) && detail.length) {
+    return detail.map((item) => item.msg || JSON.stringify(item)).join("; ");
+  }
+  if (rawText) {
+    return rawText;
+  }
+  return `${i18n.requestError} (HTTP ${status}, ${url})`;
+}
+
 async function apiRequest(url, method, bodyObj) {
-  const response = await fetch(url, {
+  const requestUrl = resolveApiUrl(url);
+  const response = await fetch(requestUrl, {
     method,
     headers: getAuthHeaders(),
     credentials: "same-origin",
@@ -371,12 +397,18 @@ async function apiRequest(url, method, bodyObj) {
       data = JSON.parse(rawText);
     } catch {
       if (!response.ok) {
-        throw new Error(rawText || i18n.requestError);
+        throw new Error(formatApiError(null, rawText, response.status, requestUrl));
       }
     }
   }
   if (!response.ok) {
-    throw new Error((data && (data.error || data.detail)) || rawText || i18n.requestError);
+    const message = formatApiError(data, rawText, response.status, requestUrl);
+    if (response.status === 404) {
+      throw new Error(
+        `${message}. API not found — update server (git pull) or fix nginx proxy for /api/. Try ${requestUrl}`,
+      );
+    }
+    throw new Error(message);
   }
   return data || {};
 }

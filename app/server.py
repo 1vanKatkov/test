@@ -644,9 +644,22 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
+API_BUILD_ID = "74622b9-email-pages-v2"
+
+
+@app.get("/api/health")
+async def api_health():
+    return {
+        "ok": True,
+        "build": API_BUILD_ID,
+        "email_auth": True,
+    }
+
+
 @app.get("/api/auth/email/health")
 async def api_email_health():
     return {
+        "build": API_BUILD_ID,
         "smtp_configured": bool(settings.smtp_host and settings.smtp_from),
         "smtp_host_set": bool(settings.smtp_host),
         "smtp_from_set": bool(settings.smtp_from),
@@ -657,6 +670,7 @@ async def api_email_health():
     }
 
 
+@app.post("/api/auth/email/register")
 @app.post("/api/auth/email/register/start")
 async def api_email_register_start(payload: EmailRegisterStartRequest):
     lang = _normalize_lang(payload.language)

@@ -9,6 +9,7 @@
 <body
   class="app-shell mobile-client-shell auth-page"
   data-page="login"
+  data-api-base=""
   data-lang="{{ lang }}"
 >
   <header class="app-topbar client-topbar">
@@ -24,7 +25,7 @@
   <main class="mobile-client">
     <section class="card">
       <h2>{{ t.login }}</h2>
-      <form id="email-login-form" class="form-grid">
+      <form id="email-login-form" class="form-grid" method="post" action="#">
         <label>{{ t.email }} <input id="login-email" type="email" autocomplete="email" required /></label>
         <label>{{ t.password }} <input id="login-password" type="password" autocomplete="current-password" required minlength="8" /></label>
         <button type="submit" class="primary-btn">{{ t.login }}</button>
@@ -37,6 +38,6 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=6400704"></script>
+  <script defer src="/static/app.js?v=74622b9v2"></script>
 </body>
 </html>

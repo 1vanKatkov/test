@@ -9,6 +9,7 @@
 <body
   class="app-shell mobile-client-shell auth-page"
   data-page="register"
+  data-api-base=""
   data-lang="{{ lang }}"
 >
   <header class="app-topbar client-topbar">
@@ -25,7 +26,7 @@
     <section class="card">
       <h2>{{ t.register }}</h2>
       <p class="muted">{{ t.no_account }}</p>
-      <form id="email-register-form" class="form-grid">
+      <form id="email-register-form" class="form-grid" method="post" action="#">
         <label>{{ t.email }} <input id="register-email" type="email" autocomplete="email" required /></label>
         <label>{{ t.password }} <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
         <label>{{ t.repeat_password }} <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
@@ -39,6 +40,6 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=6400704"></script>
+  <script defer src="/static/app.js?v=74622b9v2"></script>
 </body>
 </html>
