@@ -1,8 +1,15 @@
 const TELEGRAM_INIT_DATA_KEY = "astrolhub.telegramInitData";
 const TELEGRAM_AUTH_TOKEN_KEY = "astrolhub.telegramAuthToken";
 
+if (window.Telegram && window.Telegram.WebApp) {
+  window.Telegram.WebApp.ready();
+  if (window.Telegram.WebApp.expand) {
+    window.Telegram.WebApp.expand();
+  }
+}
+
 const state = {
-  telegramInitData: localStorage.getItem(TELEGRAM_INIT_DATA_KEY) || sessionStorage.getItem(TELEGRAM_INIT_DATA_KEY) || "",
+  telegramInitData: "",
   telegramAuthToken:
     localStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || sessionStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || "",
   lastPaymentId: sessionStorage.getItem("astrolhub.lastPaymentId") || "",
@@ -210,11 +217,9 @@ function persistTelegramInitData(initData) {
   state.telegramInitData = initData || "";
   if (!state.telegramInitData) {
     sessionStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
-    localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
     return;
   }
   sessionStorage.setItem(TELEGRAM_INIT_DATA_KEY, state.telegramInitData);
-  localStorage.setItem(TELEGRAM_INIT_DATA_KEY, state.telegramInitData);
 }
 
 function persistTelegramAuthToken(token) {
@@ -228,8 +233,21 @@ function persistTelegramAuthToken(token) {
   localStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
 }
 
+function isTelegramWebAppContext() {
+  const platform = new URLSearchParams(window.location.search).get("platform");
+  return platform === "telegram" || Boolean(window.Telegram && window.Telegram.WebApp);
+}
+
 function hydrateUiFromCache() {
   const profile = readTimedCache(PROFILE_CACHE_KEY);
+  if (isTelegramWebAppContext() && profile?.provider !== "telegram") {
+    setAuthUsername(i18n.guest);
+    const balance = readTimedCache(BALANCE_CACHE_KEY);
+    if (typeof balance === "number") {
+      setBalance(balance);
+    }
+    return;
+  }
   state.profileProvider = profile?.provider || "guest";
   if (profile?.provider === "max") {
     setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
@@ -261,6 +279,7 @@ async function apiRequest(url, method, bodyObj) {
   const response = await fetch(url, {
     method,
     headers: getAuthHeaders(),
+    credentials: "same-origin",
     body: bodyObj ? JSON.stringify(bodyObj) : undefined,
   });
   const rawText = await response.text();
@@ -335,42 +354,75 @@ async function verifyTelegramUsernameLinkFromQuery() {
   }
 }
 
+function readTelegramInitData() {
+  if (window.Telegram && window.Telegram.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    if (tg.initData) {
+      return tg.initData;
+    }
+  }
+  const params = new URLSearchParams(window.location.search);
+  return params.get("tgWebAppData") || "";
+}
+
+async function waitForTelegramInitData(maxAttempts = 50, delayMs = 100) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const initData = readTelegramInitData();
+    if (initData) {
+      return initData;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return "";
+}
+
 async function autoVerifyTelegram() {
-  async function waitForTelegramInitData(maxAttempts = 20, delayMs = 120) {
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const initData = tg.initData || "";
-        if (initData) {
-          return initData;
+  const initData = await waitForTelegramInitData();
+  if (!initData) {
+    return false;
+  }
+  persistTelegramInitData(initData);
+
+  try {
+    const response = await fetch("/api/auth/telegram/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ init_data: initData }),
+    });
+    const rawText = await response.text();
+    let result = null;
+    if (rawText) {
+      try {
+        result = JSON.parse(rawText);
+      } catch {
+        if (!response.ok) {
+          throw new Error(rawText || i18n.requestError);
         }
       }
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-    return "";
-  }
-
-  const initData = await waitForTelegramInitData();
-  if (initData) {
-    persistTelegramInitData(initData);
-  }
-  if (state.telegramAuthToken || !state.telegramInitData) {
-    return;
-  }
-  try {
-    const result = await apiRequest("/api/auth/telegram/verify", "POST", {
-      init_data: state.telegramInitData,
-    });
+    if (!response.ok) {
+      const detail = result && (result.detail || result.error);
+      throw new Error(typeof detail === "string" ? detail : i18n.requestError);
+    }
     if (result.token) {
       persistTelegramAuthToken(result.token);
     }
     if (result.profile) {
       saveTimedCache(PROFILE_CACHE_KEY, result.profile);
-      saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+      applyProfileUi(result.profile);
     }
+    if (typeof result.balance === "number") {
+      saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+      setBalance(result.balance);
+    }
+    return true;
   } catch {
     persistTelegramAuthToken("");
+    sessionStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
+    state.telegramInitData = "";
+    return false;
   }
 }
 
@@ -1083,10 +1135,15 @@ async function boot() {
   wireSonnikForm();
   wireNumerologyForm();
   wireCompatibilityForms();
+  localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();
   await verifyTelegramUsernameLinkFromQuery();
-  await autoVerifyTelegram();
-  await loadProfile();
+  const telegramVerified = await autoVerifyTelegram();
+  if (!telegramVerified) {
+    await loadProfile();
+  } else {
+    updateAdminTileVisibility().catch(() => {});
+  }
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();

@@ -25,7 +25,17 @@ class TelegramIdentity:
     init_data: str
 
 
+def _bot_tokens() -> list[str]:
+    tokens: list[str] = []
+    for value in (settings.telegram_bot_token, settings.telegram_bot_token_en):
+        if value and value not in tokens:
+            tokens.append(value)
+    return tokens
+
+
 def _secret() -> str:
+    for bot_token in _bot_tokens():
+        return hashlib.sha256((bot_token + "\nastrolhub_tg_session_v1").encode("utf-8")).hexdigest()
     if settings.max_auth_secret:
         return settings.max_auth_secret
     return "change-me-telegram-auth-secret"
@@ -98,23 +108,26 @@ def _build_data_check_string(data: dict[str, str]) -> str:
 
 
 def _verify_init_data_signature(data: dict[str, str]) -> None:
-    if not settings.telegram_bot_token:
+    bot_tokens = _bot_tokens()
+    if not bot_tokens:
         raise HTTPException(status_code=500, detail="TELEGRAM_BOT_TOKEN is not configured")
 
     data_check_string = _build_data_check_string(data)
-    secret_key = hmac.new(
-        b"WebAppData",
-        settings.telegram_bot_token.encode("utf-8"),
-        hashlib.sha256,
-    ).digest()
-    expected_hash = hmac.new(
-        secret_key,
-        data_check_string.encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
     received_hash = data["hash"]
-    if not hmac.compare_digest(expected_hash, received_hash):
-        raise HTTPException(status_code=401, detail="Telegram initData signature is invalid")
+    for bot_token in bot_tokens:
+        secret_key = hmac.new(
+            b"WebAppData",
+            bot_token.encode("utf-8"),
+            hashlib.sha256,
+        ).digest()
+        expected_hash = hmac.new(
+            secret_key,
+            data_check_string.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        if hmac.compare_digest(expected_hash, received_hash):
+            return
+    raise HTTPException(status_code=401, detail="Telegram initData signature is invalid")
 
 
 def _verify_auth_date(data: dict[str, str]) -> None:

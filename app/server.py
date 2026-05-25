@@ -60,6 +60,10 @@ def _normalize_lang(lang: str = "") -> str:
     return "en" if (lang or "").strip().lower() == "en" else "ru"
 
 
+def _auth_cookie_secure() -> bool:
+    return settings.app_base_url.lower().startswith("https://")
+
+
 def _translations(lang: str) -> dict:
     if lang == "en":
         return {
@@ -427,7 +431,7 @@ async def verify_telegram_auth(payload: TelegramVerifyRequest):
         key="telegram_auth_token",
         value=token,
         httponly=True,
-        secure=False,
+        secure=_auth_cookie_secure(),
         samesite="lax",
         max_age=settings.telegram_auth_ttl_seconds,
         path="/",
@@ -480,7 +484,7 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
         key="telegram_auth_token",
         value=session_token,
         httponly=True,
-        secure=False,
+        secure=_auth_cookie_secure(),
         samesite="lax",
         max_age=settings.telegram_auth_ttl_seconds,
         path="/",
