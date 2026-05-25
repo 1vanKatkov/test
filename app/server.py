@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
-from datetime import date
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -35,7 +34,7 @@ from app.web.schemas import (
     TelegramVerifyRequest,
     YooKassaCreatePaymentRequest,
 )
-from app.web.services import compatibility, lunar, numerology, payments, sonnik
+from app.web.services import compatibility, numerology, payments, sonnik
 from app.web.services.balance import charge, get_balance, record_transaction, refund
 from config import settings
 
@@ -62,6 +61,22 @@ def _normalize_lang(lang: str = "") -> str:
 
 def _auth_cookie_secure() -> bool:
     return settings.app_base_url.lower().startswith("https://")
+
+
+def _auth_cookie_samesite() -> str:
+    return "none" if _auth_cookie_secure() else "lax"
+
+
+def _set_telegram_auth_cookie(response: JSONResponse, token: str) -> None:
+    response.set_cookie(
+        key="telegram_auth_token",
+        value=token,
+        httponly=True,
+        secure=_auth_cookie_secure(),
+        samesite=_auth_cookie_samesite(),
+        max_age=settings.telegram_auth_ttl_seconds,
+        path="/",
+    )
 
 
 def _translations(lang: str) -> dict:
@@ -326,13 +341,9 @@ async def client_support(request: Request, lang: str = Query(default="ru")):
     )
 
 
-@app.get("/client/lunar", response_class=HTMLResponse, include_in_schema=False)
-async def client_lunar(request: Request, lang: str = Query(default="ru")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_lunar.html",
-        context=_client_template_context(request, lang),
-    )
+@app.get("/client/lunar", include_in_schema=False)
+async def client_lunar(lang: str = Query(default="ru")):
+    return RedirectResponse(url=f"/client?lang={lang}", status_code=302)
 
 
 @app.get("/client/numerology/report/{report_id}", response_class=HTMLResponse, include_in_schema=False)
@@ -410,6 +421,22 @@ async def telegram_auth_health():
     return _health()
 
 
+@app.get("/api/auth/telegram/bot-fingerprint")
+async def telegram_bot_fingerprint():
+    import hashlib
+
+    from app.web.auth.telegram_auth import _bot_tokens
+
+    tokens = _bot_tokens()
+    return {
+        "configured": len(tokens) > 0,
+        "fingerprints": [
+            {"index": index, "fingerprint": hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]}
+            for index, token in enumerate(tokens)
+        ],
+    }
+
+
 @app.post("/api/auth/telegram/verify")
 async def verify_telegram_auth(payload: TelegramVerifyRequest):
     identity, is_new_user = resolve_telegram_identity(payload.init_data)
@@ -434,15 +461,7 @@ async def verify_telegram_auth(payload: TelegramVerifyRequest):
         "balance": get_balance(identity.internal_user_id),
     }
     response = JSONResponse(content=response_data)
-    response.set_cookie(
-        key="telegram_auth_token",
-        value=token,
-        httponly=True,
-        secure=_auth_cookie_secure(),
-        samesite="lax",
-        max_age=settings.telegram_auth_ttl_seconds,
-        path="/",
-    )
+    _set_telegram_auth_cookie(response, token)
     return response
 
 
@@ -487,15 +506,7 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
         "balance": get_balance(identity.internal_user_id),
     }
     response = JSONResponse(content=response_data)
-    response.set_cookie(
-        key="telegram_auth_token",
-        value=session_token,
-        httponly=True,
-        secure=_auth_cookie_secure(),
-        samesite="lax",
-        max_age=settings.telegram_auth_ttl_seconds,
-        path="/",
-    )
+    _set_telegram_auth_cookie(response, session_token)
     return response
 
 
@@ -613,17 +624,6 @@ async def api_support_ticket_add_message(
     db.add_support_message(ticket_id=ticket_id, author_user_id=user_id, message_text=payload.message_text.strip())
     messages = db.list_support_messages(ticket_id=ticket_id)
     return {"success": True, "messages": [dict(row) for row in messages]}
-
-
-@app.get("/api/lunar/month")
-async def api_lunar_month(
-    year: int | None = Query(default=None, ge=1970, le=2100),
-    month: int | None = Query(default=None, ge=1, le=12),
-):
-    today = date.today()
-    resolved_year = year or today.year
-    resolved_month = month or today.month
-    return {"success": True, **lunar.get_lunar_month(year=resolved_year, month=resolved_month)}
 
 
 def _require_authenticated_user(

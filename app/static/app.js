@@ -288,6 +288,7 @@ function getAuthHeaders() {
   const headers = { "Content-Type": "application/json" };
   if (state.telegramAuthToken) {
     headers["X-Telegram-Auth-Token"] = state.telegramAuthToken;
+    return headers;
   }
   if (state.telegramInitData) {
     headers["X-Telegram-Init-Data"] = state.telegramInitData;
@@ -386,7 +387,7 @@ function readTelegramInitData() {
   return params.get("tgWebAppData") || "";
 }
 
-async function waitForTelegramInitData(maxAttempts = 50, delayMs = 100) {
+async function waitForTelegramInitData(maxAttempts = 80, delayMs = 100) {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const initData = readTelegramInitData();
     if (initData) {
@@ -445,8 +446,6 @@ async function autoVerifyTelegram() {
     return true;
   } catch (error) {
     persistTelegramAuthToken("");
-    sessionStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
-    state.telegramInitData = "";
     const message = error && error.message ? error.message : i18n.telegramAuthFailed;
     const hint = message.includes("signature") || message.includes("initData")
       ? ` ${i18n.telegramTokenMismatchHint}`
@@ -477,12 +476,17 @@ async function loadProfile() {
     const profile = await apiRequest("/api/profile", "GET");
     saveTimedCache(PROFILE_CACHE_KEY, profile);
     applyProfileUi(profile);
+    if (profile.provider === "telegram") {
+      setTelegramAuthStatus("");
+    }
     updateAdminTileVisibility().catch(() => {});
+    return profile;
   } catch {
     state.profileProvider = "guest";
     setAuthBadge(i18n.guest);
     setAuthUsername(i18n.guest);
     updateAdminTileVisibility().catch(() => {});
+    return null;
   }
 }
 
@@ -1160,7 +1164,6 @@ async function boot() {
   wireRequestHistory();
   wirePaymentsHistoryActions();
   wireSupportForms();
-  wireLunarForm();
   wireAdminEvents();
   wireSonnikForm();
   wireNumerologyForm();
@@ -1168,10 +1171,17 @@ async function boot() {
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();
   await verifyTelegramUsernameLinkFromQuery();
-  const telegramVerified = await autoVerifyTelegram();
-  await loadProfile();
-  if (telegramVerified) {
-    updateAdminTileVisibility().catch(() => {});
+  let telegramVerified = await autoVerifyTelegram();
+  let profile = await loadProfile();
+  if (!telegramVerified && profile?.provider !== "telegram" && state.telegramInitData) {
+    telegramVerified = await autoVerifyTelegram();
+    profile = await loadProfile();
+  }
+  if (profile?.provider !== "telegram" && isTelegramWebAppContext() && state.telegramInitData) {
+    setTelegramAuthStatus(
+      (element("telegram-auth-status")?.textContent || "") ||
+        `${i18n.telegramAuthFailed}. ${i18n.telegramTokenMismatchHint}`,
+    );
   }
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
