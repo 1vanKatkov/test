@@ -34,18 +34,6 @@ class TelegramMintUsernameLinkRequest(BaseModel):
     username: str = Field(min_length=1, max_length=32)
 
 
-class EmailRegisterRequest(BaseModel):
-    email: str = Field(min_length=5, max_length=254)
-    password: str = Field(min_length=6, max_length=128)
-    username: str = Field(default="", max_length=100)
-    language: str = Field(default="ru", max_length=8)
-
-
-class EmailLoginRequest(BaseModel):
-    email: str = Field(min_length=5, max_length=254)
-    password: str = Field(min_length=6, max_length=128)
-
-
 class SupportCreateTicketRequest(BaseModel):
     subject: str = Field(min_length=3, max_length=200)
     message_text: str = Field(min_length=3, max_length=4000)

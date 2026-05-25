@@ -26,8 +26,6 @@ class TelegramIdentity:
 
 
 def _secret() -> str:
-    if settings.email_auth_secret:
-        return settings.email_auth_secret
     if settings.max_auth_secret:
         return settings.max_auth_secret
     return "change-me-telegram-auth-secret"
@@ -180,7 +178,7 @@ def issue_telegram_auth_token(identity: TelegramIdentity) -> str:
     return _encode_token(
         {
             "sub": identity.user_id,
-            "exp": now + settings.email_auth_ttl_seconds,
+            "exp": now + settings.telegram_auth_ttl_seconds,
             "iat": now,
         }
     )
@@ -234,8 +232,7 @@ def issue_telegram_username_link_token(username: str) -> str:
 
 def issue_telegram_username_login_url(username: str) -> str:
     token = issue_telegram_username_link_token(username)
-    base = settings.app_base_url.rstrip("/")
-    return f"{base}/client?{urlencode({'tglink': token})}"
+    return f"{settings.client_base_url}?{urlencode({'tglink': token})}"
 
 
 def resolve_telegram_username_link_to_identity(token: str) -> TelegramIdentity:

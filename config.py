@@ -25,6 +25,14 @@ class Settings:
     app_base_url: str = os.getenv("APP_BASE_URL", "https://example.com").rstrip("/")
     app_title: str = os.getenv("APP_TITLE", "Mini App for Telegram and MAX")
 
+    @property
+    def client_base_url(self) -> str:
+        """Public client route base; APP_BASE_URL must be site origin only (no /client suffix)."""
+        base = self.app_base_url.rstrip("/")
+        if base.endswith("/client"):
+            return base
+        return f"{base}/client"
+
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     telegram_button_text: str = os.getenv("TELEGRAM_BUTTON_TEXT", "Open mini app")
     telegram_bot_token_en: str = os.getenv("TELEGRAM_BOT_TOKEN_EN", "")
@@ -41,13 +49,7 @@ class Settings:
     dev_auth_mock_provider_user_id: str = os.getenv("DEV_AUTH_MOCK_PROVIDER_USER_ID", "dev-bypass-user")
     dev_auth_mock_username: str = os.getenv("DEV_AUTH_MOCK_USERNAME", "Dev Tester")
     dev_auth_mock_language: str = os.getenv("DEV_AUTH_MOCK_LANGUAGE", "ru")
-    email_auth_secret: str = os.getenv("EMAIL_AUTH_SECRET", "")
-    email_auth_ttl_seconds: int = int(os.getenv("EMAIL_AUTH_TTL_SECONDS", "2592000"))
-    seed_admin_email: str = os.getenv("SEED_ADMIN_EMAIL", "")
-    seed_admin_password: str = os.getenv("SEED_ADMIN_PASSWORD", "")
-    seed_user_email: str = os.getenv("SEED_USER_EMAIL", "")
-    seed_user_password: str = os.getenv("SEED_USER_PASSWORD", "")
-    seed_user_name: str = os.getenv("SEED_USER_NAME", "User")
+    telegram_auth_ttl_seconds: int = int(os.getenv("TELEGRAM_AUTH_TTL_SECONDS", os.getenv("EMAIL_AUTH_TTL_SECONDS", "2592000")))
 
     # Web services settings (ported from bots228/max_web_app)
     database_path: str = os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "sonnik_users.db"))

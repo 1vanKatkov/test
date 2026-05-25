@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def build_webapp_url(lang: str) -> str:
     # Open the client route directly to avoid falling back to guest landing.
-    return f"{settings.app_base_url}/client?platform=telegram&lang={lang}"
+    return f"{settings.client_base_url}?platform=telegram&lang={lang}"
 
 
 def _web_login_url_for_user(username: str | None) -> str | None:

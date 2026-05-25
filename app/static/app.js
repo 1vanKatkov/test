@@ -5,7 +5,6 @@ const state = {
   telegramInitData: localStorage.getItem(TELEGRAM_INIT_DATA_KEY) || sessionStorage.getItem(TELEGRAM_INIT_DATA_KEY) || "",
   telegramAuthToken:
     localStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || sessionStorage.getItem(TELEGRAM_AUTH_TOKEN_KEY) || "",
-  emailAuthToken: localStorage.getItem("astrolhub.emailAuthToken") || "",
   lastPaymentId: sessionStorage.getItem("astrolhub.lastPaymentId") || "",
   selectedSupportTicketId: null,
   profileProvider: "guest",
@@ -42,7 +41,6 @@ const i18n = lang === "en"
     maxPrefix: "MAX",
     tgPrefix: "Telegram",
     devBypassPrefix: "Dev bypass",
-    emailPrefix: "Email",
     authSuccess: "Authentication successful",
     loading: "Loading...",
     noHistory: "No request history yet",
@@ -62,12 +60,7 @@ const i18n = lang === "en"
     openReport: "Open report",
     showAnswer: "Show answer",
     hideAnswer: "Hide answer",
-    authCellTitle: "Email authorization",
-    authCellOpen: "Sign in with email",
-    loginViaTelegram: "Log in with Telegram",
-    telegramOnlyMiniApp: "Open this page inside Telegram Mini App to sign in with Telegram.",
     telegramLinkAuthFailed: "Telegram link login failed. The link may be invalid, expired, or the account is unknown.",
-    telegramAuthFailed: "Telegram authorization failed. Try opening from the bot again.",
     close: "Close",
     chooseTicketFirst: "Choose ticket first",
   }
@@ -97,7 +90,6 @@ const i18n = lang === "en"
     maxPrefix: "MAX",
     tgPrefix: "Telegram",
     devBypassPrefix: "Dev bypass",
-    emailPrefix: "Email",
     authSuccess: "Авторизация успешна",
     loading: "Загрузка...",
     noHistory: "История запросов пока пуста",
@@ -117,12 +109,7 @@ const i18n = lang === "en"
     openReport: "Открыть отчет",
     showAnswer: "Показать ответ",
     hideAnswer: "Скрыть ответ",
-    authCellTitle: "Авторизация по email",
-    authCellOpen: "Войти по email",
-    loginViaTelegram: "Войти через Telegram",
-    telegramOnlyMiniApp: "Откройте эту страницу внутри Telegram Mini App, чтобы войти через Telegram.",
     telegramLinkAuthFailed: "Вход по ссылке не удался. Ссылка неверна, срок истёк или такого пользователя нет в системе.",
-    telegramAuthFailed: "Не удалось авторизоваться через Telegram. Попробуйте снова открыть приложение из бота.",
     close: "Закрыть",
     chooseTicketFirst: "Сначала выберите обращение",
   };
@@ -167,41 +154,6 @@ function isSocialAuthorized() {
   return state.profileProvider !== "guest";
 }
 
-function toggleEmailAuthEntry() {
-  const entry = element("email-auth-entry");
-  if (entry) {
-    entry.style.display = isSocialAuthorized() ? "none" : "";
-  }
-}
-
-function setEmailAuthModalOpen(isOpen) {
-  const modal = element("email-auth-modal");
-  if (!modal) {
-    return;
-  }
-  modal.classList.toggle("is-open", isOpen);
-}
-
-function ensureTelegramLoginButton() {
-  const modal = element("email-auth-modal");
-  const authResultNode = element("auth-result");
-  if (!modal || !authResultNode || element("telegram-login-btn")) {
-    return;
-  }
-  const button = document.createElement("button");
-  button.id = "telegram-login-btn";
-  button.type = "button";
-  button.className = "secondary-btn";
-  button.textContent = i18n.loginViaTelegram;
-
-  const firstForm = modal.querySelector("form");
-  if (firstForm && firstForm.parentNode) {
-    firstForm.parentNode.insertBefore(button, firstForm);
-  } else {
-    authResultNode.parentNode?.insertBefore(button, authResultNode);
-  }
-}
-
 function setAdminTileVisible(isVisible) {
   const entry = element("admin-panel-entry");
   const button = element("admin-panel-button");
@@ -216,7 +168,7 @@ async function updateAdminTileVisibility() {
   if (!element("admin-panel-button") || !element("admin-panel-entry")) {
     return;
   }
-  if (state.profileProvider !== "email") {
+  if (state.profileProvider === "guest") {
     setAdminTileVisible(false);
     return;
   }
@@ -285,9 +237,6 @@ function hydrateUiFromCache() {
   } else if (profile?.provider === "telegram") {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
-  } else if (profile?.provider === "email") {
-    setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
-    setAuthUsername(profile.username);
   } else {
     setAuthUsername(i18n.guest);
   }
@@ -295,7 +244,6 @@ function hydrateUiFromCache() {
   if (typeof balance === "number") {
     setBalance(balance);
   }
-  toggleEmailAuthEntry();
 }
 
 function getAuthHeaders() {
@@ -305,9 +253,6 @@ function getAuthHeaders() {
   }
   if (state.telegramInitData) {
     headers["X-Telegram-Init-Data"] = state.telegramInitData;
-  }
-  if (state.emailAuthToken) {
-    headers["X-Email-Auth-Token"] = state.emailAuthToken;
   }
   return headers;
 }
@@ -429,148 +374,33 @@ async function autoVerifyTelegram() {
   }
 }
 
+function applyProfileUi(profile) {
+  state.profileProvider = profile.provider || "guest";
+  if (profile.provider === "max") {
+    setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
+    setAuthUsername(profile.username);
+    return;
+  }
+  if (profile.provider === "telegram") {
+    setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
+    setAuthUsername(profile.username);
+    return;
+  }
+  setAuthBadge(i18n.guest);
+  setAuthUsername(i18n.guest);
+}
+
 async function loadProfile() {
   try {
     const profile = await apiRequest("/api/profile", "GET");
     saveTimedCache(PROFILE_CACHE_KEY, profile);
-    state.profileProvider = profile.provider || "guest";
-    if (profile.provider === "max") {
-      setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
-      setAuthUsername(profile.username);
-      toggleEmailAuthEntry();
-      updateAdminTileVisibility().catch(() => {});
-      return;
-    }
-    if (profile.provider === "telegram") {
-      setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
-      setAuthUsername(profile.username);
-      toggleEmailAuthEntry();
-      updateAdminTileVisibility().catch(() => {});
-      return;
-    }
-    if (profile.provider === "email") {
-      setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
-      setAuthUsername(profile.username);
-      toggleEmailAuthEntry();
-      updateAdminTileVisibility().catch(() => {});
-      return;
-    }
-    setAuthBadge(i18n.guest);
-    setAuthUsername(i18n.guest);
-    toggleEmailAuthEntry();
+    applyProfileUi(profile);
     updateAdminTileVisibility().catch(() => {});
   } catch {
     state.profileProvider = "guest";
     setAuthBadge(i18n.guest);
     setAuthUsername(i18n.guest);
-    toggleEmailAuthEntry();
     updateAdminTileVisibility().catch(() => {});
-  }
-}
-
-function wireEmailAuthForms() {
-  const registerForm = element("email-register-form");
-  if (registerForm) {
-    registerForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      setResult("auth-result", i18n.calculating);
-      try {
-        const result = await apiRequest("/api/auth/email/register", "POST", {
-          email: element("register-email").value.trim(),
-          password: element("register-password").value,
-          username: (element("register-username")?.value || "").trim(),
-          language: lang,
-        });
-        state.emailAuthToken = result.token;
-        localStorage.setItem("astrolhub.emailAuthToken", result.token);
-        setAuthBadge(`${i18n.emailPrefix}: ${result.profile.username}`);
-        setAuthUsername(result.profile.username);
-        state.profileProvider = "email";
-        toggleEmailAuthEntry();
-        updateAdminTileVisibility().catch(() => {});
-        setBalance(result.balance);
-        setResult("auth-result", i18n.authSuccess);
-        setEmailAuthModalOpen(false);
-        window.location.href = `/client?lang=${lang}`;
-      } catch (error) {
-        setResult("auth-result", error.message);
-      }
-    });
-  }
-
-  const loginForm = element("email-login-form");
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      setResult("auth-result", i18n.calculating);
-      try {
-        const result = await apiRequest("/api/auth/email/login", "POST", {
-          email: element("login-email").value.trim(),
-          password: element("login-password").value,
-        });
-        state.emailAuthToken = result.token;
-        localStorage.setItem("astrolhub.emailAuthToken", result.token);
-        setAuthBadge(`${i18n.emailPrefix}: ${result.profile.username}`);
-        setAuthUsername(result.profile.username);
-        state.profileProvider = "email";
-        toggleEmailAuthEntry();
-        updateAdminTileVisibility().catch(() => {});
-        setBalance(result.balance);
-        setResult("auth-result", i18n.authSuccess);
-        setEmailAuthModalOpen(false);
-        window.location.href = `/client?lang=${lang}`;
-      } catch (error) {
-        setResult("auth-result", error.message);
-      }
-    });
-  }
-}
-
-function wireEmailAuthModal() {
-  ensureTelegramLoginButton();
-  document.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    if (target.closest("#open-email-auth-modal")) {
-      setEmailAuthModalOpen(true);
-      return;
-    }
-    if (target.closest("#close-email-auth-modal")) {
-      setEmailAuthModalOpen(false);
-      return;
-    }
-    if (target.closest("#telegram-login-btn")) {
-      if (!(window.Telegram && window.Telegram.WebApp)) {
-        setResult("auth-result", i18n.telegramOnlyMiniApp);
-        return;
-      }
-      setResult("auth-result", i18n.loading);
-      autoVerifyTelegram()
-        .then(() => loadProfile())
-        .then(() => refreshBalance().catch(() => {}))
-        .then(() => {
-          if (state.profileProvider === "telegram") {
-            setResult("auth-result", i18n.authSuccess);
-            setEmailAuthModalOpen(false);
-            window.location.href = `/client?lang=${lang}`;
-            return;
-          }
-          setResult("auth-result", i18n.telegramAuthFailed);
-        })
-        .catch(() => {
-          setResult("auth-result", i18n.telegramAuthFailed);
-        });
-    }
-  });
-  const overlay = element("email-auth-modal");
-  if (overlay) {
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) {
-        setEmailAuthModalOpen(false);
-      }
-    });
   }
 }
 
@@ -1243,9 +1073,8 @@ function wireCompatibilityForms() {
 }
 
 async function boot() {
+  localStorage.removeItem("astrolhub.emailAuthToken");
   wirePaymentForms();
-  wireEmailAuthModal();
-  wireEmailAuthForms();
   wireRequestHistory();
   wirePaymentsHistoryActions();
   wireSupportForms();
