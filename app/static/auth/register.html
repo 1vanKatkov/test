@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astrolhub - Регистрация</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body
+  class="app-shell mobile-client-shell auth-page auth-static-page"
+  data-page="register"
+  data-api-base=""
+  data-lang="ru"
+  data-email-skip-verification="false"
+>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const pageLang = params.get("lang") === "en" ? "en" : "ru";
+      document.body.dataset.lang = pageLang;
+      document.documentElement.lang = pageLang;
+      document.title = pageLang === "en" ? "Astrolhub - Register" : "Astrolhub - Регистрация";
+    })();
+  </script>
+  <header class="app-topbar client-topbar">
+    <div class="topbar-inner">
+      <a class="brand auth-brand-link" href="/client?lang=ru">Astrolhub</a>
+      <div class="user-chip">
+        <a class="auth-username-link" href="/client/profile?lang=ru"><span id="auth-username">Гость</span></a>
+        <span id="header-auth-links" class="header-auth-links">
+          <a class="header-auth-btn auth-login-link" href="/static/auth/login.html?lang=ru">Вход</a>
+          <a class="header-auth-btn header-auth-btn-primary auth-register-link" href="/static/auth/register.html?lang=ru">Регистрация</a>
+        </span>
+        <span class="spark-pill"><span id="header-sparks">-</span> <span class="auth-sparks-label">Искры</span></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="mobile-client">
+    <section class="card">
+      <h2 data-auth-label="registerTitle">Регистрация</h2>
+      <p class="muted" data-auth-label="registerHint">Создайте аккаунт по email</p>
+      <form id="email-register-form" class="form-grid" method="post" action="#">
+        <label><span data-auth-label="email">Email</span> <input id="register-email" type="email" autocomplete="email" required /></label>
+        <label><span data-auth-label="password">Пароль</span> <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
+        <label><span data-auth-label="repeatPassword">Повтор пароля</span> <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
+        <button type="submit" class="primary-btn" id="register-submit-btn" data-auth-label="registerSubmit">Регистрация</button>
+      </form>
+      <p class="muted auth-switch-line">
+        <span data-auth-label="haveAccount">Уже есть аккаунт?</span>
+        <a class="auth-login-link" href="/static/auth/login.html?lang=ru" data-auth-label="goLogin">Войти</a>
+      </p>
+      <pre id="auth-result" class="result"></pre>
+    </section>
+  </main>
+
+  <script defer src="/static/app.js?v=f3aa0cd-auth1"></script>
+</body>
+</html>

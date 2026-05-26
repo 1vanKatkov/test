@@ -382,13 +382,26 @@ async def client_dashboard(request: Request, lang: str = Query(default="ru")):
     )
 
 
-@app.get("/client/register", response_class=HTMLResponse, include_in_schema=False)
-async def client_register(request: Request, lang: str = Query(default="ru")):
+def _render_client_register(request: Request, lang: str):
     return templates.TemplateResponse(
         request=request,
         name="client_register.html",
         context=_client_template_context(request, lang),
     )
+
+
+def _render_client_login(request: Request, lang: str):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_login.html",
+        context=_client_template_context(request, lang),
+    )
+
+
+@app.get("/client/register", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/client/sign-up", response_class=HTMLResponse, include_in_schema=False)
+async def client_register(request: Request, lang: str = Query(default="ru")):
+    return _render_client_register(request, lang)
 
 
 @app.get("/client/register/verify", response_class=HTMLResponse, include_in_schema=False)
@@ -415,12 +428,9 @@ async def client_register_verify(
 
 
 @app.get("/client/login", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/client/sign-in", response_class=HTMLResponse, include_in_schema=False)
 async def client_login(request: Request, lang: str = Query(default="ru")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_login.html",
-        context=_client_template_context(request, lang),
-    )
+    return _render_client_login(request, lang)
 
 
 @app.get("/client/sonnik", response_class=HTMLResponse, include_in_schema=False)
@@ -460,7 +470,16 @@ async def client_topup(request: Request, lang: str = Query(default="ru")):
 
 
 @app.get("/client/profile", response_class=HTMLResponse, include_in_schema=False)
-async def client_profile(request: Request, lang: str = Query(default="ru")):
+async def client_profile(
+    request: Request,
+    lang: str = Query(default="ru"),
+    auth: str = Query(default=""),
+):
+    auth_mode = (auth or "").strip().lower()
+    if auth_mode == "login":
+        return _render_client_login(request, lang)
+    if auth_mode in {"register", "signup"}:
+        return _render_client_register(request, lang)
     return templates.TemplateResponse(
         request=request,
         name="client_profile.html",
@@ -646,7 +665,7 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
-API_BUILD_ID = "74622b9-email-pages-v2"
+API_BUILD_ID = "f3aa0cd-auth-static-v1"
 
 
 @app.get("/api/health")

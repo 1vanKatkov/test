@@ -138,8 +138,113 @@ const i18n = lang === "en"
     chooseTicketFirst: "Сначала выберите обращение",
   };
 
+const authPageCopy = {
+  en: {
+    loginTitle: "Login",
+    registerTitle: "Register",
+    registerHint: "Create an account with email",
+    email: "Email",
+    password: "Password",
+    repeatPassword: "Repeat password",
+    loginSubmit: "Log in",
+    registerSubmit: "Register",
+    sendCode: "Send code",
+    confirmRegistration: "Confirm registration",
+    verifyTitle: "Confirm registration",
+    verificationCode: "Verification code",
+    noAccount: "No account yet?",
+    haveAccount: "Already have an account?",
+    goRegister: "Register",
+    goLogin: "Log in",
+    back: "Back",
+    sparks: "Sparks",
+  },
+  ru: {
+    loginTitle: "Вход",
+    registerTitle: "Регистрация",
+    registerHint: "Создайте аккаунт по email",
+    email: "Email",
+    password: "Пароль",
+    repeatPassword: "Повтор пароля",
+    loginSubmit: "Войти",
+    registerSubmit: "Регистрация",
+    sendCode: "Отправить код",
+    confirmRegistration: "Подтвердить",
+    verifyTitle: "Подтверждение регистрации",
+    verificationCode: "Код из письма",
+    noAccount: "Нет аккаунта?",
+    haveAccount: "Уже есть аккаунт?",
+    goRegister: "Зарегистрироваться",
+    goLogin: "Войти",
+    back: "Назад",
+    sparks: "Искры",
+  },
+};
+
 function element(id) {
   return document.getElementById(id);
+}
+
+function authStaticUrl(page, extraParams = {}) {
+  const paths = {
+    login: "/static/auth/login.html",
+    register: "/static/auth/register.html",
+    verify: "/static/auth/register-verify.html",
+  };
+  const params = new URLSearchParams({ lang, ...extraParams });
+  return `${paths[page]}?${params.toString()}`;
+}
+
+function withLangQuery(url) {
+  if (!url) {
+    return url;
+  }
+  const target = new URL(url, window.location.origin);
+  target.searchParams.set("lang", lang);
+  return `${target.pathname}${target.search}`;
+}
+
+async function initAuthStaticPage() {
+  if (!document.body.classList.contains("auth-static-page")) {
+    return;
+  }
+  const copy = authPageCopy[lang] || authPageCopy.ru;
+  document.querySelectorAll("[data-auth-label]").forEach((node) => {
+    const key = node.dataset.authLabel;
+    if (copy[key]) {
+      node.textContent = copy[key];
+    }
+  });
+  document.querySelectorAll(".auth-sparks-label").forEach((node) => {
+    node.textContent = copy.sparks;
+  });
+  document.querySelectorAll(".auth-brand-link, .auth-username-link, .auth-login-link, .auth-register-link").forEach((link) => {
+    link.setAttribute("href", withLangQuery(link.getAttribute("href")));
+  });
+  const verifyEmail = document.body.dataset.registerEmail || new URLSearchParams(window.location.search).get("email") || "";
+  if (element("verify-email-display")) {
+    element("verify-email-display").textContent = verifyEmail;
+  }
+  const hiddenEmail = element("register-email");
+  if (hiddenEmail) {
+    hiddenEmail.value = verifyEmail;
+  }
+  try {
+    const response = await fetch(resolveApiUrl("/api/auth/email/health"));
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    if (data.email_skip_verification) {
+      document.body.dataset.emailSkipVerification = "true";
+      const submitBtn = element("register-submit-btn");
+      if (submitBtn) {
+        submitBtn.textContent = copy.registerSubmit;
+      }
+    }
+  } catch {
+    // API may be unavailable until the app process is restarted on the server.
+  }
 }
 
 function setResult(id, text) {
@@ -641,7 +746,7 @@ function wireRegisterPage() {
         return;
       }
       const targetEmail = encodeURIComponent(result.email || email);
-      window.location.href = `/client/register/verify?email=${targetEmail}&lang=${lang}`;
+      window.location.href = authStaticUrl("verify", { email: result.email || email });
     } catch (error) {
       setResult("auth-result", error.message);
     }
@@ -1426,6 +1531,7 @@ function wireCompatibilityForms() {
 }
 
 async function boot() {
+  await initAuthStaticPage();
   wirePaymentForms();
   wireAuthPages();
   wirePasswordResetForm();
