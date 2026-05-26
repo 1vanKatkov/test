@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.web.auth.email_auth import (
     EmailIdentity,
+    complete_email_registration,
     confirm_password_reset,
     ensure_seed_accounts,
     has_pending_registration,
@@ -368,6 +369,7 @@ def _client_template_context(request: Request, lang: str) -> dict:
         "t": _translations(page_lang),
         "initial_auth_username": initial_auth_username,
         "initial_auth_provider": initial_auth_provider,
+        "email_skip_verification": settings.email_skip_verification,
     }
 
 
@@ -401,7 +403,7 @@ async def client_register_verify(
         normalized = normalize_email(email)
     except HTTPException:
         return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
-    if not has_pending_registration(normalized):
+    if settings.email_skip_verification or not has_pending_registration(normalized):
         return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
     context = _client_template_context(request, page_lang)
     context["register_email"] = normalized
@@ -667,6 +669,7 @@ async def api_email_health():
         "smtp_port": settings.smtp_port,
         "smtp_use_tls": settings.smtp_use_tls,
         "smtp_use_ssl": settings.smtp_use_ssl,
+        "email_skip_verification": settings.email_skip_verification,
     }
 
 
@@ -674,6 +677,23 @@ async def api_email_health():
 @app.post("/api/auth/email/register/start")
 async def api_email_register_start(payload: EmailRegisterStartRequest):
     lang = _normalize_lang(payload.language)
+    if settings.email_skip_verification:
+        identity, is_new_user = await run_in_threadpool(
+            complete_email_registration,
+            payload.email,
+            payload.password,
+            payload.password_confirm,
+            lang,
+        )
+        if is_new_user:
+            record_transaction(
+                identity.internal_user_id,
+                settings.starting_credits,
+                "signup_bonus",
+                "email_welcome_bonus",
+                {"provider": "email"},
+            )
+        return _email_auth_response(identity, is_new_user=is_new_user)
     result = await run_in_threadpool(
         start_email_registration,
         payload.email,

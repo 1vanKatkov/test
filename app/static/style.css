@@ -565,6 +565,37 @@ button {
   text-decoration: underline;
 }
 
+.header-auth-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #3d4f86;
+  background: #16244a;
+  color: #e8eeff;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-auth-btn:hover {
+  border-color: #5f7cff;
+  color: #fff;
+}
+
+.header-auth-btn-primary {
+  border-color: #5f7cff;
+  background: #2a3f8f;
+}
+
 .spark-pill {
   display: inline-flex;
   align-items: center;

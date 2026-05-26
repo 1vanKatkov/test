@@ -216,13 +216,11 @@ def start_email_registration(email: str, password: str, password_confirm: str, l
     }
 
 
-def verify_email_registration(email: str, code: str, lang: str = "ru") -> tuple[EmailIdentity, bool]:
-    normalized_email = normalize_email(email)
-    payload = _verify_stored_code(normalized_email, "register", code)
-    password_hash = payload.get("password_hash")
-    if not password_hash:
-        raise HTTPException(status_code=400, detail="Registration data is invalid")
-
+def _finalize_email_registration(
+    normalized_email: str,
+    password_hash: str,
+    lang: str = "ru",
+) -> tuple[EmailIdentity, bool]:
     existing = db.get_user_by_provider(provider="email", provider_user_id=normalized_email)
     is_new = not existing or not existing["password_hash"]
     username = normalized_email.split("@", 1)[0]
@@ -245,6 +243,31 @@ def verify_email_registration(email: str, code: str, lang: str = "ru") -> tuple[
         ),
         is_new,
     )
+
+
+def complete_email_registration(
+    email: str,
+    password: str,
+    password_confirm: str,
+    lang: str = "ru",
+) -> tuple[EmailIdentity, bool]:
+    normalized_email = normalize_email(email)
+    _validate_password_pair(password, password_confirm)
+
+    existing = db.get_user_by_provider(provider="email", provider_user_id=normalized_email)
+    if existing and existing["password_hash"]:
+        raise HTTPException(status_code=409, detail="Email is already registered")
+
+    return _finalize_email_registration(normalized_email, _hash_password(password), lang)
+
+
+def verify_email_registration(email: str, code: str, lang: str = "ru") -> tuple[EmailIdentity, bool]:
+    normalized_email = normalize_email(email)
+    payload = _verify_stored_code(normalized_email, "register", code)
+    password_hash = payload.get("password_hash")
+    if not password_hash:
+        raise HTTPException(status_code=400, detail="Registration data is invalid")
+    return _finalize_email_registration(normalized_email, password_hash, lang)
 
 
 def login_email_user(email: str, password: str) -> EmailIdentity:

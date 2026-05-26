@@ -328,9 +328,9 @@ function persistEmailAuthToken(token) {
   }
 }
 
-function toggleEmailAuthEntry() {
-  const entry = element("email-auth-entry");
-  if (!entry) {
+function toggleHeaderAuthLinks() {
+  const links = element("header-auth-links");
+  if (!links) {
     return;
   }
   const hide =
@@ -338,7 +338,15 @@ function toggleEmailAuthEntry() {
     state.profileProvider === "telegram" ||
     state.profileProvider === "max" ||
     state.profileProvider === "email";
-  entry.hidden = hide;
+  links.hidden = hide;
+}
+
+function toggleEmailAuthEntry() {
+  toggleHeaderAuthLinks();
+  const entry = element("email-auth-entry");
+  if (entry) {
+    entry.hidden = true;
+  }
 }
 
 function applyEmailAuthResult(result) {
@@ -626,6 +634,12 @@ function wireRegisterPage() {
         password_confirm: passwordConfirm,
         language: lang,
       });
+      const skipVerify = document.body.dataset.emailSkipVerification === "true";
+      if (skipVerify && result.profile) {
+        applyEmailAuthResult(result);
+        window.location.href = `/client?lang=${lang}`;
+        return;
+      }
       const targetEmail = encodeURIComponent(result.email || email);
       window.location.href = `/client/register/verify?email=${targetEmail}&lang=${lang}`;
     } catch (error) {

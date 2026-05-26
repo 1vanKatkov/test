@@ -16,10 +16,7 @@
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
       <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
-      <div class="user-chip">
-        <a class="auth-username-link" href="/client/profile?lang={{ lang }}"><span id="auth-username">{{ initial_auth_username }}</span></a>
-        <span class="spark-pill"><span id="header-sparks">-</span> {{ t.sparks }}</span>
-      </div>
+      {% include "partials/client_user_chip.html" %}
     </div>
   </header>
 

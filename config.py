@@ -57,6 +57,7 @@ class Settings:
     email_code_max_attempts: int = int(os.getenv("EMAIL_CODE_MAX_ATTEMPTS", "5"))
     email_code_resend_cooldown_seconds: int = int(os.getenv("EMAIL_CODE_RESEND_COOLDOWN_SECONDS", "60"))
     email_code_pepper: str = os.getenv("EMAIL_CODE_PEPPER", "")
+    email_skip_verification: bool = _bool_from_env("EMAIL_SKIP_VERIFICATION", False)
     smtp_host: str = os.getenv("SMTP_HOST", "").strip()
     smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
     smtp_use_tls: bool = _bool_from_env("SMTP_USE_TLS", True)
