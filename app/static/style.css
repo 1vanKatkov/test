@@ -614,6 +614,10 @@ button {
   gap: 6px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .header-auth-btn {
   display: inline-flex;
   align-items: center;
