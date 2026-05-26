@@ -80,6 +80,7 @@ const i18n = lang === "en"
     telegramTokenMismatchHint: "Check TELEGRAM_BOT_TOKEN on the server matches your bot token.",
     close: "Close",
     chooseTicketFirst: "Choose ticket first",
+    logout: "Log out",
   }
   : {
     guest: "Гость",
@@ -136,6 +137,7 @@ const i18n = lang === "en"
     telegramTokenMismatchHint: "На сервере TELEGRAM_BOT_TOKEN должен совпадать с токеном бота.",
     close: "Закрыть",
     chooseTicketFirst: "Сначала выберите обращение",
+    logout: "Выйти",
   };
 
 const authPageCopy = {
@@ -241,6 +243,7 @@ async function initAuthStaticPage() {
   try {
     const response = await fetch(resolveApiUrl("/api/auth/email/health"));
     if (!response.ok) {
+      toggleHeaderAuthLinks();
       return;
     }
     const data = await response.json();
@@ -254,6 +257,7 @@ async function initAuthStaticPage() {
   } catch {
     // Health endpoint may be missing until the server process is restarted.
   }
+  toggleHeaderAuthLinks();
 }
 
 function setResult(id, text) {
@@ -290,6 +294,24 @@ function setAuthUsername(username) {
 
 function isSocialAuthorized() {
   return state.profileProvider !== "guest";
+}
+
+function isLoggedIn() {
+  return (
+    state.profileProvider === "email" ||
+    state.profileProvider === "telegram" ||
+    state.profileProvider === "max" ||
+    Boolean(state.emailAuthToken) ||
+    Boolean(state.telegramAuthToken)
+  );
+}
+
+function isEmailSkipVerificationEnabled() {
+  return document.body?.dataset?.emailSkipVerification === "true";
+}
+
+function shouldShowPasswordReset() {
+  return state.profileProvider === "email" && !isEmailSkipVerificationEnabled();
 }
 
 function setAdminTileVisible(isVisible) {
@@ -411,6 +433,8 @@ function hydrateUiFromCache() {
     setAuthUsername(i18n.guest);
   }
   toggleEmailAuthEntry();
+  toggleLogoutPanel(isLoggedIn());
+  togglePasswordResetPanel(shouldShowPasswordReset());
   const balance = readTimedCache(BALANCE_CACHE_KEY);
   if (typeof balance === "number") {
     setBalance(balance);
@@ -447,12 +471,14 @@ function toggleHeaderAuthLinks() {
   if (!links) {
     return;
   }
-  const hide =
-    isTelegramWebAppContext() ||
-    state.profileProvider === "telegram" ||
-    state.profileProvider === "max" ||
-    state.profileProvider === "email";
-  links.hidden = hide;
+  links.hidden = isTelegramWebAppContext() || isLoggedIn();
+}
+
+function toggleLogoutPanel(isVisible) {
+  const panel = element("profile-logout-panel");
+  if (panel) {
+    panel.hidden = !isVisible;
+  }
 }
 
 function toggleEmailAuthEntry() {
@@ -676,6 +702,7 @@ function applyProfileUi(profile) {
     setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
     toggleEmailAuthEntry();
+    toggleLogoutPanel(true);
     togglePasswordResetPanel(false);
     return;
   }
@@ -683,6 +710,7 @@ function applyProfileUi(profile) {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
     toggleEmailAuthEntry();
+    toggleLogoutPanel(true);
     togglePasswordResetPanel(false);
     return;
   }
@@ -690,12 +718,14 @@ function applyProfileUi(profile) {
     setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
     toggleEmailAuthEntry();
-    togglePasswordResetPanel(true);
+    toggleLogoutPanel(true);
+    togglePasswordResetPanel(shouldShowPasswordReset());
     return;
   }
   setAuthBadge(i18n.guest);
   setAuthUsername(i18n.guest);
   toggleEmailAuthEntry();
+  toggleLogoutPanel(false);
   togglePasswordResetPanel(false);
 }
 
@@ -721,10 +751,47 @@ async function loadProfile() {
     setAuthBadge(i18n.guest);
     setAuthUsername(i18n.guest);
     toggleEmailAuthEntry();
+    toggleLogoutPanel(false);
     togglePasswordResetPanel(false);
     updateAdminTileVisibility().catch(() => {});
     return null;
   }
+}
+
+async function logout() {
+  try {
+    await apiRequest("/api/auth/logout", "POST");
+  } catch {
+    // Clear local session even if the request fails.
+  }
+  persistEmailAuthToken("");
+  persistTelegramAuthToken("");
+  persistTelegramInitData("");
+  sessionStorage.removeItem(PROFILE_CACHE_KEY);
+  sessionStorage.removeItem(BALANCE_CACHE_KEY);
+  state.profileProvider = "guest";
+  setAuthBadge(i18n.guest);
+  setAuthUsername(i18n.guest);
+  toggleHeaderAuthLinks();
+  toggleLogoutPanel(false);
+  togglePasswordResetPanel(false);
+  setAdminTileVisible(false);
+  window.location.href = `/client?lang=${lang}`;
+}
+
+function wireLogoutButton() {
+  const button = element("profile-logout-btn");
+  if (!button) {
+    return;
+  }
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      await logout();
+    } finally {
+      button.disabled = false;
+    }
+  });
 }
 
 function wireRegisterPage() {
@@ -1547,8 +1614,10 @@ function wireCompatibilityForms() {
 
 async function boot() {
   await initAuthStaticPage();
+  toggleHeaderAuthLinks();
   wirePaymentForms();
   wireAuthPages();
+  wireLogoutButton();
   wirePasswordResetForm();
   wireRequestHistory();
   wirePaymentsHistoryActions();

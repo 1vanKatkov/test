@@ -112,6 +112,13 @@ def _set_email_auth_cookie(response: JSONResponse, token: str) -> None:
     )
 
 
+def _clear_auth_cookies(response: JSONResponse) -> None:
+    secure = _auth_cookie_secure()
+    samesite = _auth_cookie_samesite()
+    for key in ("email_auth_token", "telegram_auth_token"):
+        response.delete_cookie(key=key, path="/", secure=secure, samesite=samesite)
+
+
 def _email_auth_response(identity: EmailIdentity, is_new_user: bool = False) -> JSONResponse:
     token = issue_email_auth_token(identity)
     response_data = {
@@ -215,6 +222,7 @@ def _translations(lang: str) -> dict:
             "month": "Month",
             "year": "Year",
             "load": "Load",
+            "logout": "Log out",
         }
     return {
         "cabinet": "Кабинет",
@@ -284,6 +292,7 @@ def _translations(lang: str) -> dict:
         "month": "Месяц",
         "year": "Год",
         "load": "Загрузить",
+        "logout": "Выйти",
     }
 
 
@@ -670,7 +679,7 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
-API_BUILD_ID = "f3aa0cd-auth-static-v1"
+API_BUILD_ID = "2f3b7d9-profile-auth-v1"
 
 
 @app.get("/api/health")
@@ -756,6 +765,13 @@ async def api_email_register_verify(payload: EmailRegisterVerifyRequest):
 async def api_email_login(payload: EmailLoginRequest):
     identity = await run_in_threadpool(login_email_user, payload.email, payload.password)
     return _email_auth_response(identity)
+
+
+@app.post("/api/auth/logout")
+async def api_logout():
+    response = JSONResponse(content={"success": True})
+    _clear_auth_cookies(response)
+    return response
 
 
 @app.post("/api/auth/email/password-reset/request")

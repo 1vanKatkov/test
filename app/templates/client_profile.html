@@ -12,6 +12,7 @@
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
+  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
@@ -24,6 +25,10 @@
     <section class="card compact-card">
       <h2>{{ t.profile }}</h2>
       <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+    </section>
+
+    <section class="card" id="profile-logout-panel" hidden>
+      <button type="button" id="profile-logout-btn" class="secondary-btn">{{ t.logout }}</button>
     </section>
 
     <section class="card" id="email-password-reset-panel" hidden>
@@ -46,6 +51,6 @@
 
   </main>
 
-  <script defer src="/static/app.js?v=6400704"></script>
+  <script defer src="/static/app.js?v=2f3b7d9v2"></script>
 </body>
 </html>

@@ -231,8 +231,6 @@ def _finalize_email_registration(
         language=lang or "ru",
     )
     db.update_user_password_hash(int(user["id"]), password_hash)
-    if is_new and db.count_admin_users() == 0:
-        db.set_user_role(int(user["id"]), "admin")
 
     return (
         EmailIdentity(
