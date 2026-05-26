@@ -530,6 +530,37 @@ class Database:
         finally:
             conn.close()
 
+    def search_users(self, query: str, limit: int = 20) -> list[sqlite3.Row]:
+        raw = (query or "").strip()
+        if not raw:
+            return []
+        conn = self.connect()
+        try:
+            if raw.isdigit():
+                return conn.execute(
+                    """
+                    SELECT id, provider, provider_user_id, username, credits, role
+                    FROM users
+                    WHERE id = ?
+                    LIMIT ?
+                    """,
+                    (int(raw), limit),
+                ).fetchall()
+            pattern = f"%{raw}%"
+            return conn.execute(
+                """
+                SELECT id, provider, provider_user_id, username, credits, role
+                FROM users
+                WHERE provider_user_id LIKE ?
+                   OR lower(COALESCE(username, '')) LIKE lower(?)
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (pattern, pattern, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
     def get_admin_module_stats(self) -> list[sqlite3.Row]:
         conn = self.connect()
         try:

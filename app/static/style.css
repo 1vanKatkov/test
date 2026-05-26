@@ -565,6 +565,11 @@ button {
   text-decoration: underline;
 }
 
+.profile-logout-btn {
+  margin-top: 12px;
+  width: 100%;
+}
+
 .header-auth-links {
   display: inline-flex;
   align-items: center;

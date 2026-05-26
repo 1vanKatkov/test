@@ -76,3 +76,9 @@ class YooKassaCreatePaymentRequest(BaseModel):
     package_id: str = Field(min_length=3, max_length=64)
     receipt_email: str = Field(min_length=5, max_length=254)
 
+
+class AdminAdjustCreditsRequest(BaseModel):
+    user_id: int = Field(gt=0)
+    amount: int = Field(ge=-100000, le=100000)
+    reason: str = Field(default="admin_adjustment", min_length=1, max_length=200)
+

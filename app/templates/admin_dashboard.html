@@ -27,6 +27,26 @@
     </section>
 
     <section class="card">
+      <h2>{{ t.admin_users }}</h2>
+      <form id="admin-credits-form" class="form-grid">
+        <label>{{ t.admin_user_lookup }}
+          <input id="admin-user-query" type="text" autocomplete="off" required />
+        </label>
+        <button type="button" id="admin-user-search-btn" class="secondary-btn">{{ t.admin_find_user }}</button>
+        <div id="admin-user-preview" class="muted"></div>
+        <input type="hidden" id="admin-selected-user-id" value="" />
+        <label>{{ t.admin_sparks_amount }}
+          <input id="admin-credits-amount" type="number" step="1" required />
+        </label>
+        <label>{{ t.admin_sparks_reason }}
+          <input id="admin-credits-reason" type="text" value="admin_adjustment" />
+        </label>
+        <button type="submit" class="primary-btn">{{ t.admin_apply_credits }}</button>
+      </form>
+      <pre id="admin-credits-result" class="result"></pre>
+    </section>
+
+    <section class="card">
       <h2>Overview</h2>
       <div id="admin-overview" class="history-list"></div>
     </section>
@@ -44,6 +64,6 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=2f3b7d9v2"></script>
+  <script defer src="/static/app.js?v=e4ae1d9-admin-v1"></script>
 </body>
 </html>

@@ -433,8 +433,7 @@ function hydrateUiFromCache() {
     setAuthUsername(i18n.guest);
   }
   toggleEmailAuthEntry();
-  toggleLogoutPanel(isLoggedIn());
-  togglePasswordResetPanel(shouldShowPasswordReset());
+  syncAuthChrome(profile);
   const balance = readTimedCache(BALANCE_CACHE_KEY);
   if (typeof balance === "number") {
     setBalance(balance);
@@ -474,10 +473,27 @@ function toggleHeaderAuthLinks() {
   links.hidden = isTelegramWebAppContext() || isLoggedIn();
 }
 
+function syncAuthChrome(profile) {
+  if (profile?.provider) {
+    state.profileProvider = profile.provider;
+  }
+  const loggedIn = isLoggedIn();
+  toggleHeaderAuthLinks();
+  const logoutBtn = element("profile-logout-btn");
+  if (logoutBtn) {
+    logoutBtn.hidden = !loggedIn;
+  }
+  if (state.profileProvider === "email") {
+    togglePasswordResetPanel(shouldShowPasswordReset());
+  } else {
+    togglePasswordResetPanel(false);
+  }
+}
+
 function toggleLogoutPanel(isVisible) {
-  const panel = element("profile-logout-panel");
-  if (panel) {
-    panel.hidden = !isVisible;
+  const logoutBtn = element("profile-logout-btn");
+  if (logoutBtn) {
+    logoutBtn.hidden = !isVisible;
   }
 }
 
@@ -701,32 +717,24 @@ function applyProfileUi(profile) {
   if (profile.provider === "max") {
     setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
-    toggleEmailAuthEntry();
-    toggleLogoutPanel(true);
-    togglePasswordResetPanel(false);
+    syncAuthChrome(profile);
     return;
   }
   if (profile.provider === "telegram") {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
-    toggleEmailAuthEntry();
-    toggleLogoutPanel(true);
-    togglePasswordResetPanel(false);
+    syncAuthChrome(profile);
     return;
   }
   if (profile.provider === "email") {
     setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
-    toggleEmailAuthEntry();
-    toggleLogoutPanel(true);
-    togglePasswordResetPanel(shouldShowPasswordReset());
+    syncAuthChrome(profile);
     return;
   }
   setAuthBadge(i18n.guest);
   setAuthUsername(i18n.guest);
-  toggleEmailAuthEntry();
-  toggleLogoutPanel(false);
-  togglePasswordResetPanel(false);
+  syncAuthChrome(profile);
 }
 
 function togglePasswordResetPanel(isVisible) {
@@ -751,8 +759,7 @@ async function loadProfile() {
     setAuthBadge(i18n.guest);
     setAuthUsername(i18n.guest);
     toggleEmailAuthEntry();
-    toggleLogoutPanel(false);
-    togglePasswordResetPanel(false);
+    syncAuthChrome(null);
     updateAdminTileVisibility().catch(() => {});
     return null;
   }
@@ -772,9 +779,7 @@ async function logout() {
   state.profileProvider = "guest";
   setAuthBadge(i18n.guest);
   setAuthUsername(i18n.guest);
-  toggleHeaderAuthLinks();
-  toggleLogoutPanel(false);
-  togglePasswordResetPanel(false);
+  syncAuthChrome({ provider: "guest", username: i18n.guest });
   setAdminTileVisible(false);
   window.location.href = `/client?lang=${lang}`;
 }
@@ -1531,7 +1536,90 @@ async function loadAdminDashboard() {
   }
 }
 
+let adminSelectedUserId = 0;
+
+function renderAdminUserPreview(users) {
+  const preview = element("admin-user-preview");
+  const hiddenId = element("admin-selected-user-id");
+  if (!preview || !hiddenId) {
+    return;
+  }
+  if (!users.length) {
+    adminSelectedUserId = 0;
+    hiddenId.value = "";
+    preview.textContent = lang === "en" ? "No users found" : "Пользователи не найдены";
+    return;
+  }
+  const user = users[0];
+  adminSelectedUserId = user.id;
+  hiddenId.value = String(user.id);
+  preview.textContent = `#${user.id} · ${user.provider} · ${user.username || user.provider_user_id} · ${user.credits} ${lang === "en" ? "sparks" : "искр"}`;
+  if (users.length > 1) {
+    preview.textContent += ` (+${users.length - 1})`;
+  }
+}
+
+function wireAdminCreditsForm() {
+  const form = element("admin-credits-form");
+  const searchBtn = element("admin-user-search-btn");
+  if (!form) {
+    return;
+  }
+  if (searchBtn) {
+    searchBtn.addEventListener("click", async () => {
+      const query = element("admin-user-query")?.value.trim() || "";
+      setResult("admin-credits-result", i18n.loading);
+      try {
+        const result = await apiRequest(`/api/admin/users/search?q=${encodeURIComponent(query)}`, "GET");
+        renderAdminUserPreview(result.users || []);
+        setResult("admin-credits-result", "");
+      } catch (error) {
+        setResult("admin-credits-result", error.message);
+      }
+    });
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const userId = Number(element("admin-selected-user-id")?.value || adminSelectedUserId || 0);
+    const amount = Number(element("admin-credits-amount")?.value || 0);
+    const reason = element("admin-credits-reason")?.value.trim() || "admin_adjustment";
+    if (!userId) {
+      setResult("admin-credits-result", lang === "en" ? "Find a user first" : "Сначала найдите пользователя");
+      return;
+    }
+    if (!amount) {
+      setResult("admin-credits-result", lang === "en" ? "Enter a non-zero amount" : "Укажите ненулевое количество искр");
+      return;
+    }
+    setResult("admin-credits-result", i18n.loading);
+    try {
+      const result = await apiRequest("/api/admin/users/adjust-credits", "POST", {
+        user_id: userId,
+        amount,
+        reason,
+      });
+      const sparksLabel = lang === "en" ? "sparks" : "искр";
+      setResult(
+        "admin-credits-result",
+        `#${result.user_id}: ${result.balance} ${sparksLabel}`,
+      );
+      renderAdminUserPreview([
+        {
+          id: result.user_id,
+          provider: result.provider,
+          provider_user_id: "",
+          username: result.username,
+          credits: result.balance,
+        },
+      ]);
+    } catch (error) {
+      setResult("admin-credits-result", error.message);
+    }
+  });
+}
+
 function wireAdminEvents() {
+  wireAdminCreditsForm();
   const container = element("admin-tickets");
   if (!container) {
     return;
@@ -1642,6 +1730,7 @@ async function boot() {
     );
   }
   toggleEmailAuthEntry();
+  syncAuthChrome(profile);
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();

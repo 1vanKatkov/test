@@ -38,6 +38,7 @@ from app.web.auth.telegram_auth import (
 )
 from app.web.db import db
 from app.web.schemas import (
+    AdminAdjustCreditsRequest,
     EmailLoginRequest,
     EmailPasswordResetConfirmRequest,
     EmailResendRequest,
@@ -55,7 +56,7 @@ from app.web.schemas import (
     YooKassaCreatePaymentRequest,
 )
 from app.web.services import compatibility, numerology, payments, sonnik
-from app.web.services.balance import charge, get_balance, record_transaction, refund
+from app.web.services.balance import charge, credit, get_balance, record_transaction, refund
 from config import settings
 
 
@@ -223,6 +224,13 @@ def _translations(lang: str) -> dict:
             "year": "Year",
             "load": "Load",
             "logout": "Log out",
+            "admin_users": "Users",
+            "admin_find_user": "Find user",
+            "admin_user_lookup": "User ID or email",
+            "admin_sparks_amount": "Sparks (+ add / − subtract)",
+            "admin_sparks_reason": "Reason",
+            "admin_apply_credits": "Apply",
+            "admin_user_not_found": "User not found",
         }
     return {
         "cabinet": "Кабинет",
@@ -293,6 +301,13 @@ def _translations(lang: str) -> dict:
         "year": "Год",
         "load": "Загрузить",
         "logout": "Выйти",
+        "admin_users": "Пользователи",
+        "admin_find_user": "Найти",
+        "admin_user_lookup": "ID или email",
+        "admin_sparks_amount": "Искры (+ начислить / − списать)",
+        "admin_sparks_reason": "Причина",
+        "admin_apply_credits": "Применить",
+        "admin_user_not_found": "Пользователь не найден",
     }
 
 
@@ -679,7 +694,7 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
-API_BUILD_ID = "2f3b7d9-profile-auth-v1"
+API_BUILD_ID = "e4ae1d9-admin-credits-v1"
 
 
 @app.get("/api/health")
@@ -1038,6 +1053,63 @@ async def api_admin_me(
     if not email_identity:
         return {"is_admin": False}
     return {"is_admin": db.is_user_admin(email_identity.internal_user_id)}
+
+
+@app.get("/api/admin/users/search")
+async def api_admin_users_search(
+    q: str = Query(default="", min_length=1, max_length=200),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    rows = await run_in_threadpool(db.search_users, q.strip(), 20)
+    users = [
+        {
+            "id": int(row["id"]),
+            "provider": row["provider"],
+            "provider_user_id": row["provider_user_id"],
+            "username": row["username"],
+            "credits": int(row["credits"]),
+            "role": row["role"] or "user",
+        }
+        for row in rows
+    ]
+    return {"success": True, "users": users}
+
+
+@app.post("/api/admin/users/adjust-credits")
+async def api_admin_adjust_credits(
+    payload: AdminAdjustCreditsRequest,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    metadata = {"admin_user_id": admin_user_id}
+    if payload.amount > 0:
+        new_balance = await run_in_threadpool(
+            credit,
+            payload.user_id,
+            payload.amount,
+            payload.reason,
+            metadata,
+            "admin_credit",
+        )
+    elif payload.amount < 0:
+        new_balance = await run_in_threadpool(
+            charge,
+            payload.user_id,
+            abs(payload.amount),
+            payload.reason,
+            metadata,
+        )
+    else:
+        new_balance = await run_in_threadpool(get_balance, payload.user_id)
+    user = db.get_user_by_id(payload.user_id)
+    return {
+        "success": True,
+        "user_id": payload.user_id,
+        "balance": new_balance,
+        "username": user["username"] if user else "",
+        "provider": user["provider"] if user else "",
+    }
 
 
 @app.get("/api/admin/stats/modules")
