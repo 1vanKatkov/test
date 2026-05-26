@@ -527,8 +527,13 @@ async def admin_dashboard(
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, str | bool]:
+    return {
+        "status": "ok",
+        "build": API_BUILD_ID,
+        "email_auth": True,
+        "email_skip_verification": settings.email_skip_verification,
+    }
 
 
 @app.get("/mini-app")
