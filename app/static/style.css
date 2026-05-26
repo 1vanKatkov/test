@@ -570,6 +570,44 @@ button {
   width: 100%;
 }
 
+.admin-user-list {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-user-select-btn {
+  white-space: nowrap;
+}
+
+.admin-credits-form {
+  margin-top: 12px;
+  border-top: 1px solid #2f3c66;
+  padding-top: 12px;
+}
+
+.admin-selected-user {
+  padding: 8px 10px;
+  background: #0f1730;
+  border: 1px solid #2f3c66;
+  border-radius: 8px;
+}
+
 .header-auth-links {
   display: inline-flex;
   align-items: center;

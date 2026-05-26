@@ -1536,59 +1536,151 @@ async function loadAdminDashboard() {
   }
 }
 
-let adminSelectedUserId = 0;
+let adminUsersCache = [];
 
-function renderAdminUserPreview(users) {
-  const preview = element("admin-user-preview");
+function adminLabel(key) {
+  const ru = {
+    selectUser: "Выберите пользователя из списка",
+    selected: "Выбран",
+    sparks: "искр",
+    role: "роль",
+    select: "Выбрать",
+    noUsers: "Пользователи не найдены",
+    findFirst: "Сначала найдите и выберите пользователя",
+    nonZero: "Укажите ненулевое количество искр",
+  };
+  const en = {
+    selectUser: "Select a user from the list",
+    selected: "Selected",
+    sparks: "sparks",
+    role: "role",
+    select: "Select",
+    noUsers: "No users found",
+    findFirst: "Find and select a user first",
+    nonZero: "Enter a non-zero amount",
+  };
+  return (lang === "en" ? en : ru)[key];
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[ch]));
+}
+
+function renderAdminUserList(users) {
+  const container = element("admin-user-list");
+  if (!container) {
+    return;
+  }
+  adminUsersCache = users || [];
+  if (!adminUsersCache.length) {
+    container.innerHTML = `<div class="muted">${adminLabel("noUsers")}</div>`;
+    return;
+  }
+  container.innerHTML = adminUsersCache
+    .map((user) => {
+      const display = user.username || user.provider_user_id || "";
+      const role = user.role || "user";
+      return `
+        <article class="history-row admin-user-row" data-user-id="${user.id}">
+          <div class="admin-user-info">
+            <strong>#${user.id}</strong>
+            <span class="muted">${escapeHtml(user.provider)}</span>
+            <span>${escapeHtml(display)}</span>
+            <span class="muted">${user.credits} ${adminLabel("sparks")} · ${escapeHtml(role)}</span>
+          </div>
+          <button type="button" class="secondary-btn admin-user-select-btn" data-user-id="${user.id}">
+            ${adminLabel("select")}
+          </button>
+        </article>`;
+    })
+    .join("");
+}
+
+function renderAdminSelectedUser(user) {
+  const card = element("admin-selected-user-card");
   const hiddenId = element("admin-selected-user-id");
-  if (!preview || !hiddenId) {
+  const form = element("admin-credits-form");
+  if (!card || !hiddenId || !form) {
     return;
   }
-  if (!users.length) {
-    adminSelectedUserId = 0;
+  if (!user) {
+    card.textContent = adminLabel("selectUser");
     hiddenId.value = "";
-    preview.textContent = lang === "en" ? "No users found" : "Пользователи не найдены";
+    form.hidden = true;
     return;
   }
-  const user = users[0];
-  adminSelectedUserId = user.id;
+  const display = user.username || user.provider_user_id || `#${user.id}`;
+  card.innerHTML = `<strong>${adminLabel("selected")}:</strong> #${user.id} · ${escapeHtml(user.provider)} · ${escapeHtml(display)} · ${user.credits} ${adminLabel("sparks")}`;
   hiddenId.value = String(user.id);
-  preview.textContent = `#${user.id} · ${user.provider} · ${user.username || user.provider_user_id} · ${user.credits} ${lang === "en" ? "sparks" : "искр"}`;
-  if (users.length > 1) {
-    preview.textContent += ` (+${users.length - 1})`;
+  form.hidden = false;
+}
+
+async function loadAdminUsers(query = "") {
+  setResult("admin-credits-result", i18n.loading);
+  try {
+    const result = await apiRequest(`/api/admin/users/search?q=${encodeURIComponent(query)}`, "GET");
+    renderAdminUserList(result.users || []);
+    setResult("admin-credits-result", "");
+  } catch (error) {
+    setResult("admin-credits-result", error.message);
   }
 }
 
 function wireAdminCreditsForm() {
   const form = element("admin-credits-form");
+  const listContainer = element("admin-user-list");
   const searchBtn = element("admin-user-search-btn");
-  if (!form) {
+  const queryInput = element("admin-user-query");
+  if (!form || !listContainer) {
     return;
   }
+  renderAdminSelectedUser(null);
+  loadAdminUsers("");
+
   if (searchBtn) {
-    searchBtn.addEventListener("click", async () => {
-      const query = element("admin-user-query")?.value.trim() || "";
-      setResult("admin-credits-result", i18n.loading);
-      try {
-        const result = await apiRequest(`/api/admin/users/search?q=${encodeURIComponent(query)}`, "GET");
-        renderAdminUserPreview(result.users || []);
-        setResult("admin-credits-result", "");
-      } catch (error) {
-        setResult("admin-credits-result", error.message);
+    searchBtn.addEventListener("click", () => {
+      loadAdminUsers(queryInput?.value.trim() || "");
+    });
+  }
+  if (queryInput) {
+    queryInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        loadAdminUsers(queryInput.value.trim());
       }
     });
   }
+  listContainer.addEventListener("click", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!target) {
+      return;
+    }
+    const row = target.closest(".admin-user-row");
+    if (!row) {
+      return;
+    }
+    const userId = Number(row.dataset.userId || 0);
+    const user = adminUsersCache.find((item) => item.id === userId);
+    renderAdminSelectedUser(user || null);
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const userId = Number(element("admin-selected-user-id")?.value || adminSelectedUserId || 0);
+    const userId = Number(element("admin-selected-user-id")?.value || 0);
     const amount = Number(element("admin-credits-amount")?.value || 0);
     const reason = element("admin-credits-reason")?.value.trim() || "admin_adjustment";
     if (!userId) {
-      setResult("admin-credits-result", lang === "en" ? "Find a user first" : "Сначала найдите пользователя");
+      setResult("admin-credits-result", adminLabel("findFirst"));
       return;
     }
     if (!amount) {
-      setResult("admin-credits-result", lang === "en" ? "Enter a non-zero amount" : "Укажите ненулевое количество искр");
+      setResult("admin-credits-result", adminLabel("nonZero"));
       return;
     }
     setResult("admin-credits-result", i18n.loading);
@@ -1598,20 +1690,13 @@ function wireAdminCreditsForm() {
         amount,
         reason,
       });
-      const sparksLabel = lang === "en" ? "sparks" : "искр";
       setResult(
         "admin-credits-result",
-        `#${result.user_id}: ${result.balance} ${sparksLabel}`,
+        `#${result.user_id}: ${result.balance} ${adminLabel("sparks")}`,
       );
-      renderAdminUserPreview([
-        {
-          id: result.user_id,
-          provider: result.provider,
-          provider_user_id: "",
-          username: result.username,
-          credits: result.balance,
-        },
-      ]);
+      await loadAdminUsers(queryInput?.value.trim() || "");
+      const refreshed = adminUsersCache.find((item) => item.id === result.user_id);
+      renderAdminSelectedUser(refreshed || null);
     } catch (error) {
       setResult("admin-credits-result", error.message);
     }

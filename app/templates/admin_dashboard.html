@@ -27,21 +27,25 @@
     </section>
 
     <section class="card">
-      <h2>{{ t.admin_users }}</h2>
-      <form id="admin-credits-form" class="form-grid">
-        <label>{{ t.admin_user_lookup }}
-          <input id="admin-user-query" type="text" autocomplete="off" required />
+      <h2>{{ t.admin_users or 'Пользователи' }}</h2>
+      <div class="form-grid">
+        <label>{{ t.admin_user_lookup or 'ID, email или ник (пусто = все)' }}
+          <input id="admin-user-query" type="text" autocomplete="off" />
         </label>
-        <button type="button" id="admin-user-search-btn" class="secondary-btn">{{ t.admin_find_user }}</button>
-        <div id="admin-user-preview" class="muted"></div>
+        <button type="button" id="admin-user-search-btn" class="secondary-btn">{{ t.admin_find_user or 'Найти' }}</button>
+      </div>
+      <div id="admin-user-list" class="admin-user-list"></div>
+
+      <form id="admin-credits-form" class="form-grid admin-credits-form" hidden>
+        <div id="admin-selected-user-card" class="admin-selected-user muted"></div>
         <input type="hidden" id="admin-selected-user-id" value="" />
-        <label>{{ t.admin_sparks_amount }}
+        <label>{{ t.admin_sparks_amount or 'Искры (+ начислить / − списать)' }}
           <input id="admin-credits-amount" type="number" step="1" required />
         </label>
-        <label>{{ t.admin_sparks_reason }}
+        <label>{{ t.admin_sparks_reason or 'Причина' }}
           <input id="admin-credits-reason" type="text" value="admin_adjustment" />
         </label>
-        <button type="submit" class="primary-btn">{{ t.admin_apply_credits }}</button>
+        <button type="submit" class="primary-btn">{{ t.admin_apply_credits or 'Применить' }}</button>
       </form>
       <pre id="admin-credits-result" class="result"></pre>
     </section>
@@ -64,6 +68,6 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=e4ae1d9-admin-v1"></script>
+  <script defer src="/static/app.js?v=78fdf5a-admin-list-v1"></script>
 </body>
 </html>

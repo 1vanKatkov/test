@@ -694,7 +694,7 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
     return response
 
 
-API_BUILD_ID = "e4ae1d9-admin-credits-v1"
+API_BUILD_ID = "78fdf5a-admin-list-v1"
 
 
 @app.get("/api/health")
@@ -1057,11 +1057,11 @@ async def api_admin_me(
 
 @app.get("/api/admin/users/search")
 async def api_admin_users_search(
-    q: str = Query(default="", min_length=1, max_length=200),
+    q: str = Query(default="", max_length=200),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     _require_admin_email_user(email_identity)
-    rows = await run_in_threadpool(db.search_users, q.strip(), 20)
+    rows = await run_in_threadpool(db.search_users, q.strip(), 50)
     users = [
         {
             "id": int(row["id"]),
