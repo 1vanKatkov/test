@@ -149,6 +149,7 @@ const authPageCopy = {
     loginSubmit: "Log in",
     registerSubmit: "Register",
     sendCode: "Send code",
+    registerSubmitCode: "Send code",
     confirmRegistration: "Confirm registration",
     verifyTitle: "Confirm registration",
     verificationCode: "Verification code",
@@ -169,6 +170,7 @@ const authPageCopy = {
     loginSubmit: "Войти",
     registerSubmit: "Регистрация",
     sendCode: "Отправить код",
+    registerSubmitCode: "Отправить код",
     confirmRegistration: "Подтвердить",
     verifyTitle: "Подтверждение регистрации",
     verificationCode: "Код из письма",
@@ -229,21 +231,28 @@ async function initAuthStaticPage() {
   if (hiddenEmail) {
     hiddenEmail.value = verifyEmail;
   }
+  if (document.body.dataset.page === "register") {
+    document.body.dataset.emailSkipVerification = "true";
+    const submitBtn = element("register-submit-btn");
+    if (submitBtn) {
+      submitBtn.textContent = copy.registerSubmit;
+    }
+  }
   try {
     const response = await fetch(resolveApiUrl("/api/auth/email/health"));
     if (!response.ok) {
       return;
     }
     const data = await response.json();
-    if (data.email_skip_verification) {
-      document.body.dataset.emailSkipVerification = "true";
+    document.body.dataset.emailSkipVerification = data.email_skip_verification ? "true" : "false";
+    if (document.body.dataset.page === "register") {
       const submitBtn = element("register-submit-btn");
       if (submitBtn) {
-        submitBtn.textContent = copy.registerSubmit;
+        submitBtn.textContent = data.email_skip_verification ? copy.registerSubmit : copy.registerSubmitCode;
       }
     }
   } catch {
-    // API may be unavailable until the app process is restarted on the server.
+    // Health endpoint may be missing until the server process is restarted.
   }
 }
 
@@ -739,13 +748,19 @@ function wireRegisterPage() {
         password_confirm: passwordConfirm,
         language: lang,
       });
-      const skipVerify = document.body.dataset.emailSkipVerification === "true";
-      if (skipVerify && result.profile) {
+      if (result.profile || result.token) {
         applyEmailAuthResult(result);
         window.location.href = `/client?lang=${lang}`;
         return;
       }
-      const targetEmail = encodeURIComponent(result.email || email);
+      const skipVerify = document.body.dataset.emailSkipVerification === "true";
+      if (skipVerify) {
+        throw new Error(
+          lang === "en"
+            ? "Instant registration is not active on the server. Set EMAIL_SKIP_VERIFICATION=true in .env and run: sudo systemctl restart miniapp"
+            : "На сервере не активна мгновенная регистрация. Добавьте EMAIL_SKIP_VERIFICATION=true в .env на VDS и выполните: sudo systemctl restart miniapp",
+        );
+      }
       window.location.href = authStaticUrl("verify", { email: result.email || email });
     } catch (error) {
       setResult("auth-result", error.message);

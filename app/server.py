@@ -713,14 +713,13 @@ async def api_email_register_start(payload: EmailRegisterStartRequest):
                 {"provider": "email"},
             )
         return _email_auth_response(identity, is_new_user=is_new_user)
-    result = await run_in_threadpool(
+    return await run_in_threadpool(
         start_email_registration,
         payload.email,
         payload.password,
         payload.password_confirm,
         lang,
     )
-    return result
 
 
 @app.post("/api/auth/email/register/resend")

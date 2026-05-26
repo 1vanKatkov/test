@@ -253,6 +253,7 @@ def complete_email_registration(
 ) -> tuple[EmailIdentity, bool]:
     normalized_email = normalize_email(email)
     _validate_password_pair(password, password_confirm)
+    db.delete_email_verification(normalized_email, "register")
 
     existing = db.get_user_by_provider(provider="email", provider_user_id=normalized_email)
     if existing and existing["password_hash"]:
