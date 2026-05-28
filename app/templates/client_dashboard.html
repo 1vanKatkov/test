@@ -26,7 +26,9 @@
       <p id="telegram-auth-status" class="result muted" hidden></p>
       <div class="compact-actions">
         <a class="secondary-btn compact-action-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
+        {% if not hide_topup_button %}
         <a class="secondary-btn compact-action-btn" href="/client/topup?lang={{ lang }}">{{ t.topup }}</a>
+        {% endif %}
       </div>
     </section>
 

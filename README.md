@@ -35,6 +35,7 @@ Optional toggles:
 - `RUN_TELEGRAM_BOT=true|false`
 - `RUN_TELEGRAM_BOT_EN=true|false`
 - `RUN_MAX_BOT=true|false`
+- `HIDE_TOPUP_BUTTON=true|false` (hide "Top Up" button in dashboard)
 - `APP_DEFAULT_LANG=ru|en` (default UI language when `?lang=` is not provided)
 
 English Telegram bot vars:

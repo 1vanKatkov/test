@@ -397,6 +397,7 @@ def _client_template_context(request: Request, lang: str) -> dict:
         "initial_auth_username": initial_auth_username,
         "initial_auth_provider": initial_auth_provider,
         "email_skip_verification": settings.email_skip_verification,
+        "hide_topup_button": settings.hide_topup_button,
     }
 
 

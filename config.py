@@ -51,6 +51,7 @@ class Settings:
     run_telegram_bot: bool = _bool_from_env("RUN_TELEGRAM_BOT", True)
     run_telegram_bot_en: bool = _bool_from_env("RUN_TELEGRAM_BOT_EN", True)
     run_max_bot: bool = _bool_from_env("RUN_MAX_BOT", True)
+    hide_topup_button: bool = _bool_from_env("HIDE_TOPUP_BUTTON", False)
     dev_auth_bypass: bool = _bool_from_env("DEV_AUTH_BYPASS", False)
     dev_auth_mock_provider_user_id: str = os.getenv("DEV_AUTH_MOCK_PROVIDER_USER_ID", "dev-bypass-user")
     dev_auth_mock_username: str = os.getenv("DEV_AUTH_MOCK_USERNAME", "Dev Tester")
