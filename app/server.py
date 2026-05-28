@@ -234,6 +234,72 @@ def _translations(lang: str) -> dict:
             "admin_sparks_reason": "Reason",
             "admin_apply_credits": "Apply",
             "admin_user_not_found": "User not found",
+            "landing_title": "Astrolhub - Dreambook, Numerology, Compatibility",
+            "landing_nav_features": "Features",
+            "landing_nav_how": "How it works",
+            "landing_nav_about": "About",
+            "landing_open_web_cabinet": "Open web cabinet",
+            "landing_eyebrow": "AI services for personal insights",
+            "landing_h1": "Dreambook, numerology, and compatibility in one digital space",
+            "landing_guest_text": (
+                "To get started, open the bot in Telegram or MAX to enter recognized mode "
+                "and access advanced functionality."
+            ),
+            "landing_open_tg_bot": "Open Telegram bot",
+            "landing_open_max_bot": "Open MAX bot",
+            "landing_recognized_text": (
+                "User recognized. Open the workspace and use the full toolkit: "
+                "dream interpretation, numerology PDF generation, and compatibility analysis."
+            ),
+            "landing_open_full": "Open full functionality",
+            "landing_recognized_meta_default": "You are signed in via an external channel",
+            "landing_available_title": "What's available",
+            "landing_available_1": "Dreambook with AI interpretation",
+            "landing_available_2": "Personal numerology PDF report",
+            "landing_available_3": "Compatibility analysis (2 modes)",
+            "landing_features_title": "Functionality",
+            "landing_features_subtitle": (
+                "Each tool covers a specific scenario: quick insight, deep interpretation, "
+                "or comparative analysis."
+            ),
+            "landing_feature_dream_title": "Dreambook",
+            "landing_feature_dream_text": (
+                "Describe your dream in free text and get meaningful AI interpretation "
+                "with focus on symbols and context."
+            ),
+            "landing_feature_numerology_title": "Numerology",
+            "landing_feature_numerology_text": (
+                "A personal PDF report is generated from full name and birth date, "
+                "so you can save and revisit it."
+            ),
+            "landing_feature_compatibility_title": "Compatibility",
+            "landing_feature_compatibility_text": (
+                "Two analysis modes: by names or by names+birth dates for deeper, "
+                "more precise results."
+            ),
+            "landing_how_title": "How it works",
+            "landing_step_1_title": "Recognition",
+            "landing_step_1_text": (
+                "The platform detects sign-in context from Telegram/MAX data or query parameters."
+            ),
+            "landing_step_2_title": "Service request",
+            "landing_step_2_text": "Choose the needed tool and submit data in the web cabinet.",
+            "landing_step_3_title": "Result and history",
+            "landing_step_3_text": (
+                "The service returns results, updates balance, and stores request/report history."
+            ),
+            "landing_about_title": "Why it is convenient",
+            "landing_benefit_one_title": "One cabinet",
+            "landing_benefit_one_text": (
+                "All functionality in one interface without switching between different bots."
+            ),
+            "landing_benefit_two_title": "Transparent balance",
+            "landing_benefit_two_text": (
+                "You always see current balance and deductions for each module before requests."
+            ),
+            "landing_meta_platform_label": "Platform",
+            "landing_meta_user_label": "User",
+            "landing_meta_user_recognized": "User recognized",
         }
     return {
         "cabinet": "Кабинет",
@@ -311,6 +377,70 @@ def _translations(lang: str) -> dict:
         "admin_sparks_reason": "Причина",
         "admin_apply_credits": "Применить",
         "admin_user_not_found": "Пользователь не найден",
+        "landing_title": "Astrolhub - Сонник, Нумерология, Совместимость",
+        "landing_nav_features": "Возможности",
+        "landing_nav_how": "Как это работает",
+        "landing_nav_about": "О сервисе",
+        "landing_open_web_cabinet": "Открыть веб-кабинет",
+        "landing_eyebrow": "AI-сервисы для личных инсайтов",
+        "landing_h1": "Сонник, нумерология и совместимость в одном цифровом пространстве",
+        "landing_guest_text": (
+            "Для старта откройте бота в Telegram или MAX, чтобы перейти в распознанный режим "
+            "и получить доступ к расширенному функционалу."
+        ),
+        "landing_open_tg_bot": "Перейти в Telegram-бот",
+        "landing_open_max_bot": "Перейти в MAX-бот",
+        "landing_recognized_text": (
+            "Пользователь распознан. Откройте рабочий кабинет и используйте полный набор "
+            "инструментов: интерпретацию снов, генерацию нумерологического PDF и анализ совместимости."
+        ),
+        "landing_open_full": "Открыть полный функционал",
+        "landing_recognized_meta_default": "Вы вошли через внешний канал",
+        "landing_available_title": "Что доступно",
+        "landing_available_1": "Сонник с AI-интерпретацией",
+        "landing_available_2": "Нумерологический PDF-отчет",
+        "landing_available_3": "Анализ совместимости (2 режима)",
+        "landing_features_title": "Функционал",
+        "landing_features_subtitle": (
+            "Каждый инструмент закрывает отдельный сценарий: быстрый ответ, глубокий разбор "
+            "или сравнительный анализ."
+        ),
+        "landing_feature_dream_title": "Сонник",
+        "landing_feature_dream_text": (
+            "Опишите сон свободным текстом и получите осмысленную AI-интерпретацию "
+            "с акцентом на символы и контекст."
+        ),
+        "landing_feature_numerology_title": "Нумерология",
+        "landing_feature_numerology_text": (
+            "По ФИО и дате рождения формируется персональный PDF-отчет, который можно "
+            "сохранить и пересматривать."
+        ),
+        "landing_feature_compatibility_title": "Совместимость",
+        "landing_feature_compatibility_text": (
+            "Два режима анализа: по именам или по именам+датам рождения для более "
+            "детального и точного результата."
+        ),
+        "landing_how_title": "Как это работает",
+        "landing_step_1_title": "Распознавание",
+        "landing_step_1_text": (
+            "Платформа определяет контекст входа по данным Telegram/MAX или query-параметрам."
+        ),
+        "landing_step_2_title": "Запрос в сервис",
+        "landing_step_2_text": "Вы выбираете нужный инструмент и отправляете данные в веб-кабинете.",
+        "landing_step_3_title": "Результат и история",
+        "landing_step_3_text": (
+            "Сервис возвращает результат, обновляет баланс и сохраняет историю запросов и отчеты."
+        ),
+        "landing_about_title": "Почему это удобно",
+        "landing_benefit_one_title": "Один кабинет",
+        "landing_benefit_one_text": "Весь функционал в одном интерфейсе без переключений между разными ботами.",
+        "landing_benefit_two_title": "Прозрачный баланс",
+        "landing_benefit_two_text": (
+            "Перед каждым запросом видно текущее состояние и списания по каждому модулю."
+        ),
+        "landing_meta_platform_label": "Платформа",
+        "landing_meta_user_label": "Пользователь",
+        "landing_meta_user_recognized": "Пользователь распознан",
     }
 
 

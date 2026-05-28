@@ -3,6 +3,18 @@
   const guestView = document.getElementById("guest-view");
   const recognizedView = document.getElementById("recognized-view");
   const recognizedMeta = document.getElementById("recognized-meta");
+  const lang = body.dataset.lang === "en" ? "en" : "ru";
+  const labels = lang === "en"
+    ? {
+      platform: "Platform",
+      user: "User",
+      recognized: "User recognized",
+    }
+    : {
+      platform: "Платформа",
+      user: "Пользователь",
+      recognized: "Пользователь распознан",
+    };
 
   function detectRecognizedUser() {
     const fromQuery = body.dataset.recognizedFromQuery === "true";
@@ -43,12 +55,12 @@
       if (recognizedMeta) {
         const parts = [];
         if (state.recognizedPlatform) {
-          parts.push(`Платформа: ${state.recognizedPlatform}`);
+          parts.push(`${labels.platform}: ${state.recognizedPlatform}`);
         }
         if (state.recognizedName) {
-          parts.push(`Пользователь: ${state.recognizedName}`);
+          parts.push(`${labels.user}: ${state.recognizedName}`);
         }
-        recognizedMeta.textContent = parts.length ? parts.join(" | ") : "Пользователь распознан";
+        recognizedMeta.textContent = parts.length ? parts.join(" | ") : labels.recognized;
       }
     } else {
       recognizedView.classList.add("hidden");
