@@ -1182,9 +1182,10 @@ async def api_numerology(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     charge(user_id, settings.cost_numerology, "numerology", {"module": "numerology"})
     try:
-        report_payload = numerology.generate_web_report(payload.full_name, payload.birth_date)
+        report_payload = numerology.generate_web_report(payload.full_name, payload.birth_date, requested_language)
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
         return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
@@ -1215,6 +1216,7 @@ async def api_numerology(
 @app.get("/api/numerology/report/{report_id}")
 async def api_numerology_report(
     report_id: int,
+    lang: str = Query(default=""),
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
@@ -1224,6 +1226,9 @@ async def api_numerology_report(
     if not row:
         raise HTTPException(status_code=404, detail="Report not found")
     content = json.loads(row["content_json"] or "{}")
+    requested_language = _normalize_lang(lang or _resolve_language(email_identity, max_identity, telegram_identity))
+    if requested_language == "en" and str(content.get("language", "")).strip().lower() != "en":
+        content = numerology.translate_report_payload(content, "en")
     return {"success": True, "report": content, "title": row["title"], "created_at": row["created_at"]}
 
 

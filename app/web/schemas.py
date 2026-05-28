@@ -8,6 +8,7 @@ class SonnikRequest(BaseModel):
 class NumerologyRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=200)
     birth_date: str = Field(min_length=10, max_length=10)
+    language: str = Field(default="", max_length=8)
 
 
 class SovmestimostNamesRequest(BaseModel):

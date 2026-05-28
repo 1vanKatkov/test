@@ -1399,16 +1399,30 @@ function wireNumerologyForm() {
       const result = await apiRequest("/api/numerology/generate", "POST", {
         full_name: element("full-name").value.trim(),
         birth_date: element("birth-date").value.trim(),
+        language: lang,
       });
       const resultNode = element("numerology-result");
       if (resultNode) {
-        resultNode.innerHTML = `${i18n.reportReady}: <a href="${result.report_url}">${lang === "en" ? "Open report" : "Открыть разбор"}</a>`;
+        const separator = result.report_url.includes("?") ? "&" : "?";
+        const reportUrl = `${result.report_url}${separator}lang=${encodeURIComponent(lang)}`;
+        resultNode.innerHTML = `${i18n.reportReady}: <a href="${reportUrl}">${lang === "en" ? "Open report" : "Открыть разбор"}</a>`;
       }
       setBalance(result.balance);
     } catch (error) {
       setResult("numerology-result", error.message);
     }
   });
+}
+
+function numerologySectionValue(section, keys) {
+  const source = section || {};
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) {
+      return value;
+    }
+  }
+  return "";
 }
 
 function renderNumerologyReport(report) {
@@ -1418,9 +1432,22 @@ function renderNumerologyReport(report) {
   }
   const numbers = report.numbers || {};
   const sections = report.sections || {};
+  const actionSection = sections.action || {};
   const matrix = report.matrix || {};
   const missing = report.missing_energies || [];
   const innate = report.innate_energies || [];
+  const actionFocus = numerologySectionValue(actionSection, ["action", "действие"]);
+  const actionComment = numerologySectionValue(actionSection, ["comment", "коммент"]);
+  const actionGuidance = numerologySectionValue(actionSection, ["guidance", "наставление"]);
+  const actionPlus = numerologySectionValue(actionSection, ["plus_actions", "поступки_плюс"]);
+  const actionMinus = numerologySectionValue(actionSection, ["minus_actions", "поступки_минус"]);
+  const plusLabel = lang === "en" ? "Strengths" : "Плюс";
+  const minusLabel = lang === "en" ? "Weaknesses" : "Минус";
+  const commentLabel = lang === "en" ? "Comment" : "Комментарий";
+  const actionLabel = lang === "en" ? "Action focus" : "Действие";
+  const guidanceLabel = lang === "en" ? "Guidance" : "Наставление";
+  const positiveActionsLabel = lang === "en" ? "Positive actions" : "Поступки (+)";
+  const negativeActionsLabel = lang === "en" ? "Negative actions" : "Поступки (-)";
   container.innerHTML = `
     <h3>${report.full_name || ""}</h3>
     <div class="muted">${report.birth_date || ""}</div>
@@ -1429,9 +1456,9 @@ function renderNumerologyReport(report) {
     <div class="history-row"><b>${lang === "en" ? "Action" : "Действие"}:</b> ${numbers.action ?? "-"}</div>
     <div class="history-row"><b>${lang === "en" ? "Character" : "Характер"}:</b> ${numbers.character ?? "-"}</div>
     <div class="history-row"><b>${lang === "en" ? "Energy" : "Энергия"}:</b> ${numbers.energy ?? "-"}</div>
-    <article class="history-row"><h4>${lang === "en" ? "Consciousness" : "Число сознания"}</h4><div>${sections.consciousness?.plus || ""}</div><div>${sections.consciousness?.minus || ""}</div><div>${sections.consciousness?.comment || ""}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Destiny" : "Число судьбы"}</h4><div>${sections.destiny?.plus || ""}</div><div>${sections.destiny?.minus || ""}</div><div>${sections.destiny?.comment || ""}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Action" : "Число действия"}</h4><div>${sections.action?.["действие"] || ""}</div><div>${sections.action?.["коммент"] || ""}</div><div>${sections.action?.["наставление"] || ""}</div><div>${sections.action?.["поступки_плюс"] || ""}</div><div>${sections.action?.["поступки_минус"] || ""}</div></article>
+    <article class="history-row"><h4>${lang === "en" ? "Consciousness" : "Число сознания"}</h4><div><b>${plusLabel}:</b> ${sections.consciousness?.plus || ""}</div><div><b>${minusLabel}:</b> ${sections.consciousness?.minus || ""}</div><div><b>${commentLabel}:</b> ${sections.consciousness?.comment || ""}</div></article>
+    <article class="history-row"><h4>${lang === "en" ? "Destiny" : "Число судьбы"}</h4><div><b>${plusLabel}:</b> ${sections.destiny?.plus || ""}</div><div><b>${minusLabel}:</b> ${sections.destiny?.minus || ""}</div><div><b>${commentLabel}:</b> ${sections.destiny?.comment || ""}</div></article>
+    <article class="history-row"><h4>${lang === "en" ? "Action" : "Число действия"}</h4><div><b>${actionLabel}:</b> ${actionFocus}</div><div><b>${commentLabel}:</b> ${actionComment}</div><div><b>${guidanceLabel}:</b> ${actionGuidance}</div><div><b>${positiveActionsLabel}:</b> ${actionPlus}</div><div><b>${negativeActionsLabel}:</b> ${actionMinus}</div></article>
     <article class="history-row"><h4>${lang === "en" ? "Character" : "Число характера"}</h4><div>${sections.character_text || ""}</div></article>
     <article class="history-row"><h4>${lang === "en" ? "Energy" : "Число энергии"}</h4><div>${sections.energy_text || ""}</div></article>
     <article class="history-row"><h4>${lang === "en" ? "Matrix" : "Матрица"}</h4><div>${Object.entries(matrix).map(([key, value]) => `${key}: ${value}`).join(", ")}</div></article>
@@ -1446,7 +1473,7 @@ async function loadNumerologyReport() {
   }
   setResult("numerology-result", i18n.loading);
   try {
-    const result = await apiRequest(`/api/numerology/report/${currentReportId}`, "GET");
+    const result = await apiRequest(`/api/numerology/report/${currentReportId}?lang=${encodeURIComponent(lang)}`, "GET");
     renderNumerologyReport(result.report || {});
     setResult("numerology-result", "");
   } catch (error) {

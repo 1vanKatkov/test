@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+import re
 import sys
 from datetime import date, datetime
 
 from fastapi import HTTPException
 
+from app.web.services.openrouter import chat_completion
 from config import settings
 
 
@@ -101,7 +104,64 @@ def calculate_psychomatrix(birth_date: date) -> dict[str, int]:
     return matrix
 
 
-def generate_web_report(full_name: str, birth_date: str) -> dict:
+def _extract_json_payload(raw_text: str) -> dict | None:
+    text = (raw_text or "").strip()
+    if not text:
+        return None
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text)
+    try:
+        payload = json.loads(text)
+        return payload if isinstance(payload, dict) else None
+    except json.JSONDecodeError:
+        pass
+    match = re.search(r"\{[\s\S]*\}", text)
+    if not match:
+        return None
+    try:
+        payload = json.loads(match.group(0))
+        return payload if isinstance(payload, dict) else None
+    except json.JSONDecodeError:
+        return None
+
+
+def _translate_report_payload_to_english(report_payload: dict) -> dict:
+    """Translate numerology report textual values to English."""
+    prompt = (
+        "Translate all Russian text VALUES in this JSON to natural English.\n"
+        "Keep JSON structure and keys exactly unchanged.\n"
+        "Do not change numbers, dates, IDs, or array ordering.\n"
+        "Output ONLY valid JSON.\n\n"
+        f"{json.dumps(report_payload, ensure_ascii=False)}"
+    )
+    model = settings.model_sonnik_en or settings.model_sonnik
+    translated_raw = chat_completion(model, prompt)
+    translated = _extract_json_payload(translated_raw)
+    if not translated:
+        return report_payload
+    translated["language"] = "en"
+    return translated
+
+
+def _normalize_language(language: str = "") -> str:
+    return "en" if (language or "").strip().lower() == "en" else "ru"
+
+
+def translate_report_payload(report_payload: dict, language: str = "ru") -> dict:
+    target_language = _normalize_language(language)
+    if target_language != "en":
+        report_payload["language"] = "ru"
+        return report_payload
+    try:
+        return _translate_report_payload_to_english(report_payload)
+    except Exception:
+        # Keep service resilient: if translation fails, return original report.
+        report_payload["language"] = "ru"
+        return report_payload
+
+
+def generate_web_report(full_name: str, birth_date: str, language: str = "ru") -> dict:
     birth_date_obj = parse_birth_date(birth_date)
     (
         consciousness_number_meanings,
@@ -133,7 +193,7 @@ def generate_web_report(full_name: str, birth_date: str) -> dict:
         else:
             missing_energies.append(item_payload)
 
-    return {
+    report_payload = {
         "full_name": full_name,
         "birth_date": birth_date_obj.strftime("%d.%m.%Y"),
         "numbers": {
@@ -154,4 +214,5 @@ def generate_web_report(full_name: str, birth_date: str) -> dict:
         "innate_energies": innate_energies,
         "missing_energies": missing_energies,
     }
+    return translate_report_payload(report_payload, language)
 
