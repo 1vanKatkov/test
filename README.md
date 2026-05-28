@@ -35,6 +35,7 @@ Optional toggles:
 - `RUN_TELEGRAM_BOT=true|false`
 - `RUN_TELEGRAM_BOT_EN=true|false`
 - `RUN_MAX_BOT=true|false`
+- `APP_DEFAULT_LANG=ru|en` (default UI language when `?lang=` is not provided)
 
 English Telegram bot vars:
 - `TELEGRAM_BOT_TOKEN_EN=...`
@@ -75,7 +76,9 @@ Important env vars for web services:
 - `OPENROUTER_API_KEY`
 - `OPENROUTER_URL`
 - `MODEL_SONNIK`
+- `MODEL_SONNIK_EN`
 - `MODEL_SOVMESTIMOST`
+- `MODEL_SOVMESTIMOST_EN`
 - `MAX_AUTH_SECRET`
 - `DATABASE_PATH`
 - `STARTING_CREDITS`, `COST_SONNIK`, `COST_NUMEROLOGY`, `COST_SOVMESTIMOST`

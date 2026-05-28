@@ -18,12 +18,18 @@ def _bool_from_env(name: str, default: bool = False) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def _lang_from_env(name: str, default: str = "ru") -> str:
+    value = (os.getenv(name) or default).strip().lower()
+    return "en" if value == "en" else "ru"
+
+
 @dataclass(frozen=True)
 class Settings:
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
     app_port: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
     app_base_url: str = os.getenv("APP_BASE_URL", "https://example.com").rstrip("/")
     app_title: str = os.getenv("APP_TITLE", "Mini App for Telegram and MAX")
+    app_default_lang: str = _lang_from_env("APP_DEFAULT_LANG", "ru")
 
     @property
     def client_base_url(self) -> str:

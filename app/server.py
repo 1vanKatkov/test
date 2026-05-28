@@ -78,7 +78,10 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 def _normalize_lang(lang: str = "") -> str:
-    return "en" if (lang or "").strip().lower() == "en" else "ru"
+    raw = (lang or "").strip().lower()
+    if raw in {"ru", "en"}:
+        return raw
+    return settings.app_default_lang
 
 
 def _auth_cookie_secure() -> bool:
@@ -321,7 +324,7 @@ def _is_recognized_request(request: Request, name: str = "", platform: str = "")
     return False
 
 
-def _client_url_with_query(name: str = "", platform: str = "", lang: str = "ru") -> str:
+def _client_url_with_query(name: str = "", platform: str = "", lang: str = "") -> str:
     params = {}
     if name.strip():
         params["name"] = name.strip()
@@ -348,7 +351,7 @@ async def root(
     request: Request,
     name: str = Query(default=""),
     platform: str = Query(default=""),
-    lang: str = Query(default="ru"),
+    lang: str = Query(default=""),
 ):
     page_lang = _normalize_lang(lang)
     if _is_recognized_request(request, name=name, platform=platform):
@@ -398,7 +401,7 @@ def _client_template_context(request: Request, lang: str) -> dict:
 
 
 @app.get("/client", response_class=HTMLResponse, include_in_schema=False)
-async def client_dashboard(request: Request, lang: str = Query(default="ru")):
+async def client_dashboard(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_dashboard.html",
@@ -424,14 +427,14 @@ def _render_client_login(request: Request, lang: str):
 
 @app.get("/client/register", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/client/sign-up", response_class=HTMLResponse, include_in_schema=False)
-async def client_register(request: Request, lang: str = Query(default="ru")):
+async def client_register(request: Request, lang: str = Query(default="")):
     return _render_client_register(request, lang)
 
 
 @app.get("/client/register/verify", response_class=HTMLResponse, include_in_schema=False)
 async def client_register_verify(
     request: Request,
-    lang: str = Query(default="ru"),
+    lang: str = Query(default=""),
     email: str = Query(default=""),
 ):
     page_lang = _normalize_lang(lang)
@@ -453,12 +456,12 @@ async def client_register_verify(
 
 @app.get("/client/login", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/client/sign-in", response_class=HTMLResponse, include_in_schema=False)
-async def client_login(request: Request, lang: str = Query(default="ru")):
+async def client_login(request: Request, lang: str = Query(default="")):
     return _render_client_login(request, lang)
 
 
 @app.get("/client/sonnik", response_class=HTMLResponse, include_in_schema=False)
-async def client_sonnik(request: Request, lang: str = Query(default="ru")):
+async def client_sonnik(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_sonnik.html",
@@ -467,7 +470,7 @@ async def client_sonnik(request: Request, lang: str = Query(default="ru")):
 
 
 @app.get("/client/numerology", response_class=HTMLResponse, include_in_schema=False)
-async def client_numerology(request: Request, lang: str = Query(default="ru")):
+async def client_numerology(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_numerology.html",
@@ -476,7 +479,7 @@ async def client_numerology(request: Request, lang: str = Query(default="ru")):
 
 
 @app.get("/client/compatibility", response_class=HTMLResponse, include_in_schema=False)
-async def client_compatibility(request: Request, lang: str = Query(default="ru")):
+async def client_compatibility(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_compatibility.html",
@@ -485,7 +488,7 @@ async def client_compatibility(request: Request, lang: str = Query(default="ru")
 
 
 @app.get("/client/topup", response_class=HTMLResponse, include_in_schema=False)
-async def client_topup(request: Request, lang: str = Query(default="ru")):
+async def client_topup(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_topup.html",
@@ -496,7 +499,7 @@ async def client_topup(request: Request, lang: str = Query(default="ru")):
 @app.get("/client/profile", response_class=HTMLResponse, include_in_schema=False)
 async def client_profile(
     request: Request,
-    lang: str = Query(default="ru"),
+    lang: str = Query(default=""),
     auth: str = Query(default=""),
 ):
     auth_mode = (auth or "").strip().lower()
@@ -512,7 +515,7 @@ async def client_profile(
 
 
 @app.get("/client/support", response_class=HTMLResponse, include_in_schema=False)
-async def client_support(request: Request, lang: str = Query(default="ru")):
+async def client_support(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_support.html",
@@ -521,7 +524,7 @@ async def client_support(request: Request, lang: str = Query(default="ru")):
 
 
 @app.get("/client/lunar", include_in_schema=False)
-async def client_lunar(lang: str = Query(default="ru")):
+async def client_lunar(lang: str = Query(default="")):
     return RedirectResponse(url=f"/client?lang={lang}", status_code=302)
 
 
@@ -529,7 +532,7 @@ async def client_lunar(lang: str = Query(default="ru")):
 async def client_numerology_report(
     report_id: int,
     request: Request,
-    lang: str = Query(default="ru"),
+    lang: str = Query(default=""),
 ):
     return templates.TemplateResponse(
         request=request,
@@ -541,7 +544,7 @@ async def client_numerology_report(
 @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
 async def admin_dashboard(
     request: Request,
-    lang: str = Query(default="ru"),
+    lang: str = Query(default=""),
 ):
     return templates.TemplateResponse(
         request=request,
@@ -565,7 +568,7 @@ async def mini_app(
     request: Request,
     name: str = Query(default=""),
     platform: str = Query(default=""),
-    lang: str = Query(default="ru"),
+    lang: str = Query(default=""),
 ):
     page_lang = _normalize_lang(lang)
     if _is_recognized_request(request, name=name, platform=platform):
