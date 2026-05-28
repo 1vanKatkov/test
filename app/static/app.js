@@ -199,6 +199,34 @@ function authStaticUrl(page, extraParams = {}) {
   return `${paths[page]}?${params.toString()}`;
 }
 
+function currentRelativeUrl() {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+function loginRedirectUrl() {
+  return authStaticUrl("login", { next: currentRelativeUrl() });
+}
+
+function resolvePostLoginRedirect() {
+  const nextRaw = new URLSearchParams(window.location.search).get("next") || "";
+  if (!nextRaw) {
+    return `/client?lang=${lang}`;
+  }
+  try {
+    const nextUrl = new URL(nextRaw, window.location.origin);
+    if (nextUrl.origin !== window.location.origin) {
+      return `/client?lang=${lang}`;
+    }
+    if (nextUrl.pathname.startsWith("/api/")) {
+      return `/client?lang=${lang}`;
+    }
+    nextUrl.searchParams.set("lang", lang);
+    return `${nextUrl.pathname}${nextUrl.search}`;
+  } catch {
+    return `/client?lang=${lang}`;
+  }
+}
+
 function withLangQuery(url) {
   if (!url) {
     return url;
@@ -546,7 +574,30 @@ function formatApiError(data, rawText, status, url) {
   return `${i18n.requestError} (HTTP ${status}, ${url})`;
 }
 
-async function apiRequest(url, method, bodyObj) {
+function shouldRedirectUnauthorized(path, options = {}) {
+  if (!options.redirectOnUnauthorized) {
+    return false;
+  }
+  if (isTelegramWebAppContext()) {
+    return false;
+  }
+  const pathname = new URL(resolveApiUrl(path), window.location.origin).pathname;
+  if (!pathname.startsWith("/api/")) {
+    return false;
+  }
+  if (
+    pathname.startsWith("/api/auth/email/login")
+    || pathname.startsWith("/api/auth/email/register")
+    || pathname.startsWith("/api/auth/telegram/")
+    || pathname.startsWith("/api/auth/max/")
+    || pathname.startsWith("/api/auth/logout")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+async function apiRequest(url, method, bodyObj, options = {}) {
   const requestUrl = resolveApiUrl(url);
   const response = await fetch(requestUrl, {
     method,
@@ -566,6 +617,10 @@ async function apiRequest(url, method, bodyObj) {
     }
   }
   if (!response.ok) {
+    if (response.status === 401 && shouldRedirectUnauthorized(url, options)) {
+      window.location.href = loginRedirectUrl();
+      throw new Error(lang === "en" ? "Redirecting to login..." : "Перенаправление на страницу входа...");
+    }
     const message = formatApiError(data, rawText, response.status, requestUrl);
     if (response.status === 404) {
       throw new Error(
@@ -894,7 +949,7 @@ function wireLoginPage() {
         password: element("login-password")?.value,
       });
       applyEmailAuthResult(result);
-      window.location.href = `/client?lang=${lang}`;
+      window.location.href = resolvePostLoginRedirect();
     } catch (error) {
       setResult("auth-result", error.message);
     }
@@ -919,7 +974,7 @@ function wirePasswordResetForm() {
     requestBtn.addEventListener("click", async () => {
       setResult("password-reset-result", i18n.loading);
       try {
-        await apiRequest("/api/auth/email/password-reset/request", "POST");
+        await apiRequest("/api/auth/email/password-reset/request", "POST", undefined, { redirectOnUnauthorized: true });
         setResult("password-reset-result", i18n.codeSent);
       } catch (error) {
         setResult("password-reset-result", error.message);
@@ -940,7 +995,7 @@ function wirePasswordResetForm() {
           code: element("password-reset-code")?.value.trim(),
           new_password: newPassword,
           password_confirm: passwordConfirm,
-        });
+        }, { redirectOnUnauthorized: true });
         setResult("password-reset-result", i18n.passwordResetSuccess);
       } catch (error) {
         setResult("password-reset-result", error.message);
@@ -989,7 +1044,7 @@ function wirePaymentForms() {
         const result = await apiRequest("/api/payments/yookassa/create", "POST", {
           package_id: packageId,
           receipt_email: receiptEmail,
-        });
+        }, { redirectOnUnauthorized: true });
         state.lastPaymentId = result.payment_id;
         sessionStorage.setItem("astrolhub.lastPaymentId", result.payment_id);
         setResult("payment-result", `${i18n.paymentCreated}: ${result.payment_id}`);
@@ -1171,7 +1226,7 @@ function wireSupportForms() {
         const result = await apiRequest("/api/support/tickets", "POST", {
           subject: element("support-subject").value.trim(),
           message_text: element("support-message").value.trim(),
-        });
+        }, { redirectOnUnauthorized: true });
         setResult("support-result", `${i18n.ticket} #${result.ticket_id}`);
         await loadSupportTickets();
       } catch (error) {
@@ -1212,6 +1267,7 @@ function wireSupportForms() {
           `/api/support/tickets/${state.selectedSupportTicketId}/messages`,
           "POST",
           { message_text: element("support-reply-message").value.trim() },
+          { redirectOnUnauthorized: true },
         );
         renderSupportMessages(result.messages || []);
         element("support-reply-message").value = "";
@@ -1330,7 +1386,7 @@ async function syncPendingPayments() {
     return;
   }
   try {
-    const result = await apiRequest("/api/payments/yookassa/sync-pending", "POST");
+    const result = await apiRequest("/api/payments/yookassa/sync-pending", "POST", undefined, { redirectOnUnauthorized: true });
     setBalance(result.balance);
     await loadPaymentsHistory();
   } catch (error) {
@@ -1358,7 +1414,7 @@ function wirePaymentsHistoryActions() {
     }
     setResult("payment-result", i18n.cancellingPayment);
     try {
-      const result = await apiRequest(`/api/payments/yookassa/${paymentId}/cancel`, "POST");
+      const result = await apiRequest(`/api/payments/yookassa/${paymentId}/cancel`, "POST", undefined, { redirectOnUnauthorized: true });
       setResult("payment-result", `${i18n.canceled}. ${i18n.status}: ${paymentStatusLabel(result.status)}`);
       await loadPaymentsHistory();
     } catch (error) {
@@ -1378,7 +1434,7 @@ function wireSonnikForm() {
     try {
       const result = await apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
-      });
+      }, { redirectOnUnauthorized: true });
       setResult("sonnik-result", result.interpretation);
       setBalance(result.balance);
     } catch (error) {
@@ -1400,7 +1456,7 @@ function wireNumerologyForm() {
         full_name: element("full-name").value.trim(),
         birth_date: element("birth-date").value.trim(),
         language: lang,
-      });
+      }, { redirectOnUnauthorized: true });
       const resultNode = element("numerology-result");
       if (resultNode) {
         const separator = result.report_url.includes("?") ? "&" : "?";
@@ -1473,7 +1529,7 @@ async function loadNumerologyReport() {
   }
   setResult("numerology-result", i18n.loading);
   try {
-    const result = await apiRequest(`/api/numerology/report/${currentReportId}?lang=${encodeURIComponent(lang)}`, "GET");
+    const result = await apiRequest(`/api/numerology/report/${currentReportId}?lang=${encodeURIComponent(lang)}`, "GET", undefined, { redirectOnUnauthorized: true });
     renderNumerologyReport(result.report || {});
     setResult("numerology-result", "");
   } catch (error) {
@@ -1770,7 +1826,7 @@ function wireCompatibilityForms() {
         const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
           name1: element("compat-name1").value.trim(),
           name2: element("compat-name2").value.trim(),
-        });
+        }, { redirectOnUnauthorized: true });
         setResult("compat-result", result.result);
         setBalance(result.balance);
       } catch (error) {
@@ -1789,7 +1845,7 @@ function wireCompatibilityForms() {
           date1: element("compat-date1").value.trim(),
           name2: element("compat-nd-name2").value.trim(),
           date2: element("compat-date2").value.trim(),
-        });
+        }, { redirectOnUnauthorized: true });
         setResult("compat-result", result.result);
         setBalance(result.balance);
       } catch (error) {
