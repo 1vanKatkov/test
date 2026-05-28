@@ -41,6 +41,8 @@ Optional toggles:
 English Telegram bot vars:
 - `TELEGRAM_BOT_TOKEN_EN=...`
 - `TELEGRAM_BUTTON_TEXT_EN=Open app`
+- `TELEGRAM_BOT_URL_RU=https://t.me/your_telegram_bot_ru` (landing link for Russian UI)
+- `TELEGRAM_BOT_URL_EN=https://t.me/your_telegram_bot_en` (landing link for English UI)
 
 Dev auth bypass (for testing authorized flows without real auth):
 - `DEV_AUTH_BYPASS=true|false`

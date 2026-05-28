@@ -128,16 +128,26 @@ def _extract_json_payload(raw_text: str) -> dict | None:
 
 def _translate_report_payload_to_english(report_payload: dict) -> dict:
     """Translate numerology report textual values to English."""
+    serialized_payload = json.dumps(report_payload, ensure_ascii=False, separators=(",", ":"))
     prompt = (
         "Translate all Russian text VALUES in this JSON to natural English.\n"
         "Keep JSON structure and keys exactly unchanged.\n"
-        "Do not change numbers, dates, IDs, or array ordering.\n"
-        "Output ONLY valid JSON.\n\n"
-        f"{json.dumps(report_payload, ensure_ascii=False)}"
+        "Do not change numbers, dates, IDs, booleans, nulls, or array ordering.\n"
+        "Output ONLY valid JSON without markdown.\n\n"
+        f"{serialized_payload}"
     )
     model = settings.model_sonnik_en or settings.model_sonnik
-    translated_raw = chat_completion(model, prompt)
+    translated_raw = chat_completion(model, prompt, timeout_seconds=120, max_tokens=12000)
     translated = _extract_json_payload(translated_raw)
+    if not translated:
+        # Retry with an even stricter format instruction in case model returns prose.
+        retry_prompt = (
+            "Return strictly valid JSON only. No explanations.\n"
+            "Translate Russian text values to English and preserve all keys as-is.\n\n"
+            f"{serialized_payload}"
+        )
+        translated_raw = chat_completion(model, retry_prompt, timeout_seconds=120, max_tokens=12000)
+        translated = _extract_json_payload(translated_raw)
     if not translated:
         return report_payload
     translated["language"] = "en"

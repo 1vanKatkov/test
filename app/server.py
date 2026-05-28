@@ -84,6 +84,13 @@ def _normalize_lang(lang: str = "") -> str:
     return settings.app_default_lang
 
 
+def _landing_telegram_bot_url(lang: str) -> str:
+    page_lang = _normalize_lang(lang)
+    if page_lang == "en":
+        return settings.telegram_bot_url_en or settings.telegram_bot_url_ru
+    return settings.telegram_bot_url_ru or settings.telegram_bot_url_en
+
+
 def _auth_cookie_secure() -> bool:
     return settings.app_base_url.lower().startswith("https://")
 
@@ -241,12 +248,8 @@ def _translations(lang: str) -> dict:
             "landing_open_web_cabinet": "Open web cabinet",
             "landing_eyebrow": "AI services for personal insights",
             "landing_h1": "Dreambook, numerology, and compatibility in one digital space",
-            "landing_guest_text": (
-                "To get started, open the bot in Telegram or MAX to enter recognized mode "
-                "and access advanced functionality."
-            ),
+            "landing_guest_text": "Open the web service in your browser or access it through the Telegram bot.",
             "landing_open_tg_bot": "Open Telegram bot",
-            "landing_open_max_bot": "Open MAX bot",
             "landing_recognized_text": (
                 "User recognized. Open the workspace and use the full toolkit: "
                 "dream interpretation, numerology PDF generation, and compatibility analysis."
@@ -384,12 +387,8 @@ def _translations(lang: str) -> dict:
         "landing_open_web_cabinet": "Открыть веб-кабинет",
         "landing_eyebrow": "AI-сервисы для личных инсайтов",
         "landing_h1": "Сонник, нумерология и совместимость в одном цифровом пространстве",
-        "landing_guest_text": (
-            "Для старта откройте бота в Telegram или MAX, чтобы перейти в распознанный режим "
-            "и получить доступ к расширенному функционалу."
-        ),
+        "landing_guest_text": "Откройте веб-сервис в браузере или зайдите через Telegram-бот.",
         "landing_open_tg_bot": "Перейти в Telegram-бот",
-        "landing_open_max_bot": "Перейти в MAX-бот",
         "landing_recognized_text": (
             "Пользователь распознан. Откройте рабочий кабинет и используйте полный набор "
             "инструментов: интерпретацию снов, генерацию нумерологического PDF и анализ совместимости."
@@ -494,8 +493,7 @@ async def root(
         request=request,
         name="index.html",
         context={
-            "telegram_bot_url": "https://t.me/your_telegram_bot",
-            "max_bot_url": "https://max.ru/your_max_bot",
+            "telegram_bot_url": _landing_telegram_bot_url(page_lang),
             "brand_name": "Astrolhub",
             "initial_name": initial_name,
             "initial_platform": initial_platform,

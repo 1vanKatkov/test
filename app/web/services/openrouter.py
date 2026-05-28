@@ -31,15 +31,24 @@ def _extract_provider_error_detail(response: requests.Response) -> str:
     return f"AI provider status {response.status_code}"
 
 
-def chat_completion(model: str, prompt: str, timeout_seconds: int = 60) -> str:
+def chat_completion(
+    model: str,
+    prompt: str,
+    timeout_seconds: int = 60,
+    max_tokens: int | None = None,
+) -> str:
     if not settings.openrouter_api_key:
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY is not configured")
+
+    payload: dict[str, Any] = {"model": model, "messages": [{"role": "user", "content": prompt}]}
+    if isinstance(max_tokens, int) and max_tokens > 0:
+        payload["max_tokens"] = max_tokens
 
     try:
         response = requests.post(
             settings.openrouter_url,
             headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},
-            json={"model": model, "messages": [{"role": "user", "content": prompt}]},
+            json=payload,
             timeout=timeout_seconds,
         )
     except requests.RequestException as exc:
