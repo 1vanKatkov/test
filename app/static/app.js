@@ -250,6 +250,12 @@ async function initAuthStaticPage() {
   document.querySelectorAll(".auth-sparks-label").forEach((node) => {
     node.textContent = copy.sparks;
   });
+  document.querySelectorAll(".header-auth-btn.auth-login-link").forEach((node) => {
+    node.textContent = copy.goLogin;
+  });
+  document.querySelectorAll(".header-auth-btn.auth-register-link").forEach((node) => {
+    node.textContent = copy.goRegister;
+  });
   document.querySelectorAll(".auth-brand-link, .auth-username-link, .auth-login-link, .auth-register-link").forEach((link) => {
     link.setAttribute("href", withLangQuery(link.getAttribute("href")));
   });
