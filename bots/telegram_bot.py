@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -16,9 +17,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _append_telegram_query(url: str, lang: str) -> str:
+    parsed = urlparse(url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.setdefault("platform", "telegram")
+    query.setdefault("lang", lang)
+    return urlunparse(parsed._replace(query=urlencode(query)))
+
+
 def build_webapp_url(lang: str) -> str:
+    # Allow per-bot URL override via env, fallback to default /client URL.
+    if lang == "en" and settings.telegram_webapp_url_en:
+        return _append_telegram_query(settings.telegram_webapp_url_en, lang)
+    if lang == "ru" and settings.telegram_webapp_url_ru:
+        return _append_telegram_query(settings.telegram_webapp_url_ru, lang)
     # Open the client route directly to avoid falling back to guest landing.
-    return f"{settings.client_base_url}?platform=telegram&lang={lang}"
+    return _append_telegram_query(settings.client_base_url, lang)
 
 
 def _web_login_url_for_user(username: str | None) -> str | None:

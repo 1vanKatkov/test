@@ -41,6 +41,8 @@ Optional toggles:
 English Telegram bot vars:
 - `TELEGRAM_BOT_TOKEN_EN=...`
 - `TELEGRAM_BUTTON_TEXT_EN=Open app`
+- `TELEGRAM_WEBAPP_URL_RU=...` (optional override for RU bot button WebApp URL)
+- `TELEGRAM_WEBAPP_URL_EN=...` (optional override for EN bot button WebApp URL)
 - `TELEGRAM_BOT_URL_RU=https://t.me/your_telegram_bot_ru` (landing link for Russian UI)
 - `TELEGRAM_BOT_URL_EN=https://t.me/your_telegram_bot_en` (landing link for English UI)
 
