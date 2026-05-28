@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 class SonnikRequest(BaseModel):
     dream_text: str = Field(min_length=3, max_length=4000)
+    language: str = Field(default="", max_length=8)
 
 
 class NumerologyRequest(BaseModel):
@@ -14,6 +15,7 @@ class NumerologyRequest(BaseModel):
 class SovmestimostNamesRequest(BaseModel):
     name1: str = Field(min_length=2, max_length=100)
     name2: str = Field(min_length=2, max_length=100)
+    language: str = Field(default="", max_length=8)
 
 
 class SovmestimostNamesDatesRequest(BaseModel):
@@ -21,6 +23,7 @@ class SovmestimostNamesDatesRequest(BaseModel):
     date1: str = Field(min_length=8, max_length=10)
     name2: str = Field(min_length=2, max_length=100)
     date2: str = Field(min_length=8, max_length=10)
+    language: str = Field(default="", max_length=8)
 
 
 class EmailRegisterStartRequest(BaseModel):

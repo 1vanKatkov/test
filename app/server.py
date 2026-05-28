@@ -1287,10 +1287,10 @@ async def api_sonnik(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    language = _resolve_language(email_identity, max_identity, telegram_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     charge(user_id, settings.cost_sonnik, "sonnik", {"module": "sonnik"})
     try:
-        interpretation = sonnik.interpret_dream(payload.dream_text, language)
+        interpretation = sonnik.interpret_dream(payload.dream_text, requested_language)
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
         return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
@@ -1376,10 +1376,10 @@ async def api_sovmestimost_names(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    language = _resolve_language(email_identity, max_identity, telegram_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     charge(user_id, settings.cost_sovmestimost, "sovmestimost_names", {"module": "sovmestimost"})
     try:
-        result = compatibility.by_names(payload.name1, payload.name2, language)
+        result = compatibility.by_names(payload.name1, payload.name2, requested_language)
     except HTTPException as exc:
         new_balance = refund(
             user_id,
@@ -1409,7 +1409,7 @@ async def api_sovmestimost_names_dates(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    language = _resolve_language(email_identity, max_identity, telegram_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     charge(
         user_id,
         settings.cost_sovmestimost,
@@ -1422,7 +1422,7 @@ async def api_sovmestimost_names_dates(
             payload.date1,
             payload.name2,
             payload.date2,
-            language,
+            requested_language,
         )
     except HTTPException as exc:
         new_balance = refund(

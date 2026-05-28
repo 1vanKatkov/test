@@ -1440,6 +1440,7 @@ function wireSonnikForm() {
     try {
       const result = await apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
+        language: lang,
       }, { redirectOnUnauthorized: true });
       setResult("sonnik-result", result.interpretation);
       setBalance(result.balance);
@@ -1832,6 +1833,7 @@ function wireCompatibilityForms() {
         const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
           name1: element("compat-name1").value.trim(),
           name2: element("compat-name2").value.trim(),
+          language: lang,
         }, { redirectOnUnauthorized: true });
         setResult("compat-result", result.result);
         setBalance(result.balance);
@@ -1851,6 +1853,7 @@ function wireCompatibilityForms() {
           date1: element("compat-date1").value.trim(),
           name2: element("compat-nd-name2").value.trim(),
           date2: element("compat-date2").value.trim(),
+          language: lang,
         }, { redirectOnUnauthorized: true });
         setResult("compat-result", result.result);
         setBalance(result.balance);
