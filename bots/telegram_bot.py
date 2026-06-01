@@ -35,10 +35,17 @@ def build_webapp_url(lang: str) -> str:
     return _append_telegram_query(settings.client_base_url, lang)
 
 
-def _web_login_url_for_user(username: str | None) -> str | None:
+def _append_tglink_query(url: str, link_token: str) -> str:
+    parsed = urlparse(url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query["tglink"] = link_token
+    return urlunparse(parsed._replace(query=urlencode(query)))
+
+
+def _web_login_url_for_user(username: str | None, webapp_url: str) -> str | None:
     from app.web.auth.telegram_auth import (
         is_telegram_username_link_configured,
-        issue_telegram_username_login_url,
+        issue_telegram_username_link_token,
     )
 
     if not is_telegram_username_link_configured():
@@ -46,7 +53,7 @@ def _web_login_url_for_user(username: str | None) -> str | None:
     if not username:
         return None
     try:
-        return issue_telegram_username_login_url(username)
+        return _append_tglink_query(webapp_url, issue_telegram_username_link_token(username))
     except Exception as exc:  # noqa: BLE001 — invalid stored username, etc.
         logger.info("Web login link skipped: %s", exc)
         return None
@@ -60,7 +67,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     start_text = context.bot_data["start_text"]
 
     user = update.effective_user
-    link_url = _web_login_url_for_user(user.username if user else None)
+    link_url = _web_login_url_for_user(user.username if user else None, webapp_url)
     target_url = link_url if link_url else webapp_url
     # Ссылка на кнопку генерируется по @username; если username отсутствует, используем обычный webapp URL.
     button_text = start_text
