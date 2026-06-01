@@ -32,8 +32,15 @@
         <label>{{ t.spark_package }}
           <select id="payment-package" required></select>
         </label>
-        <label>Email для чека
+        <label>{{ t.receipt_email }}
           <input id="payment-email" type="email" required placeholder="name@example.com" />
+        </label>
+        <label class="payment-offer-consent">
+          <input id="payment-offer-accepted" type="checkbox" required />
+          <span>
+            {{ t.public_offer_ack_prefix }}
+            <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
+          </span>
         </label>
         <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
       </form>
@@ -47,7 +54,7 @@
 
   </main>
 
-  <script defer src="/static/app.js?v=57ae02d-hidden-v1"></script>
+  <script defer src="/static/app.js?v=5ec479e-offer-consent-v1"></script>
 </body>
 </html>
 

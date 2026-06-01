@@ -63,6 +63,12 @@ from config import settings
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
+PUBLIC_OFFER_FILE_CANDIDATES = (
+    BASE_DIR.parent / "Публичная оферта.pdf",
+    BASE_DIR.parent / "bots228" / "numerology" / "Публичная оферта.pdf",
+    BASE_DIR.parent / "bots228" / "sonnik" / "Публичная оферта.pdf",
+    BASE_DIR.parent / "bots228" / "sovmestimost" / "Публичная оферта.pdf",
+)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -192,6 +198,9 @@ def _translations(lang: str) -> dict:
             "spark_package": "Spark package",
             "create_payment": "Create payment",
             "check_payment": "Check payment",
+            "receipt_email": "Receipt email",
+            "public_offer_ack_prefix": "I have read the terms of the",
+            "public_offer_ack_link": "public offer",
             "soon": "Soon",
             "sparks": "Sparks",
             "email_auth": "Email auth",
@@ -331,6 +340,9 @@ def _translations(lang: str) -> dict:
         "spark_package": "Пакет искр",
         "create_payment": "Создать платеж",
         "check_payment": "Проверить оплату",
+        "receipt_email": "Email для чека",
+        "public_offer_ack_prefix": "Я ознакомился с условиями",
+        "public_offer_ack_link": "публичной оферты",
         "soon": "Скоро",
         "sparks": "Искры",
         "email_auth": "Авторизация по email",
@@ -509,6 +521,14 @@ async def root(
 @app.get("/app", response_class=HTMLResponse, include_in_schema=False)
 async def web_app_page():
     return RedirectResponse(url="/client")
+
+
+@app.get("/public-offer.pdf", include_in_schema=False)
+async def public_offer_pdf():
+    offer_file = next((path for path in PUBLIC_OFFER_FILE_CANDIDATES if path.exists()), None)
+    if not offer_file:
+        raise HTTPException(status_code=404, detail="Public offer file not found")
+    return FileResponse(path=offer_file, media_type="application/pdf", filename="Публичная оферта.pdf")
 
 
 def _client_template_context(request: Request, lang: str) -> dict:

@@ -32,6 +32,7 @@ const i18n = lang === "en"
     paymentCreated: "Payment created",
     needCreatePaymentFirst: "Create a payment first",
     enterEmail: "Enter a valid email",
+    acceptPublicOffer: "Confirm that you have read the public offer terms",
     paymentPending: "Payment is pending",
     paymentsHistoryEmpty: "No payments yet",
     cancelPayment: "Cancel",
@@ -89,6 +90,7 @@ const i18n = lang === "en"
     paymentCreated: "Платеж создан",
     needCreatePaymentFirst: "Сначала создайте платеж",
     enterEmail: "Введите корректный email",
+    acceptPublicOffer: "Подтвердите, что вы ознакомились с условиями публичной оферты",
     paymentPending: "Платеж еще в обработке",
     paymentsHistoryEmpty: "Платежей пока нет",
     cancelPayment: "Отменить",
@@ -1046,6 +1048,10 @@ function wirePaymentForms() {
         const receiptEmail = (element("payment-email")?.value || "").trim();
         if (!receiptEmail.includes("@")) {
           throw new Error(i18n.enterEmail);
+        }
+        const offerAccepted = element("payment-offer-accepted");
+        if (offerAccepted && !offerAccepted.checked) {
+          throw new Error(i18n.acceptPublicOffer);
         }
         const result = await apiRequest("/api/payments/yookassa/create", "POST", {
           package_id: packageId,
