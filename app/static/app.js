@@ -1,13 +1,7 @@
 const TELEGRAM_INIT_DATA_KEY = "astrolhub.telegramInitData";
 const TELEGRAM_AUTH_TOKEN_KEY = "astrolhub.telegramAuthToken";
 const EMAIL_AUTH_TOKEN_KEY = "astrolhub.emailAuthToken";
-
-if (window.Telegram && window.Telegram.WebApp) {
-  window.Telegram.WebApp.ready();
-  if (window.Telegram.WebApp.expand) {
-    window.Telegram.WebApp.expand();
-  }
-}
+const TELEGRAM_WEB_APP_SCRIPT_URL = "https://telegram.org/js/telegram-web-app.js";
 
 const state = {
   telegramInitData: "",
@@ -19,6 +13,7 @@ const state = {
   selectedSupportTicketId: null,
   profileProvider: "guest",
 };
+let telegramSdkLoadPromise = null;
 const lang = document.body.dataset.lang === "en" ? "en" : "ru";
 const currentReportId = Number(document.body.dataset.reportId || 0);
 const PROFILE_CACHE_KEY = "astrolhub.profileCache";
@@ -453,6 +448,10 @@ function persistTelegramAuthToken(token) {
   localStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
 }
 
+function hasStoredAuthToken() {
+  return Boolean(state.telegramAuthToken || state.emailAuthToken);
+}
+
 function setTelegramAuthStatus(message) {
   const node = element("telegram-auth-status");
   if (!node) {
@@ -467,13 +466,66 @@ function setTelegramAuthStatus(message) {
   node.textContent = message;
 }
 
+function isTelegramSdkReady() {
+  return Boolean(window.Telegram && window.Telegram.WebApp);
+}
+
+function activateTelegramWebApp() {
+  if (!isTelegramSdkReady()) {
+    return;
+  }
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  if (tg.expand) {
+    tg.expand();
+  }
+}
+
+function loadTelegramWebAppSdk() {
+  if (isTelegramSdkReady()) {
+    activateTelegramWebApp();
+    return Promise.resolve(true);
+  }
+  if (telegramSdkLoadPromise) {
+    return telegramSdkLoadPromise;
+  }
+  telegramSdkLoadPromise = new Promise((resolve) => {
+    const existingScript = document.querySelector(`script[src="${TELEGRAM_WEB_APP_SCRIPT_URL}"]`);
+    if (existingScript) {
+      existingScript.addEventListener(
+        "load",
+        () => {
+          activateTelegramWebApp();
+          resolve(isTelegramSdkReady());
+        },
+        { once: true },
+      );
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = TELEGRAM_WEB_APP_SCRIPT_URL;
+    script.async = true;
+    script.onload = () => {
+      activateTelegramWebApp();
+      resolve(isTelegramSdkReady());
+    };
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+  return telegramSdkLoadPromise;
+}
+
 function isTelegramWebAppContext() {
   const platform = new URLSearchParams(window.location.search).get("platform");
   if (platform === "telegram") {
     return true;
   }
-  const initData = readTelegramInitData();
-  return Boolean(initData);
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("tgWebAppData")) {
+    return true;
+  }
+  return Boolean(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
 }
 
 function hydrateUiFromCache() {
@@ -749,9 +801,9 @@ async function verifyTelegramUsernameLinkFromQuery() {
 }
 
 function readTelegramInitData() {
-  if (window.Telegram && window.Telegram.WebApp) {
+  if (isTelegramSdkReady()) {
     const tg = window.Telegram.WebApp;
-    tg.ready();
+    activateTelegramWebApp();
     if (tg.initData) {
       return tg.initData;
     }
@@ -774,6 +826,16 @@ async function waitForTelegramInitData(maxAttempts = 80, delayMs = 100) {
 async function autoVerifyTelegram() {
   if (!isTelegramWebAppContext()) {
     return false;
+  }
+  if (isLoggedIn()) {
+    return false;
+  }
+  if (!readTelegramInitData()) {
+    const loaded = await loadTelegramWebAppSdk();
+    if (!loaded && !new URLSearchParams(window.location.search).get("tgWebAppData")) {
+      setTelegramAuthStatus(i18n.telegramNoInitData);
+      return false;
+    }
   }
   const initData = await waitForTelegramInitData();
   if (!initData) {
@@ -1958,10 +2020,15 @@ async function boot() {
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();
   await verifyTelegramUsernameLinkFromQuery();
-  let telegramVerified = await autoVerifyTelegram();
-  let profile = await loadProfile();
-  if (!telegramVerified && profile?.provider !== "telegram" && state.telegramInitData) {
+  let profile = null;
+  if (hasStoredAuthToken()) {
+    profile = await loadProfile();
+  }
+  let telegramVerified = false;
+  if (!isLoggedIn()) {
     telegramVerified = await autoVerifyTelegram();
+  }
+  if (!profile || telegramVerified || !isLoggedIn()) {
     profile = await loadProfile();
   }
   if (profile?.provider !== "telegram" && isTelegramWebAppContext() && state.telegramInitData) {

@@ -6,7 +6,6 @@
     <meta name="theme-color" content="#2D1B4E">
     <title>Нумерология</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
@@ -73,12 +72,32 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        const hasStoredAuth = Boolean(
+            localStorage.getItem('astrolhub.telegramAuthToken') ||
+            localStorage.getItem('astrolhub.emailAuthToken')
+        );
+        let tg = null;
+        let userId = null;
 
-        const initData = tg.initDataUnsafe;
-        const userId = initData?.user?.id;
+        function initTelegramWebApp() {
+            if (!window.Telegram || !window.Telegram.WebApp) {
+                return;
+            }
+            tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+
+            const initData = tg.initDataUnsafe;
+            userId = initData?.user?.id;
+
+            if (userId) {
+                loadBalance();
+            }
+        }
+
+        function notifyTelegram(type) {
+            tg?.HapticFeedback?.notificationOccurred(type);
+        }
 
         async function loadBalance() {
             if (!userId) return;
@@ -134,7 +153,7 @@
                     document.getElementById('downloadLink').href = data.pdf_url;
                     document.getElementById('result').style.display = 'block';
                     document.getElementById('balanceValue').textContent = data.balance;
-                    tg.HapticFeedback.notificationOccurred('success');
+                    notifyTelegram('success');
                 }
             } catch (error) {
                 showError('Ошибка при генерации отчета');
@@ -149,11 +168,15 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
-            tg.HapticFeedback.notificationOccurred('error');
+            notifyTelegram('error');
         }
 
-        if (userId) {
-            loadBalance();
+        if (!hasStoredAuth) {
+            const script = document.createElement('script');
+            script.src = 'https://telegram.org/js/telegram-web-app.js';
+            script.async = true;
+            script.onload = initTelegramWebApp;
+            document.head.appendChild(script);
         }
     </script>
 </body>
