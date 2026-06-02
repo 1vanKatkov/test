@@ -250,6 +250,11 @@ def _translations(lang: str) -> dict:
             "admin_sparks_reason": "Reason",
             "admin_apply_credits": "Apply",
             "admin_user_not_found": "User not found",
+            "mobile_hero_description": "Your personal insights",
+            "feature_sonnik_desc": "AI-powered dream interpretation with symbols and context.",
+            "feature_numerology_desc": "Personal report based on full name and birth date.",
+            "feature_compatibility_desc": "Relationship and compatibility analysis in two modes.",
+            "feature_lunar_desc": "Lunar calendar will be available soon.",
             "landing_title": "Astrolhub - Dreambook, Numerology, Compatibility",
             "landing_nav_features": "Features",
             "landing_nav_how": "How it works",
@@ -392,6 +397,11 @@ def _translations(lang: str) -> dict:
         "admin_sparks_reason": "Причина",
         "admin_apply_credits": "Применить",
         "admin_user_not_found": "Пользователь не найден",
+        "mobile_hero_description": "Сервис личных инсайтов",
+        "feature_sonnik_desc": "Разбор снов с помощью AI-интерпретации символов и контекста.",
+        "feature_numerology_desc": "Персональный разбор по ФИО и дате рождения.",
+        "feature_compatibility_desc": "Анализ отношений и совместимости в двух режимах.",
+        "feature_lunar_desc": "Лунный календарь скоро будет доступен.",
         "landing_title": "Astrolhub - Сонник, Нумерология, Совместимость",
         "landing_nav_features": "Возможности",
         "landing_nav_how": "Как это работает",
@@ -632,6 +642,15 @@ async def client_compatibility(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_compatibility.html",
+        context=_client_template_context(request, lang),
+    )
+
+
+@app.get("/client/history", response_class=HTMLResponse, include_in_schema=False)
+async def client_history(request: Request, lang: str = Query(default="")):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_history.html",
         context=_client_template_context(request, lang),
     )
 

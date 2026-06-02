@@ -1,0 +1,34 @@
+<nav class="mobile-bottom-nav" aria-label="Client navigation">
+  <a class="bottom-nav-item {% if request.url.path == '/client' %}is-active{% endif %}" href="/client?lang={{ lang }}">
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M3 10.8 12 3l9 7.8V21h-6v-6H9v6H3Z"/></svg>
+    </span>
+    <span>{{ t.home }}</span>
+  </a>
+  <a class="bottom-nav-item {% if request.url.path == '/client/history' %}is-active{% endif %}" href="/client/history?lang={{ lang }}" data-auth-required="true">
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-2.05-4.95L14 10h7V3l-2.62 2.62A8.96 8.96 0 0 0 12 3Zm-1 5v5l4 2 .9-1.79-2.9-1.46V8Z"/></svg>
+    </span>
+    <span>{{ t.history }}</span>
+  </a>
+  {% if not hide_topup_button %}
+  <a class="bottom-nav-item {% if request.url.path == '/client/topup' %}is-active{% endif %}" href="/client/topup?lang={{ lang }}" data-auth-required="true">
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3Zm1 6v3h3v2h-3v3h-2v-3H8v-2h3V8h2Z"/></svg>
+    </span>
+    <span>{{ t.topup }}</span>
+  </a>
+  {% endif %}
+  <a id="bottom-nav-profile" class="bottom-nav-item {% if request.url.path == '/client/profile' %}is-active{% endif %}" href="/client/profile?lang={{ lang }}" hidden>
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5Z"/></svg>
+    </span>
+    <span>{{ t.profile }}</span>
+  </a>
+  <a id="bottom-nav-login" class="bottom-nav-item {% if request.url.path in ['/client/login', '/client/register'] %}is-active{% endif %}" href="/static/auth/login.html?lang={{ lang }}">
+    <span class="bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5Z"/></svg>
+    </span>
+    <span>{{ t.login }}</span>
+  </a>
+</nav>

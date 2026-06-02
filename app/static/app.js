@@ -229,6 +229,19 @@ function resolvePostLoginRedirect() {
   }
 }
 
+function loginRedirectUrlFor(nextHref) {
+  try {
+    const nextUrl = new URL(nextHref, window.location.origin);
+    if (nextUrl.origin !== window.location.origin || nextUrl.pathname.startsWith("/api/")) {
+      return loginRedirectUrl();
+    }
+    nextUrl.searchParams.set("lang", lang);
+    return authStaticUrl("login", { next: `${nextUrl.pathname}${nextUrl.search}` });
+  } catch {
+    return loginRedirectUrl();
+  }
+}
+
 function withLangQuery(url) {
   if (!url) {
     return url;
@@ -236,6 +249,18 @@ function withLangQuery(url) {
   const target = new URL(url, window.location.origin);
   target.searchParams.set("lang", lang);
   return `${target.pathname}${target.search}`;
+}
+
+function wireAuthRequiredLinks() {
+  document.querySelectorAll("[data-auth-required='true']").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (isLoggedIn()) {
+        return;
+      }
+      event.preventDefault();
+      window.location.href = loginRedirectUrlFor(link.getAttribute("href") || currentRelativeUrl());
+    });
+  });
 }
 
 async function initAuthStaticPage() {
@@ -308,6 +333,10 @@ function setBalance(value) {
   if (headerSparks) {
     headerSparks.textContent = String(value);
   }
+  const dashboardHeroSparks = element("dashboard-hero-sparks");
+  if (dashboardHeroSparks) {
+    dashboardHeroSparks.textContent = String(value);
+  }
   const node = element("balance-view");
   if (node) {
     node.textContent = String(value);
@@ -326,6 +355,10 @@ function setAuthUsername(username) {
   if (node) {
     node.textContent = username || i18n.guest;
   }
+  const dashboardHeroUsername = element("dashboard-hero-username");
+  if (dashboardHeroUsername) {
+    dashboardHeroUsername.textContent = username || i18n.guest;
+  }
 }
 
 function isSocialAuthorized() {
@@ -336,9 +369,7 @@ function isLoggedIn() {
   return (
     state.profileProvider === "email" ||
     state.profileProvider === "telegram" ||
-    state.profileProvider === "max" ||
-    Boolean(state.emailAuthToken) ||
-    Boolean(state.telegramAuthToken)
+    state.profileProvider === "max"
   );
 }
 
@@ -449,6 +480,7 @@ function hydrateUiFromCache() {
   const profile = readTimedCache(PROFILE_CACHE_KEY);
   if (isTelegramWebAppContext() && profile?.provider !== "telegram") {
     setAuthUsername(i18n.guest);
+    syncAuthChrome({ provider: "guest", username: i18n.guest });
     const balance = readTimedCache(BALANCE_CACHE_KEY);
     if (typeof balance === "number") {
       setBalance(balance);
@@ -506,7 +538,27 @@ function toggleHeaderAuthLinks() {
   if (!links) {
     return;
   }
-  links.hidden = isTelegramWebAppContext() || isLoggedIn();
+  links.hidden = isLoggedIn();
+}
+
+function syncGuestOnlyChrome(isGuest) {
+  const sparkPill = element("header-spark-pill");
+  if (sparkPill) {
+    sparkPill.hidden = isGuest;
+  }
+  const dashboardHeroSparkPill = element("dashboard-hero-spark-pill");
+  if (dashboardHeroSparkPill) {
+    dashboardHeroSparkPill.hidden = isGuest;
+  }
+  const profileLink = element("bottom-nav-profile");
+  if (profileLink) {
+    profileLink.hidden = isGuest;
+  }
+  const loginLink = element("bottom-nav-login");
+  if (loginLink) {
+    loginLink.hidden = !isGuest;
+    loginLink.setAttribute("href", authStaticUrl("login", { next: "/client/profile" }));
+  }
 }
 
 function syncAuthChrome(profile) {
@@ -515,6 +567,7 @@ function syncAuthChrome(profile) {
   }
   const loggedIn = isLoggedIn();
   toggleHeaderAuthLinks();
+  syncGuestOnlyChrome(!loggedIn);
   const logoutBtn = element("profile-logout-btn");
   if (logoutBtn) {
     logoutBtn.hidden = !loggedIn;
@@ -777,6 +830,10 @@ async function autoVerifyTelegram() {
 
 function applyProfileUi(profile) {
   state.profileProvider = profile.provider || "guest";
+  if (state.profileProvider === "guest") {
+    persistEmailAuthToken("");
+    persistTelegramAuthToken("");
+  }
   if (profile.provider === "max") {
     setAuthBadge(`${i18n.maxPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
@@ -1156,7 +1213,7 @@ async function loadRequestHistory() {
   }
   setResult("history-result", i18n.loading);
   try {
-    const result = await apiRequest("/api/history/requests?limit=50", "GET");
+    const result = await apiRequest("/api/history/requests?limit=50", "GET", undefined, { redirectOnUnauthorized: true });
     renderRequestHistory(result.items || []);
     setResult("history-result", "");
   } catch (error) {
@@ -1888,6 +1945,7 @@ async function boot() {
   toggleHeaderAuthLinks();
   wirePaymentForms();
   wireAuthPages();
+  wireAuthRequiredLinks();
   wireLogoutButton();
   wirePasswordResetForm();
   wireRequestHistory();

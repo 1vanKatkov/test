@@ -22,43 +22,64 @@
   </header>
 
   <main class="mobile-client">
-    <section class="card compact-card">
-      <p id="telegram-auth-status" class="result muted" hidden></p>
-      <div class="compact-actions">
-        <a class="secondary-btn compact-action-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
-        {% if not hide_topup_button %}
-        <a class="secondary-btn compact-action-btn" href="/client/topup?lang={{ lang }}">{{ t.topup }}</a>
-        {% endif %}
+    <section class="mobile-dashboard-hero">
+      <div class="mobile-dashboard-hero-copy">
+        <h1>{{ brand_name }}</h1>
+        <p>{{ t.mobile_hero_description }}</p>
+        <div class="mobile-dashboard-hero-meta">
+          <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
+          <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
+            <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+            <span id="dashboard-hero-sparks">-</span>
+          </span>
+        </div>
       </div>
+      <p id="telegram-auth-status" class="result muted" hidden></p>
     </section>
 
     <section id="admin-panel-entry" class="card" hidden>
       <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin?lang={{ lang }}">{{ t.admin_panel }}</a>
     </section>
 
-    <section class="icon-grid">
-      <a class="feature-icon-tile" href="/client/sonnik?lang={{ lang }}">
+    <section class="feature-list">
+      <a class="feature-icon-tile feature-list-card" href="/client/sonnik?lang={{ lang }}">
         <img class="tile-icon-img" src="/static/img/icons/dreambook-neon.svg" alt="" loading="lazy" />
-        <span class="tile-title">{{ t.sonnik }}</span>
+        <span class="feature-list-copy">
+          <span class="tile-title">{{ t.sonnik }}</span>
+          <span class="tile-description">{{ t.feature_sonnik_desc }}</span>
+        </span>
+        <span class="feature-list-arrow" aria-hidden="true">›</span>
       </a>
-      <a class="feature-icon-tile" href="/client/numerology?lang={{ lang }}">
+      <a class="feature-icon-tile feature-list-card" href="/client/numerology?lang={{ lang }}">
         <img class="tile-icon-img" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
-        <span class="tile-title">{{ t.numerology }}</span>
+        <span class="feature-list-copy">
+          <span class="tile-title">{{ t.numerology }}</span>
+          <span class="tile-description">{{ t.feature_numerology_desc }}</span>
+        </span>
+        <span class="feature-list-arrow" aria-hidden="true">›</span>
       </a>
-      <a class="feature-icon-tile" href="/client/compatibility?lang={{ lang }}">
+      <a class="feature-icon-tile feature-list-card" href="/client/compatibility?lang={{ lang }}">
         <img class="tile-icon-img" src="/static/img/icons/compatibility-neon.svg" alt="" loading="lazy" />
-        <span class="tile-title">{{ t.compatibility }}</span>
+        <span class="feature-list-copy">
+          <span class="tile-title">{{ t.compatibility }}</span>
+          <span class="tile-description">{{ t.feature_compatibility_desc }}</span>
+        </span>
+        <span class="feature-list-arrow" aria-hidden="true">›</span>
       </a>
-      <span class="feature-icon-tile feature-icon-tile-disabled" aria-disabled="true">
+      <span class="feature-icon-tile feature-list-card feature-icon-tile-disabled" aria-disabled="true">
         <img class="tile-icon-img" src="/static/img/icons/lunar-locked-neon.svg" alt="" loading="lazy" />
-        <span class="tile-title">{{ t.lunar_calendar }}</span>
+        <span class="feature-list-copy">
+          <span class="tile-title">{{ t.lunar_calendar }}</span>
+          <span class="tile-description">{{ t.feature_lunar_desc }}</span>
+        </span>
         <span class="tile-soon">{{ t.soon }}</span>
       </span>
     </section>
 
   </main>
 
-  <script defer src="/static/app.js?v=5a09916-en-bot-lang-v1"></script>
+  {% include "partials/client_bottom_nav.html" %}
+  <script defer src="/static/app.js?v=mobile-hero-sparks-v1"></script>
 </body>
 </html>
 

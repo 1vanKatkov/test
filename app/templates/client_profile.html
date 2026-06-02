@@ -25,6 +25,7 @@
     <section class="card compact-card">
       <h2>{{ t.profile }}</h2>
       <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      <a class="secondary-btn profile-support-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
       <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
     </section>
 
@@ -40,14 +41,9 @@
       <pre id="password-reset-result" class="result"></pre>
     </section>
 
-    <section class="card">
-      <h2>{{ t.request_history }}</h2>
-      <div id="request-history" class="history-list"></div>
-      <pre id="history-result" class="result"></pre>
-    </section>
-
   </main>
 
-  <script defer src="/static/app.js?v=57ae02d-hidden-v1"></script>
+  {% include "partials/client_bottom_nav.html" %}
+  <script defer src="/static/app.js?v=mobile-hero-sparks-v1"></script>
 </body>
 </html>
