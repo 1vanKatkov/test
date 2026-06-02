@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-label="Astrolhub hero">
+  <defs>
+    <radialGradient id="sky" cx="70%" cy="42%" r="78%">
+      <stop offset="0" stop-color="#331071"/>
+      <stop offset="0.45" stop-color="#120b3a"/>
+      <stop offset="1" stop-color="#050713"/>
+    </radialGradient>
+    <linearGradient id="moon" x1="650" y1="260" x2="900" y2="570">
+      <stop offset="0" stop-color="#fff3cf"/>
+      <stop offset="0.48" stop-color="#ff9ce8"/>
+      <stop offset="1" stop-color="#7a55ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <g opacity=".5" fill="#b981ff">
+    <circle cx="120" cy="90" r="2"/>
+    <circle cx="250" cy="180" r="1.6"/>
+    <circle cx="420" cy="70" r="1.8"/>
+    <circle cx="1010" cy="120" r="2"/>
+    <circle cx="1080" cy="650" r="1.7"/>
+    <circle cx="360" cy="560" r="1.5"/>
+    <circle cx="170" cy="690" r="1.4"/>
+  </g>
+  <path d="M0 650C150 560 240 620 360 520c120-100 204-230 392-204 154 21 237 123 448 38v446H0Z" fill="#1b0b45" opacity=".38"/>
+  <g transform="translate(710 390)" opacity=".72">
+    <circle r="205" fill="none" stroke="#a34eff" stroke-opacity=".35" stroke-width="2"/>
+    <circle r="155" fill="none" stroke="#d65cff" stroke-opacity=".28" stroke-width="1.5"/>
+    <circle r="105" fill="none" stroke="#f0b1ff" stroke-opacity=".2" stroke-width="1"/>
+    <g stroke="#b967ff" stroke-opacity=".34">
+      <path d="M0-205V-155M0 155v50M-205 0h50M155 0h50"/>
+      <path d="M145-145l-35 35M145 145l-35-35M-145-145l35 35M-145 145l35-35"/>
+    </g>
+  </g>
+  <path d="M780 245c-91 35-136 137-101 229 31 80 111 126 193 113-34 44-89 72-150 68-107-7-188-99-181-206 8-127 119-221 239-204Z" fill="url(#moon)" filter="url(#glow)"/>
+  <path d="M930 255l6 15 15 6-15 6-6 15-6-15-15-6 15-6 6-15Z" fill="#fff1ff" filter="url(#glow)"/>
+  <path d="M540 160l4 10 10 4-10 4-4 10-4-10-10-4 10-4 4-10Z" fill="#d8c5ff" opacity=".9"/>
+</svg>

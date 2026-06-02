@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Compatibility">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="43%" r="70%">
+      <stop offset="0" stop-color="#341064"/>
+      <stop offset="0.58" stop-color="#170a34"/>
+      <stop offset="1" stop-color="#070914"/>
+    </radialGradient>
+    <linearGradient id="heart" x1="35" y1="34" x2="91" y2="99">
+      <stop offset="0" stop-color="#ffd7c7"/>
+      <stop offset="0.45" stop-color="#ff4bb7"/>
+      <stop offset="1" stop-color="#d53aff"/>
+    </linearGradient>
+    <filter id="glow" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="5" y="5" width="118" height="118" rx="28" fill="url(#bg)" stroke="#6d45d9" stroke-opacity=".5" stroke-width="2"/>
+  <circle cx="64" cy="64" r="39" fill="none" stroke="#d83aff" stroke-opacity=".25" stroke-width="1.5"/>
+  <path d="M64 101S30 80.4 30 54.9C30 42.6 38 34 49.3 34c6.8 0 12 3.3 14.7 8.5C66.7 37.3 72 34 78.7 34 90 34 98 42.6 98 54.9 98 80.4 64 101 64 101Z" fill="url(#heart)" filter="url(#glow)"/>
+  <path d="M100 36l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5 2.5-6Z" fill="#fff0ff" filter="url(#glow)"/>
+  <circle cx="29" cy="85" r="2.4" fill="#f7d2ff" opacity=".9"/>
+</svg>

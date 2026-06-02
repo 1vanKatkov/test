@@ -539,6 +539,14 @@ button {
   line-height: 1;
 }
 
+.tile-icon-img {
+  width: 74px;
+  height: 74px;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 12px 28px rgba(120, 70, 255, 0.32);
+}
+
 .tile-title {
   font-size: 16px;
   font-weight: 600;

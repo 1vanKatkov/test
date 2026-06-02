@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Numerology">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="44%" r="70%">
+      <stop offset="0" stop-color="#30106b"/>
+      <stop offset="0.58" stop-color="#150b36"/>
+      <stop offset="1" stop-color="#070914"/>
+    </radialGradient>
+    <linearGradient id="num" x1="34" y1="28" x2="92" y2="100">
+      <stop offset="0" stop-color="#ffe7c7"/>
+      <stop offset="0.45" stop-color="#ff79df"/>
+      <stop offset="1" stop-color="#8d62ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="5" y="5" width="118" height="118" rx="28" fill="url(#bg)" stroke="#6d45d9" stroke-opacity=".5" stroke-width="2"/>
+  <circle cx="64" cy="64" r="42" fill="none" stroke="#7d49ff" stroke-opacity=".28" stroke-width="1.5"/>
+  <circle cx="64" cy="64" r="32" fill="none" stroke="#d95cff" stroke-opacity=".23" stroke-width="1"/>
+  <g fill="none" stroke="#b965ff" stroke-linecap="round" opacity=".65">
+    <path d="M64 17v10M64 101v10M17 64h10M101 64h10"/>
+    <path d="M31 31l7 7M90 90l7 7M97 31l-7 7M38 90l-7 7"/>
+  </g>
+  <text x="64" y="78" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="700" fill="url(#num)" filter="url(#glow)">123</text>
+  <path d="M99 43l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z" fill="#fff0ff" filter="url(#glow)"/>
+</svg>
