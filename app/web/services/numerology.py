@@ -126,32 +126,70 @@ def _extract_json_payload(raw_text: str) -> dict | None:
         return None
 
 
+def _contains_cyrillic_text(value, parent_key: str = "") -> bool:
+    if isinstance(value, dict):
+        return any(_contains_cyrillic_text(item, str(key)) for key, item in value.items())
+    if isinstance(value, list):
+        return any(_contains_cyrillic_text(item, parent_key) for item in value)
+    if not isinstance(value, str):
+        return False
+    # Names can legitimately be entered in Cyrillic; report text itself must be translated.
+    if parent_key == "full_name":
+        return False
+    return bool(re.search(r"[А-Яа-яЁё]", value))
+
+
+def _require_english_translation(translated: dict | None) -> dict | None:
+    if not translated:
+        return None
+    if _contains_cyrillic_text(translated):
+        return None
+    return translated
+
+
+def _translation_models() -> list[str]:
+    candidates = [
+        settings.model_sonnik_en,
+        settings.model_sovmestimost_en,
+        settings.model_sonnik,
+        settings.model_sovmestimost,
+    ]
+    models: list[str] = []
+    for model in candidates:
+        if model and model not in models:
+            models.append(model)
+    return models
+
+
 def _translate_report_payload_to_english(report_payload: dict) -> dict:
     """Translate numerology report textual values to English."""
     serialized_payload = json.dumps(report_payload, ensure_ascii=False, separators=(",", ":"))
     prompt = (
-        "Translate all Russian text VALUES in this JSON to natural English.\n"
+        "Translate every Russian text VALUE in this JSON to natural English.\n"
         "Keep JSON structure and keys exactly unchanged.\n"
         "Do not change numbers, dates, IDs, booleans, nulls, or array ordering.\n"
+        "Do not leave any Cyrillic text in values except personal names in full_name.\n"
         "Output ONLY valid JSON without markdown.\n\n"
         f"{serialized_payload}"
     )
-    model = settings.model_sonnik_en or settings.model_sonnik
-    translated_raw = chat_completion(model, prompt, timeout_seconds=120, max_tokens=12000)
-    translated = _extract_json_payload(translated_raw)
-    if not translated:
-        # Retry with an even stricter format instruction in case model returns prose.
-        retry_prompt = (
-            "Return strictly valid JSON only. No explanations.\n"
-            "Translate Russian text values to English and preserve all keys as-is.\n\n"
-            f"{serialized_payload}"
-        )
+    retry_prompt = (
+        "Return strictly valid JSON only. No explanations.\n"
+        "Translate ALL Russian text values to English and preserve all keys exactly as-is.\n"
+        "There must be no Cyrillic characters in JSON string values, except in full_name.\n\n"
+        f"{serialized_payload}"
+    )
+    for model in _translation_models():
+        translated_raw = chat_completion(model, prompt, timeout_seconds=120, max_tokens=12000)
+        translated = _require_english_translation(_extract_json_payload(translated_raw))
+        if translated:
+            translated["language"] = "en"
+            return translated
         translated_raw = chat_completion(model, retry_prompt, timeout_seconds=120, max_tokens=12000)
-        translated = _extract_json_payload(translated_raw)
-    if not translated:
-        return report_payload
-    translated["language"] = "en"
-    return translated
+        translated = _require_english_translation(_extract_json_payload(translated_raw))
+        if translated:
+            translated["language"] = "en"
+            return translated
+    raise HTTPException(status_code=502, detail="Numerology English translation failed")
 
 
 def _normalize_language(language: str = "") -> str:
@@ -163,12 +201,7 @@ def translate_report_payload(report_payload: dict, language: str = "ru") -> dict
     if target_language != "en":
         report_payload["language"] = "ru"
         return report_payload
-    try:
-        return _translate_report_payload_to_english(report_payload)
-    except Exception:
-        # Keep service resilient: if translation fails, return original report.
-        report_payload["language"] = "ru"
-        return report_payload
+    return _translate_report_payload_to_english(report_payload)
 
 
 def generate_web_report(full_name: str, birth_date: str, language: str = "ru") -> dict:
