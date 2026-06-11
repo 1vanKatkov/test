@@ -2356,21 +2356,124 @@ function adminFormatNumber(value) {
   return Number(value || 0).toLocaleString(lang === "en" ? "en-US" : "ru-RU");
 }
 
+function adminText(key) {
+  const ru = {
+    usersTotal: "Всего пользователей",
+    newUsers: "Новые пользователи",
+    activeUsers: "Активные пользователи",
+    requests: "Запросы",
+    successfulPayments: "Успешные платежи",
+    revenue: "Выручка",
+    sparksCharged: "Списано искр",
+    sparksAdded: "Начислено искр",
+    openTickets: "Открытые обращения",
+    newUsersByDay: "Новые пользователи по дням",
+    requestsByDay: "Запросы по дням",
+    revenueByDay: "Выручка по дням",
+    supportTicketsByDay: "Обращения в поддержку по дням",
+    dateAxis: "Дата",
+    usersAxis: "Пользователи",
+    requestsAxis: "Запросы",
+    revenueAxis: "Выручка, ₽",
+    ticketsAxis: "Обращения",
+    admin: "админ",
+    target: "цель",
+    created: "создан",
+    lastRequest: "последний запрос",
+    paid: "платежи",
+    personas: "Персоны",
+    requestHistory: "История запросов",
+    transactions: "Транзакции",
+    payments: "Платежи",
+    roleUpdated: "Роль обновлена",
+    createdStatus: "создан",
+    succeededStatus: "успешно",
+    canceledStatus: "отменён",
+    pendingStatus: "ожидает",
+    chargeType: "списания",
+    creditType: "начисления",
+    refundType: "возвраты",
+    adminCreditType: "админ начисления",
+    adminDebitType: "админ списания",
+  };
+  const en = {
+    usersTotal: "Users total",
+    newUsers: "New users",
+    activeUsers: "Active users",
+    requests: "Requests",
+    successfulPayments: "Successful payments",
+    revenue: "Revenue",
+    sparksCharged: "Sparks charged",
+    sparksAdded: "Sparks added",
+    openTickets: "Open tickets",
+    newUsersByDay: "New users by day",
+    requestsByDay: "Requests by day",
+    revenueByDay: "Revenue by day",
+    supportTicketsByDay: "Support tickets by day",
+    dateAxis: "Date",
+    usersAxis: "Users",
+    requestsAxis: "Requests",
+    revenueAxis: "Revenue, ₽",
+    ticketsAxis: "Tickets",
+    admin: "admin",
+    target: "target",
+    created: "created",
+    lastRequest: "last request",
+    paid: "paid",
+    personas: "Personas",
+    requestHistory: "Request history",
+    transactions: "Transactions",
+    payments: "Payments",
+    roleUpdated: "Role updated",
+    createdStatus: "created",
+    succeededStatus: "succeeded",
+    canceledStatus: "canceled",
+    pendingStatus: "pending",
+    chargeType: "charges",
+    creditType: "credits",
+    refundType: "refunds",
+    adminCreditType: "admin credits",
+    adminDebitType: "admin debits",
+  };
+  return (lang === "en" ? en : ru)[key] || key;
+}
+
+function adminPaymentStatusText(status) {
+  const labels = {
+    created: adminText("createdStatus"),
+    succeeded: adminText("succeededStatus"),
+    canceled: adminText("canceledStatus"),
+    pending: adminText("pendingStatus"),
+  };
+  return labels[status] || status || "-";
+}
+
+function adminTransactionTypeText(type) {
+  const labels = {
+    charge: adminText("chargeType"),
+    credit: adminText("creditType"),
+    refund: adminText("refundType"),
+    admin_credit: adminText("adminCreditType"),
+    admin_debit: adminText("adminDebitType"),
+  };
+  return labels[type] || type || "-";
+}
+
 function renderAdminKpi(overview) {
   const container = element("admin-kpi");
   if (!container) {
     return;
   }
   const items = [
-    ["Users total", overview.users_total],
-    ["New users", overview.new_users],
-    ["Active users", overview.active_users],
-    ["Requests", overview.period_requests],
-    ["Successful payments", overview.period_succeeded_payments],
-    ["Revenue", `${adminFormatNumber(overview.period_revenue)} ₽`],
-    ["Sparks charged", overview.sparks_charged],
-    ["Sparks added", overview.sparks_added],
-    ["Open tickets", overview.open_tickets],
+    [adminText("usersTotal"), overview.users_total],
+    [adminText("newUsers"), overview.new_users],
+    [adminText("activeUsers"), overview.active_users],
+    [adminText("requests"), overview.period_requests],
+    [adminText("successfulPayments"), overview.period_succeeded_payments],
+    [adminText("revenue"), `${adminFormatNumber(overview.period_revenue)} ₽`],
+    [adminText("sparksCharged"), overview.sparks_charged],
+    [adminText("sparksAdded"), overview.sparks_added],
+    [adminText("openTickets"), overview.open_tickets],
   ];
   container.innerHTML = items
     .map(([label, value]) => `<article class="admin-kpi-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`)
@@ -2400,7 +2503,15 @@ function renderAdminBars(containerId, items, labelKey, valueKey, emptyText = i18
     .join("");
 }
 
-function renderAdminLineChart(containerId, title, days, valueKey) {
+function formatAdminChartDate(value) {
+  if (!value) {
+    return "";
+  }
+  const dateValue = new Date(`${value}T00:00:00`);
+  return dateValue.toLocaleDateString(lang === "en" ? "en-US" : "ru-RU", { day: "2-digit", month: "2-digit" });
+}
+
+function renderAdminLineChart(containerId, title, days, valueKey, yAxisLabel) {
   const container = element(containerId);
   if (!container) {
     return;
@@ -2410,18 +2521,43 @@ function renderAdminLineChart(containerId, title, days, valueKey) {
     container.innerHTML = `<div class="muted">${i18n.noAdminData}</div>`;
     return;
   }
-  const width = 320;
-  const height = 120;
+  const width = 360;
+  const height = 170;
+  const padding = { left: 54, right: 12, top: 16, bottom: 42 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
   const max = Math.max(...rows.map((row) => Number(row[valueKey] || 0)), 1);
   const points = rows.map((row, index) => {
-    const x = rows.length === 1 ? width / 2 : (index / (rows.length - 1)) * width;
-    const y = height - (Number(row[valueKey] || 0) / max) * (height - 18) - 8;
+    const x = rows.length === 1 ? padding.left + chartWidth / 2 : padding.left + (index / (rows.length - 1)) * chartWidth;
+    const y = padding.top + chartHeight - (Number(row[valueKey] || 0) / max) * chartHeight;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
+  const firstDay = rows[0]?.day || "";
+  const middleDay = rows[Math.floor(rows.length / 2)]?.day || "";
+  const lastDay = rows[rows.length - 1]?.day || "";
+  const xLabels = rows.length <= 2
+    ? [[padding.left, firstDay], [padding.left + chartWidth, lastDay]]
+    : [[padding.left, firstDay], [padding.left + chartWidth / 2, middleDay], [padding.left + chartWidth, lastDay]];
+  const gridLines = [0, 0.5, 1].map((ratio) => {
+    const y = padding.top + chartHeight - ratio * chartHeight;
+    const value = Math.round(max * ratio);
+    return `<line x1="${padding.left}" y1="${y}" x2="${padding.left + chartWidth}" y2="${y}" class="admin-chart-grid"></line>
+      <text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" class="admin-chart-axis-text">${adminFormatNumber(value)}</text>`;
+  }).join("");
+  const xLabelMarkup = xLabels
+    .filter(([, value], index, source) => value && source.findIndex(([, item]) => item === value) === index)
+    .map(([x, value]) => `<text x="${x}" y="${height - 20}" text-anchor="middle" class="admin-chart-axis-text">${escapeHtml(formatAdminChartDate(value))}</text>`)
+    .join("");
   container.insertAdjacentHTML("beforeend", `<article class="admin-chart-card">
     <h3>${escapeHtml(title)}</h3>
     <svg viewBox="0 0 ${width} ${height}" class="admin-line-chart" role="img" aria-label="${escapeHtml(title)}">
+      ${gridLines}
+      <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartHeight}" class="admin-chart-axis"></line>
+      <line x1="${padding.left}" y1="${padding.top + chartHeight}" x2="${padding.left + chartWidth}" y2="${padding.top + chartHeight}" class="admin-chart-axis"></line>
       <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      <text x="16" y="${padding.top + chartHeight / 2}" text-anchor="middle" class="admin-chart-axis-title" transform="rotate(-90 16 ${padding.top + chartHeight / 2})">${escapeHtml(yAxisLabel)}</text>
+      <text x="${padding.left + chartWidth / 2}" y="${height - 4}" text-anchor="middle" class="admin-chart-axis-title">${escapeHtml(adminText("dateAxis"))}</text>
+      ${xLabelMarkup}
     </svg>
   </article>`);
 }
@@ -2432,10 +2568,10 @@ function renderAdminDailyCharts(days) {
     return;
   }
   container.innerHTML = "";
-  renderAdminLineChart("admin-daily-charts", "New users by day", days, "new_users");
-  renderAdminLineChart("admin-daily-charts", "Requests by day", days, "requests");
-  renderAdminLineChart("admin-daily-charts", "Revenue by day", days, "revenue");
-  renderAdminLineChart("admin-daily-charts", "Support tickets by day", days, "tickets_opened");
+  renderAdminLineChart("admin-daily-charts", adminText("newUsersByDay"), days, "new_users", adminText("usersAxis"));
+  renderAdminLineChart("admin-daily-charts", adminText("requestsByDay"), days, "requests", adminText("requestsAxis"));
+  renderAdminLineChart("admin-daily-charts", adminText("revenueByDay"), days, "revenue", adminText("revenueAxis"));
+  renderAdminLineChart("admin-daily-charts", adminText("supportTicketsByDay"), days, "tickets_opened", adminText("ticketsAxis"));
 }
 
 function renderAdminModules(modules) {
@@ -2482,7 +2618,7 @@ function renderAdminPaymentFunnel(payments) {
   });
   renderAdminBars(
     "admin-payment-funnel",
-    Object.entries(grouped).map(([status, total]) => ({ status, total })),
+    Object.entries(grouped).map(([status, total]) => ({ status: adminPaymentStatusText(status), total })),
     "status",
     "total",
   );
@@ -2496,7 +2632,7 @@ function renderAdminSparks(sparks) {
   });
   renderAdminBars(
     "admin-sparks-chart",
-    Object.entries(grouped).map(([type, amount]) => ({ type, amount })),
+    Object.entries(grouped).map(([type, amount]) => ({ type: adminTransactionTypeText(type), amount })),
     "type",
     "amount",
   );
@@ -2521,7 +2657,7 @@ function renderAdminAudit(items) {
         <strong>${escapeHtml(item.action)}</strong>
         <span class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</span>
       </div>
-      <div class="muted">admin: ${escapeHtml(item.admin_username || `#${item.admin_user_id}`)} · target: ${escapeHtml(item.target_username || item.target_user_id || "-")}</div>
+      <div class="muted">${adminText("admin")}: ${escapeHtml(item.admin_username || `#${item.admin_user_id}`)} · ${adminText("target")}: ${escapeHtml(item.target_username || item.target_user_id || "-")}</div>
       <div>${escapeHtml(item.metadata || "")}</div>
     </article>`)
     .join("");
@@ -2546,9 +2682,9 @@ function renderAdminUserDetail(payload) {
     <strong>#${user.id} · ${escapeHtml(display)}</strong>
     <div class="muted">${escapeHtml(user.provider)} · ${escapeHtml(user.role || "user")}</div>
     <div>${adminFormatNumber(user.credits)} ${adminLabel("sparks")}</div>
-    <div class="muted">created: ${escapeHtml(new Date(user.created_at).toLocaleString())}</div>
-    <div class="muted">last request: ${escapeHtml(user.last_request_at ? new Date(user.last_request_at).toLocaleString() : "-")}</div>
-    <div>requests: ${adminFormatNumber(user.requests_total)} · paid: ${adminFormatNumber(user.succeeded_payments)} · revenue: ${adminFormatNumber(user.revenue_total)} ₽</div>
+    <div class="muted">${adminText("created")}: ${escapeHtml(new Date(user.created_at).toLocaleString())}</div>
+    <div class="muted">${adminText("lastRequest")}: ${escapeHtml(user.last_request_at ? new Date(user.last_request_at).toLocaleString() : "-")}</div>
+    <div>${adminText("requests")}: ${adminFormatNumber(user.requests_total)} · ${adminText("paid")}: ${adminFormatNumber(user.succeeded_payments)} · ${adminText("revenue")}: ${adminFormatNumber(user.revenue_total)} ₽</div>
   </article>`;
   if (roleForm) {
     roleForm.hidden = false;
@@ -2560,7 +2696,7 @@ function renderAdminUserDetail(payload) {
   const personasContainer = element("admin-user-personas");
   if (personasContainer) {
     const personas = payload.personas || [];
-    personasContainer.innerHTML = `<h3>Personas</h3>${personas.length ? personas
+    personasContainer.innerHTML = `<h3>${adminText("personas")}</h3>${personas.length ? personas
       .map((persona) => `<article class="history-row"><strong>${escapeHtml(persona.name)}</strong><div class="muted">${escapeHtml(persona.birth_date)} · ${escapeHtml(persona.birth_time || "")} · ${escapeHtml(persona.birth_place || "")}</div><div>${escapeHtml(persona.note || "")}</div></article>`)
       .join("") : `<div class="muted">${i18n.noAdminData}</div>`}`;
   }
@@ -2586,12 +2722,12 @@ async function loadAdminUserDetail(userId) {
     apiRequest(`/api/admin/users/${userId}/payments`, "GET"),
   ]);
   renderAdminUserDetail(detail);
-  renderAdminUserRelated("admin-user-history", "Request history", history.items || [], (item) => {
+  renderAdminUserRelated("admin-user-history", adminText("requestHistory"), history.items || [], (item) => {
     const summary = formatHistorySummary(item);
     return `<article class="history-row"><strong>${escapeHtml(summary.title)}</strong><div class="muted">${escapeHtml(summary.subtitle || "")}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`;
   });
-  renderAdminUserRelated("admin-user-transactions", "Transactions", transactions.transactions || [], (item) => `<article class="history-row"><strong>${escapeHtml(item.type)} · ${adminFormatNumber(item.amount)}</strong><div>${escapeHtml(item.reason)}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`);
-  renderAdminUserRelated("admin-user-payments", "Payments", payments.payments || [], (item) => `<article class="history-row"><strong>${escapeHtml(item.status)} · ${adminFormatNumber(item.amount)} ₽</strong><div>${adminFormatNumber(item.sparks)} ${adminLabel("sparks")}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`);
+  renderAdminUserRelated("admin-user-transactions", adminText("transactions"), transactions.transactions || [], (item) => `<article class="history-row"><strong>${escapeHtml(adminTransactionTypeText(item.type))} · ${adminFormatNumber(item.amount)}</strong><div>${escapeHtml(item.reason)}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`);
+  renderAdminUserRelated("admin-user-payments", adminText("payments"), payments.payments || [], (item) => `<article class="history-row"><strong>${escapeHtml(adminPaymentStatusText(item.status))} · ${adminFormatNumber(item.amount)} ₽</strong><div>${adminFormatNumber(item.sparks)} ${adminLabel("sparks")}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`);
 }
 
 function adminRangeQuery() {

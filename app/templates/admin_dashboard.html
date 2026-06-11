@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.admin_panel }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=divination-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=admin-i18n-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -26,37 +26,37 @@
     </section>
 
     <section class="card">
-      <h2>Analytics period</h2>
+      <h2>{{ "Analytics period" if lang == "en" else "Период аналитики" }}</h2>
       <div class="admin-period-controls">
-        <button type="button" class="secondary-btn admin-period-btn" data-days="1">Today</button>
-        <button type="button" class="secondary-btn admin-period-btn" data-days="7">7 days</button>
-        <button type="button" class="secondary-btn admin-period-btn" data-days="30">30 days</button>
+        <button type="button" class="secondary-btn admin-period-btn" data-days="1">{{ "Today" if lang == "en" else "Сегодня" }}</button>
+        <button type="button" class="secondary-btn admin-period-btn" data-days="7">{{ "7 days" if lang == "en" else "7 дней" }}</button>
+        <button type="button" class="secondary-btn admin-period-btn" data-days="30">{{ "30 days" if lang == "en" else "30 дней" }}</button>
       </div>
       <div class="form-grid admin-date-range">
-        <label>From <input id="admin-date-from" type="date" /></label>
-        <label>To <input id="admin-date-to" type="date" /></label>
-        <button type="button" id="admin-analytics-apply" class="primary-btn">Apply range</button>
+        <label>{{ "From" if lang == "en" else "С" }} <input id="admin-date-from" type="date" /></label>
+        <label>{{ "To" if lang == "en" else "По" }} <input id="admin-date-to" type="date" /></label>
+        <button type="button" id="admin-analytics-apply" class="primary-btn">{{ "Apply range" if lang == "en" else "Применить период" }}</button>
       </div>
     </section>
 
     <section class="card">
-      <h2>KPI</h2>
+      <h2>{{ "KPI" if lang == "en" else "Ключевые показатели" }}</h2>
       <div id="admin-kpi" class="admin-kpi-grid"></div>
     </section>
 
     <section class="card">
-      <h2>Growth charts</h2>
+      <h2>{{ "Growth charts" if lang == "en" else "Графики роста" }}</h2>
       <div id="admin-daily-charts" class="admin-chart-stack"></div>
     </section>
 
     <section class="card">
-      <h2>Module and provider charts</h2>
+      <h2>{{ "Module and provider charts" if lang == "en" else "Модули и источники регистрации" }}</h2>
       <div id="admin-modules" class="admin-chart-stack"></div>
       <div id="admin-providers" class="admin-chart-stack"></div>
     </section>
 
     <section class="card">
-      <h2>Payments and sparks</h2>
+      <h2>{{ "Payments and sparks" if lang == "en" else "Платежи и искры" }}</h2>
       <div id="admin-payment-funnel" class="admin-chart-stack"></div>
       <div id="admin-sparks-chart" class="admin-chart-stack"></div>
     </section>
@@ -67,19 +67,19 @@
         <label>{{ t.admin_user_lookup or 'ID, email или ник (пусто = все)' }}
           <input id="admin-user-query" type="text" autocomplete="off" />
         </label>
-        <label>Provider
+        <label>{{ "Provider" if lang == "en" else "Источник" }}
           <select id="admin-user-provider">
-            <option value="">All</option>
+            <option value="">{{ "All" if lang == "en" else "Все" }}</option>
             <option value="email">Email</option>
             <option value="telegram">Telegram</option>
             <option value="max">MAX</option>
           </select>
         </label>
-        <label>Role
+        <label>{{ "Role" if lang == "en" else "Роль" }}
           <select id="admin-user-role-filter">
-            <option value="">All</option>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
+            <option value="">{{ "All" if lang == "en" else "Все" }}</option>
+            <option value="user">{{ "User" if lang == "en" else "Пользователь" }}</option>
+            <option value="admin">{{ "Admin" if lang == "en" else "Админ" }}</option>
           </select>
         </label>
         <button type="button" id="admin-user-search-btn" class="secondary-btn">{{ t.admin_find_user or 'Найти' }}</button>
@@ -101,16 +101,16 @@
     </section>
 
     <section class="card">
-      <h2>User detail</h2>
+      <h2>{{ "User detail" if lang == "en" else "Карточка пользователя" }}</h2>
       <div id="admin-user-detail" class="history-list"></div>
       <div class="form-grid admin-role-form" hidden>
-        <label>Role
+        <label>{{ "Role" if lang == "en" else "Роль" }}
           <select id="admin-user-role">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
+            <option value="user">{{ "User" if lang == "en" else "Пользователь" }}</option>
+            <option value="admin">{{ "Admin" if lang == "en" else "Админ" }}</option>
           </select>
         </label>
-        <button type="button" id="admin-role-apply" class="secondary-btn">Update role</button>
+        <button type="button" id="admin-role-apply" class="secondary-btn">{{ "Update role" if lang == "en" else "Обновить роль" }}</button>
       </div>
       <div id="admin-user-history" class="history-list"></div>
       <div id="admin-user-transactions" class="history-list"></div>
@@ -119,35 +119,35 @@
     </section>
 
     <section class="card">
-      <h2>Support tickets</h2>
+      <h2>{{ "Support tickets" if lang == "en" else "Обращения в поддержку" }}</h2>
       <div class="form-grid">
-        <label>Status
+        <label>{{ "Status" if lang == "en" else "Статус" }}
           <select id="admin-support-status">
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
+            <option value="">{{ "All" if lang == "en" else "Все" }}</option>
+            <option value="open">{{ "Open" if lang == "en" else "Открытые" }}</option>
+            <option value="closed">{{ "Closed" if lang == "en" else "Закрытые" }}</option>
           </select>
         </label>
-        <button type="button" id="admin-support-refresh" class="secondary-btn">Refresh support</button>
+        <button type="button" id="admin-support-refresh" class="secondary-btn">{{ "Refresh support" if lang == "en" else "Обновить поддержку" }}</button>
       </div>
       <div id="admin-tickets" class="history-list"></div>
       <div id="admin-ticket-messages" class="history-list"></div>
       <form id="admin-ticket-reply-form" class="form-grid" hidden>
         <input id="admin-selected-ticket-id" type="hidden" />
-        <label>Reply <textarea id="admin-ticket-reply-text" rows="3"></textarea></label>
-        <button type="submit" class="primary-btn">Send reply</button>
-        <button type="button" id="admin-ticket-close-btn" class="secondary-btn">Close ticket</button>
-        <button type="button" id="admin-ticket-open-btn" class="secondary-btn">Reopen ticket</button>
+        <label>{{ "Reply" if lang == "en" else "Ответ" }} <textarea id="admin-ticket-reply-text" rows="3"></textarea></label>
+        <button type="submit" class="primary-btn">{{ "Send reply" if lang == "en" else "Отправить ответ" }}</button>
+        <button type="button" id="admin-ticket-close-btn" class="secondary-btn">{{ "Close ticket" if lang == "en" else "Закрыть обращение" }}</button>
+        <button type="button" id="admin-ticket-open-btn" class="secondary-btn">{{ "Reopen ticket" if lang == "en" else "Открыть снова" }}</button>
       </form>
       <pre id="admin-result" class="result"></pre>
     </section>
 
     <section class="card">
-      <h2>Audit log</h2>
+      <h2>{{ "Audit log" if lang == "en" else "Журнал аудита" }}</h2>
       <div id="admin-audit-log" class="history-list"></div>
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=divination-v1"></script>
+  <script defer src="/static/app.js?v=admin-i18n-v1"></script>
 </body>
 </html>

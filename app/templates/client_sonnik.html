@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.sonnik }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=divination-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=service-theme-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -22,8 +22,8 @@
     </div>
   </header>
 
-  <main class="mobile-client">
-    <section class="card compact-card client-page-hero">
+  <main class="mobile-client card-readings-page service-theme-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
       <div>
         <h2>{{ t.sonnik }}</h2>
         <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
@@ -34,7 +34,7 @@
       </span>
     </section>
 
-    <section class="card auth-gated-card">
+    <section class="card auth-gated-card service-theme-shell">
       <div class="auth-required-panel" hidden>
         <h3>{{ t.sign_in_required_title }}</h3>
         <p>{{ t.sign_in_required_text }}</p>
@@ -42,7 +42,7 @@
       </div>
       <div class="auth-required-content">
         <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_sonnik }} {{ t.sparks }}</div>
-        <form id="sonnik-form" class="form-grid">
+        <form id="sonnik-form" class="form-grid service-theme-form">
           <label>{{ t.dream_description }}
             <textarea id="dream-text" rows="6" required></textarea>
           </label>
@@ -55,7 +55,7 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=divination-v1"></script>
+  <script defer src="/static/app.js?v=service-theme-v1"></script>
 </body>
 </html>
 
