@@ -100,6 +100,22 @@ class Database:
             )
             conn.execute(
                 """
+                CREATE TABLE IF NOT EXISTS user_personas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    birth_date TEXT NOT NULL,
+                    birth_time TEXT,
+                    birth_place TEXT,
+                    note TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+                """
+            )
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS generated_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -137,6 +153,19 @@ class Database:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS admin_audit_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    admin_user_id INTEGER NOT NULL,
+                    action TEXT NOT NULL,
+                    target_user_id INTEGER,
+                    metadata TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(admin_user_id) REFERENCES users(id)
+                )
+                """
+            )
             self._ensure_column(conn, "users", "subscription_end", "TEXT")
             self._ensure_column(conn, "users", "password_hash", "TEXT")
             self._ensure_column(conn, "users", "role", "TEXT DEFAULT 'user'")
@@ -150,9 +179,16 @@ class Database:
             self._ensure_column(conn, "generated_reports", "content_json", "TEXT")
             self._ensure_column(conn, "generated_reports", "title", "TEXT")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_request_history_user_created ON request_history(user_id, created_at DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_request_history_created_at ON request_history(created_at)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_created_status ON payments(created_at, status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_transactions_created_type ON transactions(created_at, type)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_user_personas_user_updated ON user_personas(user_id, updated_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_created_status ON support_tickets(created_at, status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_support_messages_ticket_id ON support_messages(ticket_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit_log(created_at DESC)")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS email_verification_codes (
@@ -368,6 +404,89 @@ class Database:
         finally:
             conn.close()
 
+    def create_persona(
+        self,
+        user_id: int,
+        name: str,
+        birth_date: str,
+        birth_time: str = "",
+        birth_place: str = "",
+        note: str = "",
+    ) -> sqlite3.Row:
+        now = self._now()
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO user_personas
+                    (user_id, name, birth_date, birth_time, birth_place, note, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (user_id, name, birth_date, birth_time, birth_place, note, now, now),
+            )
+            persona_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+            return conn.execute(
+                "SELECT * FROM user_personas WHERE id = ? AND user_id = ?",
+                (persona_id, user_id),
+            ).fetchone()
+
+    def list_personas(self, user_id: int) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT *
+                FROM user_personas
+                WHERE user_id = ?
+                ORDER BY updated_at DESC, id DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_persona(self, user_id: int, persona_id: int) -> Optional[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                "SELECT * FROM user_personas WHERE id = ? AND user_id = ?",
+                (persona_id, user_id),
+            ).fetchone()
+        finally:
+            conn.close()
+
+    def update_persona(
+        self,
+        user_id: int,
+        persona_id: int,
+        name: str,
+        birth_date: str,
+        birth_time: str = "",
+        birth_place: str = "",
+        note: str = "",
+    ) -> Optional[sqlite3.Row]:
+        now = self._now()
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE user_personas
+                SET name = ?, birth_date = ?, birth_time = ?, birth_place = ?, note = ?, updated_at = ?
+                WHERE id = ? AND user_id = ?
+                """,
+                (name, birth_date, birth_time, birth_place, note, now, persona_id, user_id),
+            )
+            return conn.execute(
+                "SELECT * FROM user_personas WHERE id = ? AND user_id = ?",
+                (persona_id, user_id),
+            ).fetchone()
+
+    def delete_persona(self, user_id: int, persona_id: int) -> bool:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "DELETE FROM user_personas WHERE id = ? AND user_id = ?",
+                (persona_id, user_id),
+            )
+            return cursor.rowcount > 0
+
     def create_support_ticket(self, user_id: int, subject: str, message_text: str) -> int:
         now = self._now()
         with self.transaction() as conn:
@@ -508,9 +627,45 @@ class Database:
         finally:
             conn.close()
 
-    def get_admin_overview_stats(self) -> dict[str, int]:
+    def record_admin_audit(
+        self,
+        admin_user_id: int,
+        action: str,
+        target_user_id: Optional[int] = None,
+        metadata: Optional[dict] = None,
+    ) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO admin_audit_log (admin_user_id, action, target_user_id, metadata, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (admin_user_id, action, target_user_id, json.dumps(metadata or {}, ensure_ascii=False), self._now()),
+            )
+
+    def list_admin_audit_log(self, limit: int = 100, offset: int = 0) -> list[sqlite3.Row]:
         conn = self.connect()
         try:
+            return conn.execute(
+                """
+                SELECT aal.id, aal.admin_user_id, aal.action, aal.target_user_id, aal.metadata, aal.created_at,
+                       admin.username AS admin_username, target.username AS target_username
+                FROM admin_audit_log aal
+                LEFT JOIN users admin ON admin.id = aal.admin_user_id
+                LEFT JOIN users target ON target.id = aal.target_user_id
+                ORDER BY aal.id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_admin_overview_stats(self, date_from: str = "", date_to: str = "") -> dict[str, int]:
+        conn = self.connect()
+        try:
+            period_clause = "substr(created_at, 1, 10) BETWEEN ? AND ?" if date_from and date_to else "1=1"
+            period_params = (date_from, date_to) if date_from and date_to else ()
             users_total = int(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0])
             requests_total = int(conn.execute("SELECT COUNT(*) FROM request_history").fetchone()[0])
             payments_total = int(conn.execute("SELECT COUNT(*) FROM payments").fetchone()[0])
@@ -519,6 +674,40 @@ class Database:
                 conn.execute("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'succeeded'").fetchone()[0]
             )
             open_tickets = int(conn.execute("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'").fetchone()[0])
+            new_users = int(conn.execute(f"SELECT COUNT(*) FROM users WHERE {period_clause}", period_params).fetchone()[0])
+            period_requests = int(
+                conn.execute(f"SELECT COUNT(*) FROM request_history WHERE {period_clause}", period_params).fetchone()[0]
+            )
+            active_users = int(
+                conn.execute(
+                    f"SELECT COUNT(DISTINCT user_id) FROM request_history WHERE {period_clause}",
+                    period_params,
+                ).fetchone()[0]
+            )
+            period_succeeded_payments = int(
+                conn.execute(
+                    f"SELECT COUNT(*) FROM payments WHERE status = 'succeeded' AND {period_clause}",
+                    period_params,
+                ).fetchone()[0]
+            )
+            period_revenue = int(
+                conn.execute(
+                    f"SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'succeeded' AND {period_clause}",
+                    period_params,
+                ).fetchone()[0]
+            )
+            sparks_charged = int(
+                conn.execute(
+                    f"SELECT COALESCE(SUM(ABS(amount)), 0) FROM transactions WHERE amount < 0 AND {period_clause}",
+                    period_params,
+                ).fetchone()[0]
+            )
+            sparks_added = int(
+                conn.execute(
+                    f"SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE amount > 0 AND {period_clause}",
+                    period_params,
+                ).fetchone()[0]
+            )
             return {
                 "users_total": users_total,
                 "requests_total": requests_total,
@@ -526,59 +715,272 @@ class Database:
                 "succeeded_payments": succeeded_payments,
                 "revenue_total": revenue_total,
                 "open_tickets": open_tickets,
+                "new_users": new_users,
+                "period_requests": period_requests,
+                "active_users": active_users,
+                "period_succeeded_payments": period_succeeded_payments,
+                "period_revenue": period_revenue,
+                "sparks_charged": sparks_charged,
+                "sparks_added": sparks_added,
             }
         finally:
             conn.close()
 
-    def search_users(self, query: str, limit: int = 50) -> list[sqlite3.Row]:
+    def search_users(
+        self,
+        query: str,
+        limit: int = 50,
+        offset: int = 0,
+        provider: str = "",
+        role: str = "",
+    ) -> list[sqlite3.Row]:
         raw = (query or "").strip()
+        clauses = []
+        params: list[Any] = []
+        if provider:
+            clauses.append("provider = ?")
+            params.append(provider)
+        if role:
+            clauses.append("COALESCE(role, 'user') = ?")
+            params.append(role)
         conn = self.connect()
         try:
             if not raw:
+                where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
                 return conn.execute(
-                    """
-                    SELECT id, provider, provider_user_id, username, credits, role
+                    f"""
+                    SELECT id, provider, provider_user_id, username, credits, role, created_at, updated_at
                     FROM users
+                    {where_sql}
                     ORDER BY id DESC
-                    LIMIT ?
+                    LIMIT ? OFFSET ?
                     """,
-                    (limit,),
+                    (*params, limit, offset),
                 ).fetchall()
             if raw.isdigit():
+                id_clauses = ["id = ?", *clauses]
                 return conn.execute(
-                    """
-                    SELECT id, provider, provider_user_id, username, credits, role
+                    f"""
+                    SELECT id, provider, provider_user_id, username, credits, role, created_at, updated_at
                     FROM users
-                    WHERE id = ?
-                    LIMIT ?
+                    WHERE {' AND '.join(id_clauses)}
+                    LIMIT ? OFFSET ?
                     """,
-                    (int(raw), limit),
+                    (int(raw), *params, limit, offset),
                 ).fetchall()
             pattern = f"%{raw}%"
+            search_clauses = ["(provider_user_id LIKE ? OR lower(COALESCE(username, '')) LIKE lower(?))", *clauses]
             return conn.execute(
-                """
-                SELECT id, provider, provider_user_id, username, credits, role
+                f"""
+                SELECT id, provider, provider_user_id, username, credits, role, created_at, updated_at
                 FROM users
-                WHERE provider_user_id LIKE ?
-                   OR lower(COALESCE(username, '')) LIKE lower(?)
+                WHERE {' AND '.join(search_clauses)}
                 ORDER BY id DESC
-                LIMIT ?
+                LIMIT ? OFFSET ?
                 """,
-                (pattern, pattern, limit),
+                (pattern, pattern, *params, limit, offset),
             ).fetchall()
         finally:
             conn.close()
 
-    def get_admin_module_stats(self) -> list[sqlite3.Row]:
+    def get_admin_user_detail(self, user_id: int) -> Optional[sqlite3.Row]:
         conn = self.connect()
         try:
             return conn.execute(
                 """
+                SELECT u.*,
+                       (SELECT MAX(created_at) FROM request_history WHERE user_id = u.id) AS last_request_at,
+                       (SELECT COUNT(*) FROM request_history WHERE user_id = u.id) AS requests_total,
+                       (SELECT COUNT(*) FROM payments WHERE user_id = u.id AND status = 'succeeded') AS succeeded_payments,
+                       (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE user_id = u.id AND status = 'succeeded') AS revenue_total
+                FROM users u
+                WHERE u.id = ?
+                """,
+                (user_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+
+    def list_transactions_for_user(self, user_id: int, limit: int = 50) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT *
+                FROM transactions
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def list_payments_for_user_admin(self, user_id: int, limit: int = 50) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT *
+                FROM payments
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def update_user_role(self, user_id: int, role: str) -> None:
+        with self.transaction() as conn:
+            conn.execute("UPDATE users SET role = ?, updated_at = ? WHERE id = ?", (role, self._now(), user_id))
+
+    def update_user_role_safely(self, user_id: int, role: str) -> sqlite3.Row:
+        with self.transaction() as conn:
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+            if not row:
+                raise ValueError("User not found")
+            current_role = row["role"] or "user"
+            if current_role == "admin" and role != "admin":
+                admin_count = int(conn.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'").fetchone()[0])
+                if admin_count <= 1:
+                    raise RuntimeError("Cannot remove the last admin")
+            conn.execute("UPDATE users SET role = ?, updated_at = ? WHERE id = ?", (role, self._now(), user_id))
+            return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    def update_support_ticket_status(self, ticket_id: int, status: str) -> bool:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE support_tickets SET status = ?, updated_at = ? WHERE id = ?",
+                (status, self._now(), ticket_id),
+            )
+            return cursor.rowcount > 0
+
+    def get_admin_module_stats(self, date_from: str = "", date_to: str = "") -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            period_clause = "WHERE substr(created_at, 1, 10) BETWEEN ? AND ?" if date_from and date_to else ""
+            params = (date_from, date_to) if date_from and date_to else ()
+            return conn.execute(
+                f"""
                 SELECT module, COUNT(*) AS total
                 FROM request_history
+                {period_clause}
                 GROUP BY module
                 ORDER BY total DESC
+                """,
+                params,
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_admin_daily_stats(self, date_from: str, date_to: str) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            params = (date_from, date_to) * 6
+            return conn.execute(
                 """
+                SELECT day,
+                       SUM(new_users) AS new_users,
+                       SUM(requests) AS requests,
+                       SUM(active_users) AS active_users,
+                       SUM(revenue) AS revenue,
+                       SUM(succeeded_payments) AS succeeded_payments,
+                       SUM(sparks_charged) AS sparks_charged,
+                       SUM(sparks_added) AS sparks_added,
+                       SUM(tickets_opened) AS tickets_opened
+                FROM (
+                    SELECT substr(created_at,1,10) AS day, COUNT(*) AS new_users, 0 AS requests, 0 AS active_users,
+                           0 AS revenue, 0 AS succeeded_payments, 0 AS sparks_charged, 0 AS sparks_added, 0 AS tickets_opened
+                    FROM users WHERE substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                    UNION ALL
+                    SELECT substr(created_at,1,10), 0, COUNT(*), COUNT(DISTINCT user_id), 0, 0, 0, 0, 0
+                    FROM request_history WHERE substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                    UNION ALL
+                    SELECT substr(created_at,1,10), 0, 0, 0, COALESCE(SUM(amount), 0), COUNT(*), 0, 0, 0
+                    FROM payments WHERE status='succeeded' AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                    UNION ALL
+                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, COALESCE(SUM(ABS(amount)), 0), 0, 0
+                    FROM transactions WHERE amount < 0 AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                    UNION ALL
+                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, 0, COALESCE(SUM(amount), 0), 0
+                    FROM transactions WHERE amount > 0 AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                    UNION ALL
+                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, 0, 0, COUNT(*)
+                    FROM support_tickets WHERE substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                )
+                GROUP BY day
+                ORDER BY day
+                """,
+                params,
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_admin_payment_stats(self, date_from: str, date_to: str) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT substr(created_at,1,10) AS day, status, COUNT(*) AS total, COALESCE(SUM(amount), 0) AS amount
+                FROM payments
+                WHERE substr(created_at,1,10) BETWEEN ? AND ?
+                GROUP BY day, status
+                ORDER BY day
+                """,
+                (date_from, date_to),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_admin_spark_stats(self, date_from: str, date_to: str) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT substr(created_at,1,10) AS day, type, reason, COUNT(*) AS total, COALESCE(SUM(amount), 0) AS amount
+                FROM transactions
+                WHERE substr(created_at,1,10) BETWEEN ? AND ?
+                GROUP BY day, type, reason
+                ORDER BY day DESC, total DESC
+                """,
+                (date_from, date_to),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_admin_provider_stats(self, date_from: str, date_to: str) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT provider, COUNT(*) AS total
+                FROM users
+                WHERE substr(created_at,1,10) BETWEEN ? AND ?
+                GROUP BY provider
+                ORDER BY total DESC
+                """,
+                (date_from, date_to),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_admin_top_users(self, date_from: str, date_to: str, limit: int = 10) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT u.id, u.username, u.provider, COUNT(rh.id) AS requests_total
+                FROM request_history rh
+                JOIN users u ON u.id = rh.user_id
+                WHERE substr(rh.created_at,1,10) BETWEEN ? AND ?
+                GROUP BY u.id
+                ORDER BY requests_total DESC
+                LIMIT ?
+                """,
+                (date_from, date_to, limit),
             ).fetchall()
         finally:
             conn.close()

@@ -36,11 +36,16 @@ def chat_completion(
     prompt: str,
     timeout_seconds: int = 60,
     max_tokens: int | None = None,
+    system_prompt: str | None = None,
 ) -> str:
     if not settings.openrouter_api_key:
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY is not configured")
 
-    payload: dict[str, Any] = {"model": model, "messages": [{"role": "user", "content": prompt}]}
+    messages: list[dict[str, str]] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+    payload: dict[str, Any] = {"model": model, "messages": messages}
     if isinstance(max_tokens, int) and max_tokens > 0:
         payload["max_tokens"] = max_tokens
 

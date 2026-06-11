@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlencode
+from datetime import date, timedelta
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
@@ -39,24 +41,31 @@ from app.web.auth.telegram_auth import (
 from app.web.db import db
 from app.web.schemas import (
     AdminAdjustCreditsRequest,
+    AdminSetRoleRequest,
+    AdminSupportReplyRequest,
+    AdminTicketStatusRequest,
     EmailLoginRequest,
     EmailPasswordResetConfirmRequest,
     EmailResendRequest,
     EmailRegisterStartRequest,
     EmailRegisterVerifyRequest,
     NumerologyRequest,
+    PersonaCreateRequest,
+    PersonaUpdateRequest,
     SonnikRequest,
     SupportAddMessageRequest,
     SupportCreateTicketRequest,
     SovmestimostNamesDatesRequest,
     SovmestimostNamesRequest,
+    AstrologyForecastRequest,
+    TarotRequest,
     TelegramLinkVerifyRequest,
     TelegramMintUsernameLinkRequest,
     TelegramVerifyRequest,
     YooKassaCreatePaymentRequest,
 )
-from app.web.services import compatibility, numerology, payments, sonnik
-from app.web.services.balance import charge, credit, get_balance, record_transaction, refund
+from app.web.services import compatibility, divination, numerology, payments, sonnik
+from app.web.services.balance import admin_debit, charge, credit, get_balance, record_transaction, refund
 from config import settings
 
 
@@ -88,6 +97,79 @@ def _normalize_lang(lang: str = "") -> str:
     if raw in {"ru", "en"}:
         return raw
     return settings.app_default_lang
+
+
+def _validate_tarot_spread(spread: str) -> str:
+    normalized = (spread or "natal_map").strip()
+    if normalized not in divination.SPREAD_LABELS:
+        raise HTTPException(status_code=400, detail="Invalid tarot spread")
+    return "natal_map"
+
+
+def _validate_card_reading_topic(topic: str) -> str:
+    normalized = (topic or "full_portrait").strip()
+    if normalized not in divination.CARD_READING_TOPICS:
+        raise HTTPException(status_code=400, detail="Invalid card reading topic")
+    return normalized
+
+
+def _validate_optional_birth_time(value: str) -> str:
+    normalized = (value or "").strip()
+    if not normalized:
+        return ""
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", normalized):
+        raise HTTPException(status_code=400, detail="Invalid birth time format. Use HH:MM")
+    return normalized
+
+
+def _clean_persona_payload(payload: PersonaCreateRequest | PersonaUpdateRequest) -> dict[str, str]:
+    birth_date = payload.birth_date.strip()
+    compatibility.parse_date(birth_date)
+    return {
+        "name": payload.name.strip(),
+        "birth_date": birth_date,
+        "birth_time": _validate_optional_birth_time(payload.birth_time),
+        "birth_place": payload.birth_place.strip(),
+        "note": payload.note.strip(),
+    }
+
+
+def _serialize_persona(row) -> dict:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "birth_date": row["birth_date"],
+        "birth_time": row["birth_time"] or "",
+        "birth_place": row["birth_place"] or "",
+        "note": row["note"] or "",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _tarot_persona_context(user_id: int, payload: TarotRequest) -> dict | None:
+    if payload.persona_id:
+        row = db.get_persona(user_id=user_id, persona_id=payload.persona_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Persona not found")
+        return _serialize_persona(row)
+
+    name = payload.persona_name.strip()
+    birth_date = payload.persona_birth_date.strip()
+    birth_time = _validate_optional_birth_time(payload.persona_birth_time)
+    birth_place = payload.persona_birth_place.strip()
+    note = payload.persona_note.strip()
+    if not name or not birth_date:
+        raise HTTPException(status_code=400, detail="Choose a saved persona or enter name and birth date")
+    if birth_date:
+        compatibility.parse_date(birth_date)
+    return {
+        "name": name,
+        "birth_date": birth_date,
+        "birth_time": birth_time,
+        "birth_place": birth_place,
+        "note": note,
+    }
 
 
 def _landing_telegram_bot_url(lang: str) -> str:
@@ -180,15 +262,51 @@ def _translations(lang: str) -> dict:
             "sonnik": "Dreambook",
             "numerology": "Numerology",
             "compatibility": "Compatibility",
+            "tarot": "Natal Charts",
+            "natal_maps": "Natal Charts",
+            "astrology": "Astrology Forecast",
             "topup": "Top Up",
             "home": "Home",
             "dream_description": "Dream description",
             "get_interpretation": "Get interpretation",
+            "cost_label": "Cost",
+            "sign_in_required_title": "Sign in to continue",
+            "sign_in_required_text": "Create an account or log in to use this tool and keep your results in history.",
+            "sign_in_required_action": "Log in",
             "full_name": "Full name",
             "birth_date": "Birth date (DD.MM.YYYY)",
             "generate_pdf": "Generate PDF",
             "by_names": "By names",
             "by_names_dates": "By names and dates",
+            "tarot_question": "Additional context",
+            "tarot_spread": "Spread",
+            "tarot_spread_three_cards": "Three cards",
+            "tarot_spread_choice": "Choice",
+            "tarot_spread_relationship": "Relationship",
+            "get_tarot_reading": "Get natal chart",
+            "open_natal_map_form": "Open natal chart form",
+            "persona_required_error": "Choose a saved persona or enter at least name and birth date.",
+            "personas": "Personas",
+            "my_personas": "My personas",
+            "persona_use_saved": "Use saved persona",
+            "persona_manual": "Enter new data",
+            "persona_save_offer": "Save this persona for future readings",
+            "persona_save": "Save persona",
+            "persona_add": "Add persona",
+            "persona_update": "Update persona",
+            "persona_delete": "Delete",
+            "persona_empty": "No saved personas yet",
+            "persona_name": "Persona name",
+            "persona_note": "Note",
+            "persona_saved": "Persona saved",
+            "persona_deleted": "Persona deleted",
+            "persona_select_placeholder": "Choose persona",
+            "back_to_natal_maps": "Back to natal charts",
+            "astrology_name": "Name",
+            "astrology_birth_time": "Birth time (optional)",
+            "astrology_birth_place": "Birth place (optional)",
+            "astrology_focus": "Question or focus",
+            "get_astrology_forecast": "Get forecast",
             "name_1": "Name 1",
             "name_2": "Name 2",
             "date_1": "Date 1 (DD.MM.YYYY)",
@@ -254,6 +372,8 @@ def _translations(lang: str) -> dict:
             "feature_sonnik_desc": "AI-powered dream interpretation with symbols and context.",
             "feature_numerology_desc": "Personal report based on full name and birth date.",
             "feature_compatibility_desc": "Relationship and compatibility analysis in two modes.",
+            "feature_tarot_desc": "Personal natal-style maps for money, love, career, strengths, and life patterns.",
+            "feature_astrology_desc": "Personal astrological forecast by date, place, and current focus.",
             "feature_lunar_desc": "Lunar calendar will be available soon.",
             "landing_title": "Astrolhub - Dreambook, Numerology, Compatibility",
             "landing_nav_features": "Features",
@@ -327,15 +447,51 @@ def _translations(lang: str) -> dict:
         "sonnik": "Сонник",
         "numerology": "Нумерология",
         "compatibility": "Совместимость",
+        "tarot": "Натальные карты",
+        "natal_maps": "Натальные карты",
+        "astrology": "Астропрогноз",
         "topup": "Пополнение",
         "home": "На главную",
         "dream_description": "Описание сна",
         "get_interpretation": "Получить интерпретацию",
+        "cost_label": "Стоимость",
+        "sign_in_required_title": "Войдите, чтобы продолжить",
+        "sign_in_required_text": "Создайте аккаунт или войдите, чтобы пользоваться инструментом и сохранять результаты в истории.",
+        "sign_in_required_action": "Войти",
         "full_name": "Полное имя",
         "birth_date": "Дата рождения (ДД.ММ.ГГГГ)",
         "generate_pdf": "Сгенерировать PDF",
         "by_names": "По именам",
         "by_names_dates": "По именам и датам",
+        "tarot_question": "Дополнительный контекст",
+        "tarot_spread": "Расклад",
+        "tarot_spread_three_cards": "Три карты",
+        "tarot_spread_choice": "Выбор",
+        "tarot_spread_relationship": "Отношения",
+        "get_tarot_reading": "Получить натальную карту",
+        "open_natal_map_form": "Открыть форму натальной карты",
+        "persona_required_error": "Выберите сохранённую персону или введите минимум имя и дату рождения.",
+        "personas": "Персоны",
+        "my_personas": "Мои персоны",
+        "persona_use_saved": "Выбрать сохранённую персону",
+        "persona_manual": "Ввести новые данные",
+        "persona_save_offer": "Сохранить эту персону для следующих разборов",
+        "persona_save": "Сохранить персону",
+        "persona_add": "Добавить персону",
+        "persona_update": "Обновить персону",
+        "persona_delete": "Удалить",
+        "persona_empty": "Сохранённых персон пока нет",
+        "persona_name": "Имя персоны",
+        "persona_note": "Заметка",
+        "persona_saved": "Персона сохранена",
+        "persona_deleted": "Персона удалена",
+        "persona_select_placeholder": "Выберите персону",
+        "back_to_natal_maps": "Назад к натальным картам",
+        "astrology_name": "Имя",
+        "astrology_birth_time": "Время рождения (необязательно)",
+        "astrology_birth_place": "Место рождения (необязательно)",
+        "astrology_focus": "Вопрос или фокус",
+        "get_astrology_forecast": "Получить прогноз",
         "name_1": "Имя 1",
         "name_2": "Имя 2",
         "date_1": "Дата 1 (ДД.ММ.ГГГГ)",
@@ -401,6 +557,8 @@ def _translations(lang: str) -> dict:
         "feature_sonnik_desc": "Разбор снов с помощью AI-интерпретации символов и контекста.",
         "feature_numerology_desc": "Персональный разбор по ФИО и дате рождения.",
         "feature_compatibility_desc": "Анализ отношений и совместимости в двух режимах.",
+        "feature_tarot_desc": "Персональные натальные карты про деньги, любовь, карьеру, сильные качества и жизненные сценарии.",
+        "feature_astrology_desc": "Персональный астропрогноз по дате, месту и текущему фокусу.",
         "feature_lunar_desc": "Лунный календарь скоро будет доступен.",
         "landing_title": "Astrolhub - Сонник, Нумерология, Совместимость",
         "landing_nav_features": "Возможности",
@@ -463,6 +621,41 @@ def _translations(lang: str) -> dict:
         "landing_meta_user_label": "Пользователь",
         "landing_meta_user_recognized": "Пользователь распознан",
     }
+
+
+def _card_reading_topics(lang: str) -> list[dict[str, str | bool]]:
+    page_lang = _normalize_lang(lang)
+    icon_map = {
+        "money": "money.svg",
+        "career": "career.svg",
+        "love": "love.svg",
+        "attraction": "attraction.svg",
+        "hidden_scenarios": "hidden-scenarios.svg",
+        "energy": "energy.svg",
+        "period_task": "period-task.svg",
+        "child_potential": "child-potential.svg",
+        "strengths": "strengths.svg",
+        "decisions": "decisions.svg",
+        "relationship_compatibility": "relationship-compatibility.svg",
+        "full_portrait": "full-portrait.svg",
+    }
+    return [
+        {
+            "key": key,
+            "title": value[page_lang]["title"],
+            "description": value[page_lang]["description"],
+            "icon": f"/static/img/card-readings/{icon_map[key]}",
+            "wide": key == "full_portrait",
+        }
+        for key, value in divination.CARD_READING_TOPICS.items()
+    ]
+
+
+def _card_reading_topic_context(topic: str, lang: str) -> dict[str, str | bool]:
+    page_lang = _normalize_lang(lang)
+    topic_key = _validate_card_reading_topic(topic)
+    topic_map = {item["key"]: item for item in _card_reading_topics(page_lang)}
+    return topic_map[topic_key]
 
 
 def _is_recognized_request(request: Request, name: str = "", platform: str = "") -> bool:
@@ -541,10 +734,11 @@ async def public_offer_pdf():
     return FileResponse(path=offer_file, media_type="application/pdf", filename="Публичная оферта.pdf")
 
 
-def _client_template_context(request: Request, lang: str) -> dict:
+def _client_template_context(request: Request, lang: str, selected_card_topic: str = "") -> dict:
     page_lang = _normalize_lang(lang)
     initial_auth_username = _translations(page_lang)["guest"]
     initial_auth_provider = _translations(page_lang)["guest"]
+    selected_topic = _card_reading_topic_context(selected_card_topic, page_lang) if selected_card_topic else None
     return {
         "request": request,
         "brand_name": "Astrolhub",
@@ -556,6 +750,14 @@ def _client_template_context(request: Request, lang: str) -> dict:
         "initial_auth_provider": initial_auth_provider,
         "email_skip_verification": settings.email_skip_verification,
         "hide_topup_button": settings.hide_topup_button,
+        "cost_sonnik": settings.cost_sonnik,
+        "cost_numerology": settings.cost_numerology,
+        "cost_sovmestimost": settings.cost_sovmestimost,
+        "cost_tarot": settings.cost_tarot,
+        "cost_astrology": settings.cost_astrology,
+        "card_reading_topics": _card_reading_topics(page_lang),
+        "card_reading_default_topic": divination.CARD_READING_TOPICS["full_portrait"][page_lang],
+        "selected_card_reading_topic": selected_topic,
     }
 
 
@@ -646,6 +848,34 @@ async def client_compatibility(request: Request, lang: str = Query(default="")):
     )
 
 
+@app.get("/client/tarot", response_class=HTMLResponse, include_in_schema=False)
+async def client_tarot(request: Request, lang: str = Query(default="")):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_tarot.html",
+        context=_client_template_context(request, lang),
+    )
+
+
+@app.get("/client/tarot/{topic}", response_class=HTMLResponse, include_in_schema=False)
+async def client_tarot_topic(request: Request, topic: str, lang: str = Query(default="")):
+    page_lang = _normalize_lang(lang)
+    return templates.TemplateResponse(
+        request=request,
+        name="client_tarot.html",
+        context=_client_template_context(request, page_lang, selected_card_topic=topic),
+    )
+
+
+@app.get("/client/astrology", response_class=HTMLResponse, include_in_schema=False)
+async def client_astrology(request: Request, lang: str = Query(default="")):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_astrology.html",
+        context=_client_template_context(request, lang),
+    )
+
+
 @app.get("/client/history", response_class=HTMLResponse, include_in_schema=False)
 async def client_history(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
@@ -713,7 +943,15 @@ async def client_numerology_report(
 async def admin_dashboard(
     request: Request,
     lang: str = Query(default=""),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
+    try:
+        _require_admin_email_user(email_identity)
+    except HTTPException as exc:
+        page_lang = _normalize_lang(lang)
+        if exc.status_code == 401:
+            return RedirectResponse(url=f"/static/auth/login.html?lang={page_lang}&next=/admin%3Flang%3D{page_lang}", status_code=302)
+        raise
     return templates.TemplateResponse(
         request=request,
         name="admin_dashboard.html",
@@ -1037,6 +1275,58 @@ async def balance(
     return {"balance": get_balance(user_id)}
 
 
+@app.get("/api/personas")
+async def api_list_personas(
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    return {"success": True, "personas": [_serialize_persona(row) for row in db.list_personas(user_id)]}
+
+
+@app.post("/api/personas")
+async def api_create_persona(
+    payload: PersonaCreateRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    data = _clean_persona_payload(payload)
+    row = db.create_persona(user_id=user_id, **data)
+    return {"success": True, "persona": _serialize_persona(row)}
+
+
+@app.patch("/api/personas/{persona_id}")
+async def api_update_persona(
+    persona_id: int,
+    payload: PersonaUpdateRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    data = _clean_persona_payload(payload)
+    row = db.update_persona(user_id=user_id, persona_id=persona_id, **data)
+    if not row:
+        raise HTTPException(status_code=404, detail="Persona not found")
+    return {"success": True, "persona": _serialize_persona(row)}
+
+
+@app.delete("/api/personas/{persona_id}")
+async def api_delete_persona(
+    persona_id: int,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    if not db.delete_persona(user_id=user_id, persona_id=persona_id):
+        raise HTTPException(status_code=404, detail="Persona not found")
+    return {"success": True}
+
+
 @app.get("/api/history/requests")
 async def api_request_history(
     limit: int = Query(default=30, ge=1, le=200),
@@ -1144,6 +1434,29 @@ def _require_admin_email_user(email_identity: EmailIdentity | None) -> int:
     return email_identity.internal_user_id
 
 
+def _admin_date_range(date_from: str = "", date_to: str = "", days: int = 30) -> tuple[str, str]:
+    today = date.today()
+    end = today
+    start = today - timedelta(days=max(days - 1, 0))
+    if date_to:
+        try:
+            end = date.fromisoformat(date_to[:10])
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid date_to") from exc
+    if date_from:
+        try:
+            start = date.fromisoformat(date_from[:10])
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid date_from") from exc
+    if start > end:
+        raise HTTPException(status_code=400, detail="date_from must be before date_to")
+    return start.isoformat(), end.isoformat()
+
+
+def _record_admin_audit(admin_user_id: int, action: str, target_user_id: int | None = None, metadata: dict | None = None) -> None:
+    db.record_admin_audit(admin_user_id=admin_user_id, action=action, target_user_id=target_user_id, metadata=metadata or {})
+
+
 @app.get("/api/payments/packages")
 async def payment_packages():
     return {"success": True, "packages": payments.get_payment_packages()}
@@ -1209,12 +1522,15 @@ async def api_sync_pending_yookassa_payments(
 
 @app.get("/api/admin/stats/overview")
 async def api_admin_stats_overview(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     _admin_user_id = _require_admin_email_user(email_identity)
-    return {"success": True, **db.get_admin_overview_stats()}
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, **db.get_admin_overview_stats(start, end)}
 
 
 @app.get("/api/admin/me")
@@ -1229,10 +1545,19 @@ async def api_admin_me(
 @app.get("/api/admin/users/search")
 async def api_admin_users_search(
     q: str = Query(default="", max_length=200),
+    provider: str = Query(default="", max_length=32),
+    role: str = Query(default="", max_length=16),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
-    rows = await run_in_threadpool(db.search_users, q.strip(), 50)
+    admin_user_id = _require_admin_email_user(email_identity)
+    _record_admin_audit(
+        admin_user_id,
+        "search_users",
+        metadata={"query": q.strip(), "provider": provider.strip(), "role": role.strip(), "limit": limit, "offset": offset},
+    )
+    rows = await run_in_threadpool(db.search_users, q.strip(), limit, offset, provider.strip(), role.strip())
     users = [
         {
             "id": int(row["id"]),
@@ -1241,6 +1566,8 @@ async def api_admin_users_search(
             "username": row["username"],
             "credits": int(row["credits"]),
             "role": row["role"] or "user",
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
         }
         for row in rows
     ]
@@ -1253,26 +1580,38 @@ async def api_admin_adjust_credits(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     admin_user_id = _require_admin_email_user(email_identity)
-    metadata = {"admin_user_id": admin_user_id}
+    max_adjustment = max(settings.admin_max_credit_adjustment, 1)
+    if abs(payload.amount) > max_adjustment:
+        raise HTTPException(status_code=400, detail=f"Amount exceeds admin limit ({max_adjustment})")
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=400, detail="Reason is required")
+    metadata = {"admin_user_id": admin_user_id, "reason": reason}
     if payload.amount > 0:
         new_balance = await run_in_threadpool(
             credit,
             payload.user_id,
             payload.amount,
-            payload.reason,
+            reason,
             metadata,
             "admin_credit",
         )
     elif payload.amount < 0:
         new_balance = await run_in_threadpool(
-            charge,
+            admin_debit,
             payload.user_id,
             abs(payload.amount),
-            payload.reason,
+            reason,
             metadata,
         )
     else:
         new_balance = await run_in_threadpool(get_balance, payload.user_id)
+    _record_admin_audit(
+        admin_user_id,
+        "adjust_credits",
+        payload.user_id,
+        {"amount": payload.amount, "new_balance": new_balance, "reason": reason},
+    )
     user = db.get_user_by_id(payload.user_id)
     return {
         "success": True,
@@ -1285,12 +1624,135 @@ async def api_admin_adjust_credits(
 
 @app.get("/api/admin/stats/modules")
 async def api_admin_stats_modules(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     _admin_user_id = _require_admin_email_user(email_identity)
-    return {"success": True, "modules": [dict(row) for row in db.get_admin_module_stats()]}
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, "modules": [dict(row) for row in db.get_admin_module_stats(start, end)]}
+
+
+@app.get("/api/admin/stats/daily")
+async def api_admin_stats_daily(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, "days": [dict(row) for row in db.get_admin_daily_stats(start, end)]}
+
+
+@app.get("/api/admin/stats/payments")
+async def api_admin_stats_payments(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, "payments": [dict(row) for row in db.get_admin_payment_stats(start, end)]}
+
+
+@app.get("/api/admin/stats/sparks")
+async def api_admin_stats_sparks(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, "sparks": [dict(row) for row in db.get_admin_spark_stats(start, end)]}
+
+
+@app.get("/api/admin/stats/providers")
+async def api_admin_stats_providers(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, "providers": [dict(row) for row in db.get_admin_provider_stats(start, end)]}
+
+
+@app.get("/api/admin/stats/top-users")
+async def api_admin_stats_top_users(
+    date_from: str = Query(default="", alias="from"),
+    date_to: str = Query(default="", alias="to"),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    start, end = _admin_date_range(date_from, date_to)
+    return {"success": True, "from": start, "to": end, "users": [dict(row) for row in db.get_admin_top_users(start, end)]}
+
+
+@app.get("/api/admin/users/{user_id}")
+async def api_admin_user_detail(
+    user_id: int,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    row = db.get_admin_user_detail(user_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    _record_admin_audit(admin_user_id, "view_user", user_id)
+    return {"success": True, "user": dict(row), "personas": [_serialize_persona(persona) for persona in db.list_personas(user_id)]}
+
+
+@app.get("/api/admin/users/{user_id}/history")
+async def api_admin_user_history(
+    user_id: int,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    _record_admin_audit(admin_user_id, "view_user_history", user_id)
+    return {"success": True, "items": [dict(row) for row in db.list_request_history(user_id=user_id, limit=50)]}
+
+
+@app.get("/api/admin/users/{user_id}/transactions")
+async def api_admin_user_transactions(
+    user_id: int,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    _record_admin_audit(admin_user_id, "view_user_transactions", user_id)
+    return {"success": True, "transactions": [dict(row) for row in db.list_transactions_for_user(user_id=user_id, limit=50)]}
+
+
+@app.get("/api/admin/users/{user_id}/payments")
+async def api_admin_user_payments(
+    user_id: int,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    _record_admin_audit(admin_user_id, "view_user_payments", user_id)
+    return {"success": True, "payments": [dict(row) for row in db.list_payments_for_user_admin(user_id=user_id, limit=50)]}
+
+
+@app.patch("/api/admin/users/{user_id}/role")
+async def api_admin_set_role(
+    user_id: int,
+    payload: AdminSetRoleRequest,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    user = db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    current_role = user["role"] or "user"
+    new_role = payload.role.strip()
+    try:
+        db.update_user_role_safely(user_id, new_role)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail="Cannot remove the last admin")
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="User not found") from exc
+    _record_admin_audit(admin_user_id, "set_role", user_id, {"old_role": current_role, "new_role": new_role})
+    return {"success": True, "user_id": user_id, "role": new_role}
 
 
 @app.get("/api/admin/support/tickets")
@@ -1298,7 +1760,8 @@ async def api_admin_support_tickets(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
     status: str = Query(default=""),
 ):
-    _admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_email_user(email_identity)
+    _record_admin_audit(admin_user_id, "list_support_tickets", metadata={"status": status.strip()})
     rows = db.list_support_tickets_admin(status=status.strip() or None)
     return {"success": True, "tickets": [dict(row) for row in rows]}
 
@@ -1310,12 +1773,55 @@ async def api_admin_support_ticket_details(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_email_user(email_identity)
     ticket = db.get_support_ticket(ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    _record_admin_audit(admin_user_id, "view_support_ticket", ticket["user_id"], {"ticket_id": ticket_id})
     messages = db.list_support_messages(ticket_id=ticket_id)
     return {"success": True, "ticket": dict(ticket), "messages": [dict(row) for row in messages]}
+
+
+@app.post("/api/admin/support/tickets/{ticket_id}/messages")
+async def api_admin_support_ticket_reply(
+    ticket_id: int,
+    payload: AdminSupportReplyRequest,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    ticket = db.get_support_ticket(ticket_id=ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    db.add_support_message(ticket_id=ticket_id, author_user_id=admin_user_id, message_text=payload.message_text.strip())
+    _record_admin_audit(admin_user_id, "support_reply", ticket["user_id"], {"ticket_id": ticket_id})
+    messages = db.list_support_messages(ticket_id=ticket_id)
+    return {"success": True, "messages": [dict(row) for row in messages]}
+
+
+@app.patch("/api/admin/support/tickets/{ticket_id}")
+async def api_admin_support_ticket_status(
+    ticket_id: int,
+    payload: AdminTicketStatusRequest,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    admin_user_id = _require_admin_email_user(email_identity)
+    ticket = db.get_support_ticket(ticket_id=ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not db.update_support_ticket_status(ticket_id=ticket_id, status=payload.status):
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _record_admin_audit(admin_user_id, "support_status", ticket["user_id"], {"ticket_id": ticket_id, "status": payload.status})
+    return {"success": True, "ticket_id": ticket_id, "status": payload.status}
+
+
+@app.get("/api/admin/audit-log")
+async def api_admin_audit_log(
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    _require_admin_email_user(email_identity)
+    return {"success": True, "items": [dict(row) for row in db.list_admin_audit_log(limit=limit, offset=offset)]}
 
 
 @app.post("/api/sonnik/interpret")
@@ -1487,4 +1993,67 @@ async def api_sovmestimost_names_dates(
         f"{payload.name1};{payload.date1};{payload.name2};{payload.date2}",
         result,
     )
+    return {"success": True, "result": result, "balance": get_balance(user_id)}
+
+
+@app.post("/api/tarot/reading")
+async def api_tarot_reading(
+    payload: TarotRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
+    topic = _validate_card_reading_topic(payload.topic)
+    spread = _validate_tarot_spread(payload.spread)
+    persona_context = _tarot_persona_context(user_id, payload)
+    charge(user_id, settings.cost_tarot, "tarot", {"module": "tarot"})
+    try:
+        result = divination.tarot_reading(payload.question, topic, spread, requested_language, persona_context)
+    except HTTPException as exc:
+        new_balance = refund(user_id, settings.cost_tarot, "tarot_refund", {"module": "tarot"})
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+    except Exception as exc:
+        new_balance = refund(user_id, settings.cost_tarot, "tarot_refund", {"module": "tarot"})
+        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
+
+    persona_name = f"; persona={persona_context.get('name')}" if persona_context and persona_context.get("name") else ""
+    db.record_history(user_id, "tarot", f"{topic}; {spread}{persona_name}; {payload.question}", result)
+    return {"success": True, "result": result, "balance": get_balance(user_id)}
+
+
+@app.post("/api/astrology/forecast")
+async def api_astrology_forecast(
+    payload: AstrologyForecastRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
+    compatibility.parse_date(payload.birth_date)
+    birth_time = _validate_optional_birth_time(payload.birth_time)
+    charge(user_id, settings.cost_astrology, "astrology", {"module": "astrology"})
+    try:
+        result = divination.astrology_forecast(
+            payload.name,
+            payload.birth_date,
+            birth_time,
+            payload.birth_place,
+            payload.focus,
+            requested_language,
+        )
+    except HTTPException as exc:
+        new_balance = refund(user_id, settings.cost_astrology, "astrology_refund", {"module": "astrology"})
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+    except Exception as exc:
+        new_balance = refund(user_id, settings.cost_astrology, "astrology_refund", {"module": "astrology"})
+        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
+
+    input_text = (
+        f"{payload.name}; {payload.birth_date}; {birth_time or '-'}; "
+        f"{payload.birth_place or '-'}; {payload.focus or '-'}"
+    )
+    db.record_history(user_id, "astrology", input_text, result)
     return {"success": True, "result": result, "balance": get_balance(user_id)}

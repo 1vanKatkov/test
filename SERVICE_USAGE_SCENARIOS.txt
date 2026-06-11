@@ -1,0 +1,583 @@
+Сценарии использования сервиса Astrolhub
+=======================================
+
+Документ описывает пользовательские сценарии сервиса и то, как каждый сценарий
+обрабатывается на фронте, на бэке, на серверных сервисах и в ботах.
+
+Основной стек:
+- Web-приложение: FastAPI в app/server.py.
+- Шаблоны страниц: app/templates/*.html.
+- Общий фронтенд-скрипт: app/static/app.js.
+- Лендинг: app/templates/index.html и app/static/landing.js.
+- База данных: SQLite через app/web/db.py.
+- Сервисы: app/web/services/*.
+- Авторизация: app/web/auth/*.
+- Telegram-боты RU/EN: bots/telegram_bot.py.
+- Запуск всего приложения: run_all.py.
+
+
+1. Открытие главной страницы
+----------------------------
+
+Пользовательский сценарий:
+Пользователь открывает https://astrolhub.site/ или другой настроенный домен.
+Если основной язык задан английским, главная страница отображается на английском.
+Если пользователь открывает URL с ?lang=ru, страница отображается на русском.
+
+Фронт:
+- Шаблон app/templates/index.html получает lang и словарь переводов t от сервера.
+- Тексты, кнопки, описания функций и ссылки строятся через Jinja-переменные.
+- app/static/landing.js отвечает за визуальные эффекты лендинга и может показать
+  состояние распознанного пользователя, если страница открыта с признаками внешнего
+  канала.
+
+Бэк:
+- GET / обрабатывается в app/server.py.
+- Язык определяется через _normalize_lang(). Если query-параметра нет, берется
+  APP_DEFAULT_LANG из config.py.
+- Для кнопки Telegram выбирается ссылка через _landing_telegram_bot_url():
+  TELEGRAM_BOT_URL_EN для английского и TELEGRAM_BOT_URL_RU для русского.
+- Если запрос содержит признаки распознанного внешнего пользователя, сервер может
+  перенаправить его в /client с нужными параметрами.
+
+База:
+- Для обычного гостевого открытия лендинга база не используется.
+
+Боты:
+- На лендинге кнопка Telegram ведет на t.me-ссылку бота, а не напрямую в WebApp.
+
+
+2. Открытие сервиса через Telegram-бота
+---------------------------------------
+
+Пользовательский сценарий:
+Пользователь открывает Telegram-бота, нажимает /start и кнопку WebApp. Русский бот
+ведет в русскую версию, английский бот - в английскую.
+
+Фронт:
+- Открывается /client?lang=ru&platform=telegram или /client?lang=en&platform=telegram.
+- app/static/app.js запускает boot().
+- Сначала фронт пытается восстановить сохраненную авторизацию из localStorage,
+  sessionStorage и cookies через GET /api/profile.
+- Если пользователь уже авторизован, Telegram SDK не загружается повторно.
+- Если пользователь не авторизован и страница открыта как Telegram WebApp,
+  app.js динамически загружает https://telegram.org/js/telegram-web-app.js.
+- После загрузки SDK вызывается autoVerifyTelegram(), который берет initData и
+  отправляет его на POST /api/auth/telegram/verify.
+- Если бот добавил tglink в URL, verifyTelegramUsernameLinkFromQuery() отправляет
+  POST /api/auth/telegram/verify-link.
+
+Бэк:
+- bots/telegram_bot.py формирует WebApp URL через build_webapp_url(lang).
+- Для RU используется TELEGRAM_WEBAPP_URL_RU, для EN - TELEGRAM_WEBAPP_URL_EN.
+- В URL добавляются platform=telegram и lang.
+- Если включена username-link авторизация, бот добавляет tglink.
+- POST /api/auth/telegram/verify проверяет initData по токенам Telegram-ботов.
+- POST /api/auth/telegram/verify-link проверяет одноразовый/подписанный tglink.
+- При успехе сервер выдает telegram_auth_token, ставит cookie и возвращает profile.
+
+База:
+- Пользователь создается или находится через db.get_or_create_user(provider=telegram).
+- В users хранится provider, provider_user_id, username, language, credits и role.
+
+Ошибки:
+- "Telegram did not provide initData" означает, что страница открыта как Telegram,
+  но Telegram SDK не передал initData. Обычно причина: открытие не через WebApp-кнопку
+  или неверный /setdomain в BotFather.
+- Ошибка Telegram "unsupported url protocol" обычно означает неправильный URL в .env,
+  например лишний символ "=" перед https://.
+
+
+3. Регистрация и вход по email
+------------------------------
+
+Пользовательский сценарий:
+Пользователь нажимает Login/Register, создает аккаунт по email или входит в уже
+созданный аккаунт. Если EMAIL_SKIP_VERIFICATION=true, регистрация проходит без
+отправки кода на почту.
+
+Фронт:
+- Страницы могут открываться как статические:
+  app/static/auth/login.html
+  app/static/auth/register.html
+  app/static/auth/register-verify.html
+- Также есть серверные шаблоны:
+  app/templates/client_login.html
+  app/templates/client_register.html
+  app/templates/client_register_verify.html
+- app.js функции:
+  wireRegisterPage()
+  wireRegisterVerifyPage()
+  wireLoginPage()
+  applyEmailAuthResult()
+- После успешного входа emailAuthToken сохраняется в localStorage.
+- Для API-запросов app.js добавляет X-Email-Auth-Token.
+
+Бэк:
+- POST /api/auth/email/register/start и alias /api/auth/email/register.
+- POST /api/auth/email/register/verify.
+- POST /api/auth/email/register/resend.
+- POST /api/auth/email/login.
+- GET /api/auth/email/health.
+- POST /api/auth/logout.
+- Логика находится в app/web/auth/email_auth.py.
+- Если EMAIL_SKIP_VERIFICATION=true, complete_email_registration вызывается сразу.
+- Если проверка включена, создается код, сохраняется в базе и отправляется через SMTP.
+
+База:
+- users: создается provider=email.
+- email_verification_codes: хранит коды регистрации/сброса пароля.
+- transactions: может фиксировать стартовый бонус.
+
+Боты:
+- В email-сценарии боты не участвуют.
+
+
+4. Восстановление профиля и сохранение авторизации
+-------------------------------------------------
+
+Пользовательский сценарий:
+Пользователь уже входил ранее и переходит между страницами сервиса. Авторизация
+должна сохраняться, а пользователь не должен снова определяться как гость.
+
+Фронт:
+- app.js при boot() вызывает hydrateUiFromCache(), затем loadProfile().
+- getAuthHeaders() добавляет:
+  X-Telegram-Auth-Token, если есть telegramAuthToken;
+  X-Email-Auth-Token, если есть emailAuthToken;
+  X-Telegram-Init-Data, если есть initData.
+- Если /api/profile возвращает provider=email/telegram/max, UI показывает пользователя.
+- Если /api/profile возвращает guest, старые токены очищаются.
+
+Бэк:
+- GET /api/profile проверяет optional_email_auth, optional_telegram_auth и
+  optional_max_auth.
+- Если ни одна авторизация не прошла, возвращается provider=guest.
+
+База:
+- По токену находится пользователь в users.
+- Баланс берется через get_balance().
+
+Боты:
+- Telegram SDK не запускается повторно для уже авторизованного пользователя.
+- Боты нужны только для первого входа или открытия WebApp.
+
+
+5. Кабинет пользователя
+-----------------------
+
+Пользовательский сценарий:
+Пользователь открывает /client и видит функциональные карточки: Сонник,
+Нумерология, Совместимость, а также нижнее мобильное меню Home/History/Profile
+или Login для гостя.
+
+Фронт:
+- Шаблон app/templates/client_dashboard.html.
+- Нижнее меню: app/templates/partials/client_bottom_nav.html.
+- Данные пользователя: app/templates/partials/client_user_chip.html.
+- app.js обновляет:
+  имя пользователя,
+  баланс,
+  видимость кнопок login/register/logout,
+  видимость Profile/Login в нижнем меню,
+  видимость admin tile.
+
+Бэк:
+- GET /client возвращает шаблон с _client_template_context().
+- Контекст содержит lang, t, brand_name, initial_auth_username, hide_topup_button.
+- GET /api/balance возвращает баланс авторизованного пользователя.
+- GET /api/admin/me используется для определения, показывать ли админ-панель.
+
+База:
+- users и transactions используются для баланса.
+
+Боты:
+- Если кабинет открыт из Telegram, он проходит через тот же WebApp URL и auth-flow.
+
+
+6. Сонник
+---------
+
+Пользовательский сценарий:
+Пользователь открывает /client/sonnik, вводит описание сна и получает AI-толкование.
+
+Фронт:
+- Шаблон app/templates/client_sonnik.html.
+- app.js wireSonnikForm() отправляет POST /api/sonnik/interpret.
+- В payload отправляется dream_text и language=lang.
+- При успехе результат показывается на странице, баланс обновляется.
+- Если пользователь не авторизован, redirectOnUnauthorized переносит на login.
+
+Бэк:
+- POST /api/sonnik/interpret.
+- Сервер требует авторизованного пользователя через _require_authenticated_user().
+- Язык берется из payload.language или из профиля пользователя.
+- Сначала списывается стоимость через charge().
+- Затем вызывается app/web/services/sonnik.py -> interpret_dream().
+- Модель выбирается по языку:
+  MODEL_SONNIK для RU;
+  MODEL_SONNIK_EN для EN.
+- Если AI-запрос падает, делается refund().
+- Результат записывается в request_history.
+
+База:
+- transactions: списание или возврат искр.
+- request_history: входной сон и результат.
+
+Боты:
+- Бот только открывает WebApp. Само толкование идет через Web API.
+
+
+7. Нумерология
+--------------
+
+Пользовательский сценарий:
+Пользователь открывает /client/numerology, вводит имя и дату рождения, получает
+персональный отчет. Отчет открывается на отдельной странице и доступен из истории.
+
+Фронт:
+- Форма: app/templates/client_numerology.html.
+- Страница отчета: app/templates/client_numerology_report.html.
+- app.js wireNumerologyForm() отправляет POST /api/numerology/generate.
+- В payload отправляется full_name, birth_date и language=lang.
+- После успешной генерации фронт получает report_url и добавляет к нему lang.
+- loadNumerologyReport() загружает GET /api/numerology/report/{id}?lang=...
+- renderNumerologyReport() отрисовывает числа, разделы, матрицу и энергии.
+
+Бэк:
+- POST /api/numerology/generate.
+- Сервер проверяет авторизацию и списывает COST_NUMEROLOGY через charge().
+- Вызывает app/web/services/numerology.py -> generate_web_report().
+- Базовые описания загружаются из bots228/numerology/numbers_desc.py.
+- Для EN вызывается translate_report_payload().
+- Английский перевод выполняется через OpenRouter.
+- Если модель вернула JSON, но оставила кириллицу в текстовых значениях, перевод
+  считается неуспешным, делается повторная попытка и пробуются доступные модели.
+- Если английский перевод не удался, API возвращает ошибку вместо русского текста.
+- Готовый отчет сохраняется через db.record_html_report().
+- В request_history записывается report_id.
+- GET /api/numerology/report/{id} достает отчет из generated_reports. Если отчет
+  старый и сохранен на русском, но запрошен lang=en, сервер пытается перевести его
+  перед отдачей.
+
+База:
+- generated_reports: JSON отчета.
+- request_history: строка report_id=...
+- transactions: списание/возврат искр.
+
+Боты:
+- Боты только открывают WebApp. Нумерология выполняется через Web API.
+
+
+8. Совместимость
+----------------
+
+Пользовательский сценарий:
+Пользователь открывает /client/compatibility и выбирает режим:
+1) совместимость по именам;
+2) совместимость по именам и датам рождения.
+
+Фронт:
+- Шаблон app/templates/client_compatibility.html.
+- app.js wireCompatibilityForms() управляет вкладками и формами.
+- Для режима имен вызывается POST /api/sovmestimost/by-names.
+- Для режима имен и дат вызывается POST /api/sovmestimost/by-names-dates.
+- В payload отправляется language=lang.
+
+Бэк:
+- Сервер проверяет авторизацию.
+- Списывает COST_SOVMESTIMOST через charge().
+- app/web/services/compatibility.py формирует prompt.
+- Модель выбирается по языку:
+  MODEL_SOVMESTIMOST для RU;
+  MODEL_SOVMESTIMOST_EN для EN.
+- Ответ записывается в request_history.
+- При ошибке AI делается refund().
+
+База:
+- request_history: модуль sovmestimost_names или sovmestimost_names_dates.
+- transactions: списание/возврат.
+
+Боты:
+- Бот только открывает WebApp.
+
+
+9. История запросов
+-------------------
+
+Пользовательский сценарий:
+Пользователь нажимает History в нижнем меню и видит историю своих запросов.
+Если гость нажимает History, его переносит на страницу входа.
+
+Фронт:
+- Шаблон app/templates/client_history.html.
+- Нижнее меню содержит data-auth-required=true для History.
+- app.js wireAuthRequiredLinks() перенаправляет гостя на login.
+- loadRequestHistory() вызывает GET /api/history/requests.
+- renderRequestHistory() показывает элементы истории.
+- Для нумерологии история получает report_url и позволяет открыть отчет.
+
+Бэк:
+- GET /api/history/requests.
+- Сервер требует авторизацию.
+- db.list_request_history() возвращает историю пользователя.
+- Для numerology output_text=report_id=... преобразуется в report_url.
+
+База:
+- request_history.
+
+Боты:
+- Не участвуют.
+
+
+10. Пополнение баланса
+----------------------
+
+Пользовательский сценарий:
+Пользователь открывает /client/topup, выбирает пакет искр, вводит email для чека,
+ставит галочку согласия с публичной офертой и создает платеж.
+
+Фронт:
+- Шаблон app/templates/client_topup.html.
+- app.js:
+  loadPaymentPackages()
+  wirePaymentForms()
+  loadPaymentsHistory()
+  syncPendingPayments()
+  wirePaymentsHistoryActions()
+- Кнопка пополнения может быть скрыта через HIDE_TOPUP_BUTTON.
+- Для гостя Top-up ведет на login.
+- Перед созданием платежа фронт проверяет чекбокс публичной оферты.
+- Ссылка на оферту ведет на /public-offer.pdf.
+
+Бэк:
+- GET /api/payments/packages возвращает доступные пакеты.
+- POST /api/payments/yookassa/create создает платеж.
+- POST /api/payments/yookassa/{payment_id}/check проверяет статус.
+- POST /api/payments/yookassa/{payment_id}/cancel отменяет платеж, если можно.
+- POST /api/payments/yookassa/sync-pending синхронизирует ожидающие платежи.
+- GET /api/payments/yookassa/history возвращает историю платежей.
+- GET /public-offer.pdf отдает файл "Публичная оферта.pdf" из списка путей.
+
+Сервисы:
+- app/web/services/payments.py работает с YooKassa.
+- app/web/services/balance.py начисляет искры после успешной оплаты.
+
+База:
+- payments: платежи YooKassa.
+- transactions: начисления искр.
+- users.credits: текущий баланс.
+
+Боты:
+- Не участвуют в оплате напрямую. YOOKASSA_RETURN_URL может вести обратно в Telegram.
+
+
+11. Профиль, поддержка и выход
+-----------------------------
+
+Пользовательский сценарий:
+Пользователь открывает Profile, видит данные аккаунта, баланс, кнопку Support и
+кнопку Logout. Email-пользователь может менять пароль, если EMAIL_SKIP_VERIFICATION
+не отключает этот блок.
+
+Фронт:
+- Профиль: app/templates/client_profile.html.
+- Поддержка: app/templates/client_support.html.
+- app.js:
+  wireLogoutButton()
+  wirePasswordResetForm()
+  wireSupportForms()
+  loadSupportTickets()
+  loadSupportTicketMessages()
+- Logout очищает локальные токены и отправляет POST /api/auth/logout.
+
+Бэк:
+- GET /api/profile возвращает provider, username, language.
+- POST /api/auth/logout очищает cookies.
+- POST /api/auth/email/password-reset/request и /confirm работают для email.
+- POST /api/support/tickets создает обращение.
+- GET /api/support/tickets возвращает список обращений.
+- GET /api/support/tickets/{id}/messages возвращает сообщения.
+- POST /api/support/tickets/{id}/messages добавляет сообщение.
+
+База:
+- support_tickets.
+- support_messages.
+- email_verification_codes для смены пароля.
+
+Боты:
+- Не участвуют.
+
+
+12. Админ-панель
+----------------
+
+Пользовательский сценарий:
+Администратор входит по email и видит кнопку Admin в кабинете. В админке он может
+смотреть статистику, пользователей, обращения и начислять/списывать искры.
+
+Фронт:
+- Шаблон app/templates/admin_dashboard.html.
+- app.js:
+  updateAdminTileVisibility()
+  loadAdminDashboard()
+  wireAdminEvents()
+  wireAdminCreditsForm()
+- Админская кнопка показывается только если GET /api/admin/me подтверждает роль.
+
+Бэк:
+- GET /admin возвращает шаблон админки.
+- GET /api/admin/me проверяет права.
+- GET /api/admin/stats/overview.
+- GET /api/admin/stats/modules.
+- GET /api/admin/users/search.
+- POST /api/admin/users/credits/adjust.
+- GET /api/admin/support/tickets.
+- GET /api/admin/support/tickets/{id}/messages.
+- Все admin API требуют email-пользователя с role=admin.
+- Telegram/MAX пользователи не считаются администраторами для admin API.
+
+База:
+- users.role.
+- payments, request_history, support_tickets, support_messages.
+- transactions для ручной корректировки баланса.
+
+Боты:
+- Не участвуют.
+
+
+13. Работа языков RU/EN
+-----------------------
+
+Пользовательский сценарий:
+Пользователь открывает сервис на языке по умолчанию или явно добавляет ?lang=ru
+или ?lang=en. Английский бот ведет в EN-версию, русский бот - в RU-версию.
+
+Фронт:
+- Все клиентские шаблоны получают data-lang.
+- app.js вычисляет lang из document.body.dataset.lang.
+- UI-тексты берутся из i18n в app.js и из t в Jinja.
+- API-запросы AI-модулей отправляют language=lang.
+
+Бэк:
+- _normalize_lang() принимает ru/en или возвращает APP_DEFAULT_LANG.
+- _translations(lang) возвращает словарь переводов.
+- _resolve_language() берет язык из email/max/telegram identity, если payload не
+  передал язык.
+- В users.language хранится язык пользователя.
+
+Боты:
+- bots/telegram_bot.py запускает два сценария:
+  run() для RU;
+  run_en() для EN.
+- build_webapp_url(lang) выбирает TELEGRAM_WEBAPP_URL_RU или TELEGRAM_WEBAPP_URL_EN.
+
+
+14. Защита функционала от гостей
+--------------------------------
+
+Пользовательский сценарий:
+Гость может открыть лендинг и часть UI, но при попытке использовать платные функции,
+историю, поддержку или пополнение его отправляет на страницу входа.
+
+Фронт:
+- app.js isLoggedIn() проверяет provider.
+- wireAuthRequiredLinks() перехватывает клики по data-auth-required=true.
+- apiRequest(..., { redirectOnUnauthorized: true }) перенаправляет на login при 401.
+- Для гостя в нижнем меню показывается Login вместо Profile.
+- Для гостя скрываются "Sparks" и числовой баланс в мобильной шапке/hero.
+
+Бэк:
+- Платные и приватные API вызывают _require_authenticated_user().
+- Если auth identity нет, возвращается 401.
+
+База:
+- Для гостя пользовательская запись не создается.
+
+Боты:
+- При открытии через Telegram пользователь должен авторизоваться через initData или tglink.
+
+
+15. Развертывание и работа серверного процесса
+----------------------------------------------
+
+Пользовательский сценарий:
+Администратор сервера запускает приложение на VDS. Пользователь заходит через Nginx
+на публичный домен.
+
+Сервер:
+- systemd service miniapp запускает:
+  /root/opt/test/test/.venv/bin/python /root/opt/test/test/run_all.py
+- run_all.py стартует FastAPI на 0.0.0.0:8000 и ботов, если они включены.
+- Nginx проксирует домен на http://127.0.0.1:8000.
+- /health и /api/health используются для проверки.
+
+Типовые проблемы:
+- 502 Bad Gateway: приложение упало или не слушает 8000.
+- status=200/CHDIR в systemd: неверный WorkingDirectory.
+- TypeError по dict[str, str | bool] на Python 3.8: нужен eval_type_backport или Python 3.11+.
+- Telegram Conflict getUpdates: тот же бот-токен запущен на другом сервере.
+- Telegram unsupported url protocol: неправильный TELEGRAM_WEBAPP_URL_* в .env.
+
+
+16. Сводная карта основных маршрутов
+------------------------------------
+
+Публичные страницы:
+- GET /                         лендинг
+- GET /client                   кабинет
+- GET /client/sonnik            сонник
+- GET /client/numerology        форма нумерологии
+- GET /client/numerology/report/{id}
+- GET /client/compatibility     совместимость
+- GET /client/history           история
+- GET /client/profile           профиль
+- GET /client/topup             пополнение
+- GET /client/support           поддержка
+- GET /admin                    админка
+- GET /public-offer.pdf         публичная оферта
+
+Auth API:
+- GET /api/profile
+- POST /api/auth/email/register/start
+- POST /api/auth/email/register/verify
+- POST /api/auth/email/login
+- POST /api/auth/logout
+- POST /api/auth/telegram/verify
+- POST /api/auth/telegram/verify-link
+- POST /api/auth/max/verify
+
+Функциональные API:
+- POST /api/sonnik/interpret
+- POST /api/numerology/generate
+- GET /api/numerology/report/{id}
+- POST /api/sovmestimost/by-names
+- POST /api/sovmestimost/by-names-dates
+- GET /api/history/requests
+- GET /api/balance
+- GET /api/payments/packages
+- POST /api/payments/yookassa/create
+- GET /api/payments/yookassa/history
+- POST /api/support/tickets
+- GET /api/support/tickets
+
+
+17. Где смотреть реализацию
+---------------------------
+
+- app/server.py: маршруты, HTML-страницы, API, язык, auth responses.
+- app/static/app.js: основная логика фронта, формы, auth, Telegram SDK, платежи,
+  история, поддержка, админка.
+- app/templates/: HTML-шаблоны страниц.
+- app/web/db.py: SQLite-операции.
+- app/web/auth/email_auth.py: email-регистрация, вход, сброс пароля.
+- app/web/auth/telegram_auth.py: Telegram initData, tglink, auth tokens.
+- app/web/auth/max_auth.py: MAX-подписи.
+- app/web/services/sonnik.py: сонник через OpenRouter.
+- app/web/services/numerology.py: расчет и перевод нумерологии.
+- app/web/services/compatibility.py: совместимость через OpenRouter.
+- app/web/services/payments.py: YooKassa.
+- app/web/services/balance.py: списания, начисления и возвраты искр.
+- bots/telegram_bot.py: RU/EN Telegram WebApp-кнопки.
+- bots/max_bot.py: MAX WebApp-кнопка.
+- run_all.py: общий запуск приложения и ботов.

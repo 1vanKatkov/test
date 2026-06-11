@@ -1,6 +1,7 @@
 const TELEGRAM_INIT_DATA_KEY = "astrolhub.telegramInitData";
 const TELEGRAM_AUTH_TOKEN_KEY = "astrolhub.telegramAuthToken";
 const EMAIL_AUTH_TOKEN_KEY = "astrolhub.emailAuthToken";
+const ACTIVE_AUTH_PROVIDER_KEY = "astrolhub.activeAuthProvider";
 const TELEGRAM_WEB_APP_SCRIPT_URL = "https://telegram.org/js/telegram-web-app.js";
 
 const state = {
@@ -12,6 +13,8 @@ const state = {
   lastPaymentId: sessionStorage.getItem("astrolhub.lastPaymentId") || "",
   selectedSupportTicketId: null,
   profileProvider: "guest",
+  activeAuthProvider: localStorage.getItem(ACTIVE_AUTH_PROVIDER_KEY) || "",
+  personas: [],
 };
 let telegramSdkLoadPromise = null;
 const lang = document.body.dataset.lang === "en" ? "en" : "ru";
@@ -41,6 +44,8 @@ const i18n = lang === "en"
     status: "Status",
     balance: "Balance",
     analyzingDream: "Analyzing dream...",
+    readingTarot: "Building natal chart...",
+    buildingForecast: "Building forecast...",
     generatingReport: "Generating report...",
     reportReady: "Report is ready",
     calculating: "Calculating...",
@@ -77,6 +82,12 @@ const i18n = lang === "en"
     close: "Close",
     chooseTicketFirst: "Choose ticket first",
     logout: "Log out",
+    signInRedirecting: "Redirecting to login...",
+    personaSaved: "Persona saved",
+    personaDeleted: "Persona deleted",
+    personaEmpty: "No saved personas yet",
+    choosePersona: "Choose persona",
+    personaRequired: "Choose a saved persona or enter at least name and birth date.",
   }
   : {
     guest: "Гость",
@@ -99,6 +110,8 @@ const i18n = lang === "en"
     status: "Статус",
     balance: "Баланс",
     analyzingDream: "Выполняется анализ...",
+    readingTarot: "Строим натальную карту...",
+    buildingForecast: "Строим прогноз...",
     generatingReport: "Генерация отчета...",
     reportReady: "Отчет готов",
     calculating: "Выполняется расчет...",
@@ -135,6 +148,12 @@ const i18n = lang === "en"
     close: "Закрыть",
     chooseTicketFirst: "Сначала выберите обращение",
     logout: "Выйти",
+    signInRedirecting: "Перенаправляем на страницу входа...",
+    personaSaved: "Персона сохранена",
+    personaDeleted: "Персона удалена",
+    personaEmpty: "Сохранённых персон пока нет",
+    choosePersona: "Выберите персону",
+    personaRequired: "Выберите сохранённую персону или введите минимум имя и дату рождения.",
   };
 
 const authPageCopy = {
@@ -224,6 +243,10 @@ function resolvePostLoginRedirect() {
   }
 }
 
+function currentAuthNextParam() {
+  return new URLSearchParams(window.location.search).get("next") || "";
+}
+
 function loginRedirectUrlFor(nextHref) {
   try {
     const nextUrl = new URL(nextHref, window.location.origin);
@@ -244,6 +267,11 @@ function withLangQuery(url) {
   const target = new URL(url, window.location.origin);
   target.searchParams.set("lang", lang);
   return `${target.pathname}${target.search}`;
+}
+
+function authStaticUrlWithCurrentNext(page, extraParams = {}) {
+  const next = currentAuthNextParam();
+  return authStaticUrl(page, next ? { ...extraParams, next } : extraParams);
 }
 
 function wireAuthRequiredLinks() {
@@ -278,8 +306,14 @@ async function initAuthStaticPage() {
   document.querySelectorAll(".header-auth-btn.auth-register-link").forEach((node) => {
     node.textContent = copy.goRegister;
   });
-  document.querySelectorAll(".auth-brand-link, .auth-username-link, .auth-login-link, .auth-register-link").forEach((link) => {
+  document.querySelectorAll(".auth-brand-link, .auth-username-link").forEach((link) => {
     link.setAttribute("href", withLangQuery(link.getAttribute("href")));
+  });
+  document.querySelectorAll(".auth-login-link").forEach((link) => {
+    link.setAttribute("href", authStaticUrlWithCurrentNext("login"));
+  });
+  document.querySelectorAll(".auth-register-link").forEach((link) => {
+    link.setAttribute("href", authStaticUrlWithCurrentNext("register"));
   });
   const verifyEmail = document.body.dataset.registerEmail || new URLSearchParams(window.location.search).get("email") || "";
   if (element("verify-email-display")) {
@@ -316,10 +350,78 @@ async function initAuthStaticPage() {
   toggleHeaderAuthLinks();
 }
 
+function renderInlineMarkdown(text) {
+  return escapeHtml(text)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+function renderMarkdownText(text) {
+  const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+  const parts = [];
+  let paragraph = [];
+  let listItems = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.length) {
+      return;
+    }
+    parts.push(`<p>${renderInlineMarkdown(paragraph.join(" "))}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!listItems.length) {
+      return;
+    }
+    parts.push(`<ul>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+    listItems = [];
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+    if (/^(\*{3,}|-{3,}|_{3,})$/.test(trimmed)) {
+      flushParagraph();
+      flushList();
+      parts.push("<hr>");
+      return;
+    }
+    const heading = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(heading[1].length + 1, 4);
+      parts.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      return;
+    }
+    const bullet = trimmed.match(/^[-*]\s+(.+)$/);
+    if (bullet) {
+      flushParagraph();
+      listItems.push(bullet[1]);
+      return;
+    }
+    flushList();
+    paragraph.push(trimmed);
+  });
+  flushParagraph();
+  flushList();
+  return parts.join("");
+}
+
 function setResult(id, text) {
   const node = element(id);
   if (node) {
-    node.textContent = text || "";
+    if (node.classList.contains("rich-result")) {
+      node.innerHTML = text ? renderMarkdownText(text) : "";
+    } else {
+      node.textContent = text || "";
+    }
+    node.hidden = !text;
   }
 }
 
@@ -331,6 +433,10 @@ function setBalance(value) {
   const dashboardHeroSparks = element("dashboard-hero-sparks");
   if (dashboardHeroSparks) {
     dashboardHeroSparks.textContent = String(value);
+  }
+  const pageSparks = element("page-sparks");
+  if (pageSparks) {
+    pageSparks.textContent = String(value);
   }
   const node = element("balance-view");
   if (node) {
@@ -437,15 +543,28 @@ function persistTelegramInitData(initData) {
   sessionStorage.setItem(TELEGRAM_INIT_DATA_KEY, state.telegramInitData);
 }
 
+function setActiveAuthProvider(provider) {
+  state.activeAuthProvider = provider || "";
+  if (!state.activeAuthProvider) {
+    localStorage.removeItem(ACTIVE_AUTH_PROVIDER_KEY);
+    return;
+  }
+  localStorage.setItem(ACTIVE_AUTH_PROVIDER_KEY, state.activeAuthProvider);
+}
+
 function persistTelegramAuthToken(token) {
   state.telegramAuthToken = token || "";
   if (!state.telegramAuthToken) {
     sessionStorage.removeItem(TELEGRAM_AUTH_TOKEN_KEY);
     localStorage.removeItem(TELEGRAM_AUTH_TOKEN_KEY);
+    if (state.activeAuthProvider === "telegram") {
+      setActiveAuthProvider("");
+    }
     return;
   }
   sessionStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
   localStorage.setItem(TELEGRAM_AUTH_TOKEN_KEY, state.telegramAuthToken);
+  setActiveAuthProvider("telegram");
 }
 
 function hasStoredAuthToken() {
@@ -562,15 +681,33 @@ function hydrateUiFromCache() {
 
 function getAuthHeaders() {
   const headers = { "Content-Type": "application/json" };
-  if (state.telegramAuthToken) {
+  if (state.activeAuthProvider === "email" && state.emailAuthToken) {
+    headers["X-Active-Auth-Provider"] = "email";
+    headers["X-Email-Auth-Token"] = state.emailAuthToken;
+    return headers;
+  }
+  if (state.activeAuthProvider === "telegram" && state.telegramAuthToken) {
+    headers["X-Active-Auth-Provider"] = "telegram";
+    headers["X-Telegram-Auth-Token"] = state.telegramAuthToken;
+    return headers;
+  }
+  if (isTelegramWebAppContext() && state.telegramAuthToken) {
+    headers["X-Active-Auth-Provider"] = "telegram";
     headers["X-Telegram-Auth-Token"] = state.telegramAuthToken;
     return headers;
   }
   if (state.emailAuthToken) {
+    headers["X-Active-Auth-Provider"] = "email";
     headers["X-Email-Auth-Token"] = state.emailAuthToken;
     return headers;
   }
+  if (state.telegramAuthToken) {
+    headers["X-Active-Auth-Provider"] = "telegram";
+    headers["X-Telegram-Auth-Token"] = state.telegramAuthToken;
+    return headers;
+  }
   if (state.telegramInitData) {
+    headers["X-Active-Auth-Provider"] = "telegram";
     headers["X-Telegram-Init-Data"] = state.telegramInitData;
   }
   return headers;
@@ -580,8 +717,12 @@ function persistEmailAuthToken(token) {
   state.emailAuthToken = token || "";
   if (token) {
     localStorage.setItem(EMAIL_AUTH_TOKEN_KEY, token);
+    setActiveAuthProvider("email");
   } else {
     localStorage.removeItem(EMAIL_AUTH_TOKEN_KEY);
+    if (state.activeAuthProvider === "email") {
+      setActiveAuthProvider("");
+    }
   }
 }
 
@@ -602,6 +743,10 @@ function syncGuestOnlyChrome(isGuest) {
   if (dashboardHeroSparkPill) {
     dashboardHeroSparkPill.hidden = isGuest;
   }
+  const pageSparkPill = element("page-spark-pill");
+  if (pageSparkPill) {
+    pageSparkPill.hidden = isGuest;
+  }
   const profileLink = element("bottom-nav-profile");
   if (profileLink) {
     profileLink.hidden = isGuest;
@@ -613,6 +758,19 @@ function syncGuestOnlyChrome(isGuest) {
   }
 }
 
+function syncAuthRequiredSections(isGuest) {
+  document.querySelectorAll(".auth-required-panel").forEach((panel) => {
+    panel.hidden = !isGuest;
+  });
+  document.querySelectorAll(".auth-required-content").forEach((content) => {
+    content.hidden = false;
+    content.classList.toggle("is-auth-locked", isGuest);
+    content.querySelectorAll("input, textarea, select, button").forEach((control) => {
+      control.disabled = isGuest;
+    });
+  });
+}
+
 function syncAuthChrome(profile) {
   if (profile?.provider) {
     state.profileProvider = profile.provider;
@@ -620,6 +778,7 @@ function syncAuthChrome(profile) {
   const loggedIn = isLoggedIn();
   toggleHeaderAuthLinks();
   syncGuestOnlyChrome(!loggedIn);
+  syncAuthRequiredSections(!loggedIn);
   const logoutBtn = element("profile-logout-btn");
   if (logoutBtn) {
     logoutBtn.hidden = !loggedIn;
@@ -648,6 +807,7 @@ function toggleEmailAuthEntry() {
 
 function applyEmailAuthResult(result) {
   if (result.token) {
+    persistTelegramAuthToken("");
     persistEmailAuthToken(result.token);
   }
   if (result.profile) {
@@ -660,6 +820,34 @@ function applyEmailAuthResult(result) {
   }
   toggleEmailAuthEntry();
   updateAdminTileVisibility().catch(() => {});
+}
+
+function setFormBusy(form, isBusy, loadingText = i18n.loading) {
+  if (!form) {
+    return;
+  }
+  const submitButton = form.querySelector("button[type='submit']");
+  if (!submitButton) {
+    return;
+  }
+  if (isBusy) {
+    submitButton.dataset.originalText = submitButton.textContent || "";
+    submitButton.disabled = true;
+    submitButton.textContent = loadingText;
+    return;
+  }
+  submitButton.disabled = false;
+  if (submitButton.dataset.originalText) {
+    submitButton.textContent = submitButton.dataset.originalText;
+  }
+}
+
+function redirectGuestFromForm() {
+  if (isLoggedIn()) {
+    return false;
+  }
+  window.location.href = loginRedirectUrl();
+  return true;
 }
 
 function resolveApiUrl(path) {
@@ -777,6 +965,7 @@ async function verifyTelegramUsernameLinkFromQuery() {
       throw new Error(msg);
     }
     if (data.token) {
+      persistEmailAuthToken("");
       persistTelegramAuthToken(data.token);
     }
     if (data.profile) {
@@ -867,6 +1056,7 @@ async function autoVerifyTelegram() {
       throw new Error(typeof detail === "string" ? detail : i18n.requestError);
     }
     if (result.token) {
+      persistEmailAuthToken("");
       persistTelegramAuthToken(result.token);
     }
     if (result.profile) {
@@ -1004,7 +1194,7 @@ function wireRegisterPage() {
       });
       if (result.profile || result.token) {
         applyEmailAuthResult(result);
-        window.location.href = `/client?lang=${lang}`;
+        window.location.href = resolvePostLoginRedirect();
         return;
       }
       const skipVerify = document.body.dataset.emailSkipVerification === "true";
@@ -1015,7 +1205,8 @@ function wireRegisterPage() {
             : "На сервере не активна мгновенная регистрация. Добавьте EMAIL_SKIP_VERIFICATION=true в .env на VDS и выполните: sudo systemctl restart miniapp",
         );
       }
-      window.location.href = authStaticUrl("verify", { email: result.email || email });
+      const next = currentAuthNextParam();
+      window.location.href = authStaticUrl("verify", next ? { email: result.email || email, next } : { email: result.email || email });
     } catch (error) {
       setResult("auth-result", error.message);
     }
@@ -1039,7 +1230,7 @@ function wireRegisterVerifyPage() {
         language: lang,
       });
       applyEmailAuthResult(result);
-      window.location.href = `/client?lang=${lang}`;
+      window.location.href = resolvePostLoginRedirect();
     } catch (error) {
       setResult("auth-result", error.message);
     }
@@ -1215,6 +1406,107 @@ function supportTicketStatusLabel(status) {
   return status;
 }
 
+function moduleLabel(module) {
+  const labels = {
+    sonnik: lang === "en" ? "Dreambook" : "Сонник",
+    numerology: lang === "en" ? "Numerology" : "Нумерология",
+    sovmestimost_names: lang === "en" ? "Compatibility" : "Совместимость",
+    sovmestimost_names_dates: lang === "en" ? "Compatibility" : "Совместимость",
+    tarot: lang === "en" ? "Natal Charts" : "Натальные карты",
+    astrology: lang === "en" ? "Astrology" : "Астропрогноз",
+  };
+  return labels[module] || module || (lang === "en" ? "Request" : "Запрос");
+}
+
+function natalTopicLabel(topic) {
+  const labels = lang === "en"
+    ? {
+      money: "Money and Realization",
+      career: "Career Potential",
+      love: "Relationships and Love",
+      attraction: "What Attracts You in People",
+      hidden_scenarios: "Hidden Life Scenarios",
+      energy: "Your Source of Energy",
+      period_task: "Main Task of This Period",
+      child_potential: "Child Potential",
+      strengths: "Natural Strengths",
+      decisions: "Decision-Making Style",
+      relationship_compatibility: "Relationship Compatibility",
+      full_portrait: "Full Personality Portrait",
+    }
+    : {
+      money: "Деньги и реализация",
+      career: "Карьерный потенциал",
+      love: "Отношения и любовь",
+      attraction: "Что вас привлекает в людях",
+      hidden_scenarios: "Скрытые сценарии жизни",
+      energy: "Источник энергии",
+      period_task: "Главная задача периода",
+      child_potential: "Потенциал ребёнка",
+      strengths: "Природные сильные качества",
+      decisions: "Как вы принимаете решения",
+      relationship_compatibility: "Совместимость в отношениях",
+      full_portrait: "Полный портрет личности",
+    };
+  return labels[topic] || topic || moduleLabel("tarot");
+}
+
+function compactText(text, fallback = "") {
+  const normalized = (text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return fallback;
+  }
+  return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
+}
+
+function formatHistorySummary(item) {
+  const raw = item.input_text || "";
+  if (item.module === "tarot") {
+    const parts = raw.split(";").map((part) => part.trim());
+    const topic = parts[0] || "";
+    const personaPart = parts.find((part) => part.startsWith("persona=")) || "";
+    const personaName = personaPart ? personaPart.replace(/^persona=/, "").trim() : "";
+    const question = parts
+      .filter((part, index) => index > 0 && part !== "natal_map" && !part.startsWith("persona="))
+      .join("; ")
+      .trim();
+    return {
+      title: personaName ? `${natalTopicLabel(topic)} · ${personaName}` : natalTopicLabel(topic),
+      subtitle: compactText(question, lang === "en" ? "Natal chart by selected topic" : "Натальная карта по выбранной теме"),
+      chips: [natalTopicLabel(topic), personaName ? `${lang === "en" ? "Persona" : "Персона"}: ${personaName}` : ""].filter(Boolean),
+    };
+  }
+  if (item.module === "numerology") {
+    const [name, birthDate] = raw.split(";").map((part) => part.trim());
+    return {
+      title: compactText(name, moduleLabel(item.module)),
+      subtitle: birthDate || "",
+      chips: birthDate ? [birthDate] : [],
+    };
+  }
+  if (item.module === "sovmestimost_names" || item.module === "sovmestimost_names_dates") {
+    const parts = raw.split(";").map((part) => part.trim()).filter(Boolean);
+    const names = item.module === "sovmestimost_names_dates" ? [parts[0], parts[2]].filter(Boolean) : parts.slice(0, 2);
+    return {
+      title: names.length ? names.join(" + ") : moduleLabel(item.module),
+      subtitle: parts.filter((part) => !names.includes(part)).join(" · "),
+      chips: [moduleLabel(item.module)],
+    };
+  }
+  if (item.module === "sonnik") {
+    return {
+      title: lang === "en" ? "Dream interpretation" : "Толкование сна",
+      subtitle: compactText(raw),
+      chips: [],
+    };
+  }
+  return {
+    title: compactText(raw, moduleLabel(item.module)),
+    subtitle: "",
+    chips: [],
+  };
+}
+
 function renderRequestHistory(items) {
   const container = element("request-history");
   if (!container) {
@@ -1226,16 +1518,32 @@ function renderRequestHistory(items) {
   }
   container.innerHTML = items
     .map((item) => {
+      const itemId = Number(item.id) || 0;
+      const summary = formatHistorySummary(item);
+      const summaryTitle = escapeHtml(summary.title || moduleLabel(item.module));
+      const summarySubtitle = escapeHtml(summary.subtitle || "");
+      const summaryChips = (summary.chips || [])
+        .map((chip) => `<span class="history-meta-chip">${escapeHtml(chip)}</span>`)
+        .join("");
+      const outputText = renderMarkdownText(item.output_text || "");
+      const createdAt = escapeHtml(new Date(item.created_at).toLocaleString());
+      const label = escapeHtml(moduleLabel(item.module));
       const reportLink = item.report_url
-        ? `<a class="secondary-btn inline-link-btn" href="${item.report_url}">${i18n.openReport}</a>`
+        ? `<a class="secondary-btn inline-link-btn" href="${escapeHtml(item.report_url)}">${i18n.openReport}</a>`
         : "";
-      return `<article class="history-row history-item" data-item-id="${item.id}">
-      <button class="history-summary-btn" type="button" data-item-id="${item.id}">
-        <span class="history-summary-main">${item.input_text}</span>
-        <span class="muted">${new Date(item.created_at).toLocaleString()}</span>
+      return `<article class="history-row history-item" data-item-id="${itemId}">
+      <button class="history-summary-btn" type="button" data-item-id="${itemId}">
+        <span class="history-card-top">
+          <span class="history-module-badge">${label}</span>
+          <span class="muted">${createdAt}</span>
+        </span>
+        <span class="history-summary-main">${summaryTitle}</span>
+        ${summarySubtitle ? `<span class="history-summary-subtitle">${summarySubtitle}</span>` : ""}
+        ${summaryChips ? `<span class="history-meta-chips">${summaryChips}</span>` : ""}
+        <span class="history-open-hint">${lang === "en" ? "Open answer" : "Открыть ответ"}</span>
       </button>
-      <div id="history-answer-${item.id}" class="history-answer">
-        <div><b>${lang === "en" ? "Answer" : "Ответ"}:</b> ${item.output_text}</div>
+      <div id="history-answer-${itemId}" class="history-answer">
+        <div class="history-answer-body">${outputText}</div>
         <div class="history-actions">${reportLink}</div>
       </div>
     </article>`;
@@ -1293,16 +1601,19 @@ function renderSupportTickets(tickets) {
     return;
   }
   container.innerHTML = tickets
-    .map((ticket) => `<article class="history-row">
-      <div class="payment-row-top">
-        <strong>${i18n.ticket} #${ticket.id}</strong>
-        <span class="payment-status">${supportTicketStatusLabel(ticket.status)}</span>
-      </div>
-      <div>${ticket.subject}</div>
-      <button class="secondary-btn support-ticket-open" data-ticket-id="${ticket.id}" type="button">
-        ${lang === "en" ? "Open dialog" : "Открыть диалог"}
-      </button>
-    </article>`)
+    .map((ticket) => {
+      const ticketId = Number(ticket.id) || 0;
+      return `<article class="history-row">
+        <div class="payment-row-top">
+          <strong>${i18n.ticket} #${ticketId}</strong>
+          <span class="payment-status">${escapeHtml(supportTicketStatusLabel(ticket.status))}</span>
+        </div>
+        <div>${escapeHtml(ticket.subject)}</div>
+        <button class="secondary-btn support-ticket-open" data-ticket-id="${ticketId}" type="button">
+          ${lang === "en" ? "Open dialog" : "Открыть диалог"}
+        </button>
+      </article>`;
+    })
     .join("");
 }
 
@@ -1314,10 +1625,10 @@ function renderSupportMessages(messages) {
   container.innerHTML = messages
     .map((item) => `<article class="history-row">
       <div class="payment-row-top">
-        <strong>${item.username || `#${item.author_user_id}`}</strong>
-        <span class="muted">${new Date(item.created_at).toLocaleString()}</span>
+        <strong>${escapeHtml(item.username || `#${item.author_user_id}`)}</strong>
+        <span class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</span>
       </div>
-      <div>${item.message_text}</div>
+      <div>${escapeHtml(item.message_text)}</div>
     </article>`)
     .join("");
 }
@@ -1561,7 +1872,12 @@ function wireSonnikForm() {
   }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (redirectGuestFromForm()) {
+      setResult("sonnik-result", i18n.signInRedirecting);
+      return;
+    }
     setResult("sonnik-result", i18n.analyzingDream);
+    setFormBusy(form, true, i18n.analyzingDream);
     try {
       const result = await apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
@@ -1571,6 +1887,8 @@ function wireSonnikForm() {
       setBalance(result.balance);
     } catch (error) {
       setResult("sonnik-result", error.message);
+    } finally {
+      setFormBusy(form, false);
     }
   });
 }
@@ -1582,7 +1900,12 @@ function wireNumerologyForm() {
   }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (redirectGuestFromForm()) {
+      setResult("numerology-result", i18n.signInRedirecting);
+      return;
+    }
     setResult("numerology-result", i18n.generatingReport);
+    setFormBusy(form, true, i18n.generatingReport);
     try {
       const result = await apiRequest("/api/numerology/generate", "POST", {
         full_name: element("full-name").value.trim(),
@@ -1598,6 +1921,366 @@ function wireNumerologyForm() {
       setBalance(result.balance);
     } catch (error) {
       setResult("numerology-result", error.message);
+    } finally {
+      setFormBusy(form, false);
+    }
+  });
+}
+
+function personaPayloadFromPrefix(prefix) {
+  return {
+    name: element(`${prefix}-name`)?.value.trim() || "",
+    birth_date: element(`${prefix}-birth-date`)?.value.trim() || "",
+    birth_time: element(`${prefix}-birth-time`)?.value.trim() || "",
+    birth_place: element(`${prefix}-birth-place`)?.value.trim() || "",
+    note: element(`${prefix}-note`)?.value.trim() || "",
+  };
+}
+
+function personaPreview(persona) {
+  if (!persona) {
+    return "";
+  }
+  return [persona.name, persona.birth_date, persona.birth_time, persona.birth_place]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+async function createPersona(payload) {
+  const result = await apiRequest("/api/personas", "POST", payload, { redirectOnUnauthorized: true });
+  return result.persona;
+}
+
+async function updatePersona(personaId, payload) {
+  const result = await apiRequest(`/api/personas/${personaId}`, "PATCH", payload, { redirectOnUnauthorized: true });
+  return result.persona;
+}
+
+async function deletePersona(personaId) {
+  return apiRequest(`/api/personas/${personaId}`, "DELETE", undefined, { redirectOnUnauthorized: true });
+}
+
+function renderTarotPersonaSelect() {
+  const select = element("tarot-persona-select");
+  if (!select) {
+    return;
+  }
+  const selectedValue = select.value;
+  select.innerHTML = `<option value="">${i18n.choosePersona}</option>${state.personas
+    .map((persona) => `<option value="${persona.id}">${escapeHtml(persona.name)} · ${escapeHtml(persona.birth_date)}</option>`)
+    .join("")}`;
+  if (selectedValue && state.personas.some((persona) => String(persona.id) === selectedValue)) {
+    select.value = selectedValue;
+  }
+  updateTarotPersonaPreview();
+}
+
+function updateTarotPersonaPreview() {
+  const preview = element("tarot-persona-preview");
+  const select = element("tarot-persona-select");
+  if (!preview || !select) {
+    return;
+  }
+  const persona = state.personas.find((item) => String(item.id) === String(select.value));
+  preview.textContent = persona ? personaPreview(persona) : i18n.personaEmpty;
+}
+
+async function loadPersonas() {
+  if (!isLoggedIn()) {
+    state.personas = [];
+    renderTarotPersonaSelect();
+    renderProfilePersonas();
+    return [];
+  }
+  try {
+    const result = await apiRequest("/api/personas", "GET", undefined, { redirectOnUnauthorized: true });
+    state.personas = result.personas || [];
+  } catch {
+    state.personas = [];
+  }
+  renderTarotPersonaSelect();
+  renderProfilePersonas();
+  return state.personas;
+}
+
+function clearProfilePersonaForm() {
+  if (!element("profile-persona-form")) {
+    return;
+  }
+  element("profile-persona-id").value = "";
+  element("profile-persona-name").value = "";
+  element("profile-persona-birth-date").value = "";
+  element("profile-persona-birth-time").value = "";
+  element("profile-persona-birth-place").value = "";
+  element("profile-persona-note").value = "";
+}
+
+function fillProfilePersonaForm(persona) {
+  if (!persona || !element("profile-persona-form")) {
+    return;
+  }
+  element("profile-persona-id").value = String(persona.id || "");
+  element("profile-persona-name").value = persona.name || "";
+  element("profile-persona-birth-date").value = persona.birth_date || "";
+  element("profile-persona-birth-time").value = persona.birth_time || "";
+  element("profile-persona-birth-place").value = persona.birth_place || "";
+  element("profile-persona-note").value = persona.note || "";
+}
+
+function renderProfilePersonas() {
+  const container = element("profile-personas-list");
+  if (!container) {
+    return;
+  }
+  if (!state.personas.length) {
+    container.innerHTML = `<div class="muted">${i18n.personaEmpty}</div>`;
+    return;
+  }
+  container.innerHTML = state.personas
+    .map((persona) => `<article class="persona-list-row" data-persona-id="${persona.id}">
+      <div class="persona-list-info">
+        <strong>${escapeHtml(persona.name)}</strong>
+        <span class="muted">${escapeHtml(personaPreview(persona))}</span>
+        ${persona.note ? `<span>${escapeHtml(persona.note)}</span>` : ""}
+      </div>
+      <div class="persona-row-actions">
+        <button type="button" class="secondary-btn persona-edit-btn" data-persona-id="${persona.id}">${lang === "en" ? "Edit" : "Редактировать"}</button>
+        <button type="button" class="secondary-btn persona-delete-btn" data-persona-id="${persona.id}">${lang === "en" ? "Delete" : "Удалить"}</button>
+      </div>
+    </article>`)
+    .join("");
+}
+
+function wireProfilePersonas() {
+  const form = element("profile-persona-form");
+  const list = element("profile-personas-list");
+  const modal = element("profile-persona-modal");
+  if (!form && !list) {
+    return;
+  }
+  const setProfilePersonaFormStatus = (message) => setResult("profile-persona-form-result", message);
+  const openProfilePersonaModal = (mode = "create") => {
+    if (!modal) {
+      return;
+    }
+    const title = element("profile-persona-modal-title");
+    if (title) {
+      title.textContent = mode === "edit" ? (lang === "en" ? "Edit persona" : "Редактировать персону") : (lang === "en" ? "Add persona" : "Добавить персону");
+    }
+    setProfilePersonaFormStatus("");
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    setTimeout(() => element("profile-persona-name")?.focus(), 0);
+  };
+  const closeProfilePersonaModal = () => {
+    if (!modal) {
+      return;
+    }
+    modal.hidden = true;
+    document.body.classList.remove("modal-open");
+  };
+  element("profile-persona-add-btn")?.addEventListener("click", () => {
+    clearProfilePersonaForm();
+    setResult("profile-persona-result", "");
+    openProfilePersonaModal("create");
+  });
+  element("profile-persona-reset")?.addEventListener("click", () => {
+    clearProfilePersonaForm();
+    setProfilePersonaFormStatus("");
+    closeProfilePersonaModal();
+  });
+  modal?.addEventListener("click", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest("[data-profile-persona-close]")) {
+      clearProfilePersonaForm();
+      closeProfilePersonaModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal && !modal.hidden) {
+      closeProfilePersonaModal();
+    }
+  });
+  list?.addEventListener("click", async (event) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!target) {
+      return;
+    }
+    const editButton = target.closest(".persona-edit-btn");
+    const deleteButton = target.closest(".persona-delete-btn");
+    if (editButton) {
+      const persona = state.personas.find((item) => String(item.id) === String(editButton.dataset.personaId));
+      fillProfilePersonaForm(persona);
+      openProfilePersonaModal("edit");
+      return;
+    }
+    if (!deleteButton) {
+      return;
+    }
+    const personaId = Number(deleteButton.dataset.personaId || 0);
+    if (!personaId) {
+      return;
+    }
+    deleteButton.disabled = true;
+    try {
+      await deletePersona(personaId);
+      setResult("profile-persona-result", i18n.personaDeleted);
+      await loadPersonas();
+    } catch (error) {
+      setResult("profile-persona-result", error.message);
+    } finally {
+      deleteButton.disabled = false;
+    }
+  });
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const personaId = Number(element("profile-persona-id")?.value || 0);
+    const payload = personaPayloadFromPrefix("profile-persona");
+    setProfilePersonaFormStatus(i18n.loading);
+    try {
+      if (personaId) {
+        await updatePersona(personaId, payload);
+      } else {
+        await createPersona(payload);
+      }
+      clearProfilePersonaForm();
+      closeProfilePersonaModal();
+      setResult("profile-persona-result", i18n.personaSaved);
+      await loadPersonas();
+    } catch (error) {
+      setProfilePersonaFormStatus(error.message);
+    }
+  });
+}
+
+function wireTarotForm() {
+  const form = element("tarot-form");
+  if (!form) {
+    return;
+  }
+  const setTarotFormStatus = (message) => setResult("tarot-form-result", message);
+  const showTarotReadingResult = (text) => {
+    const resultNode = element("tarot-result");
+    form.hidden = true;
+    setResult("tarot-result", text);
+    if (resultNode) {
+      resultNode.insertAdjacentHTML(
+        "beforeend",
+        `<div class="reading-result-actions">
+          <button type="button" class="secondary-btn" id="tarot-new-reading-btn">
+            ${lang === "en" ? "New reading" : "Новый разбор"}
+          </button>
+        </div>`,
+      );
+    }
+  };
+  const togglePersonaMode = () => {
+    const mode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
+    const savedPanel = element("tarot-saved-persona-panel");
+    const manualPanel = element("tarot-manual-persona-panel");
+    if (savedPanel) {
+      savedPanel.hidden = mode !== "saved";
+    }
+    if (manualPanel) {
+      manualPanel.hidden = mode !== "manual";
+    }
+  };
+  document.querySelectorAll("input[name='tarot-persona-mode']").forEach((radio) => {
+    radio.addEventListener("change", togglePersonaMode);
+  });
+  element("tarot-persona-select")?.addEventListener("change", updateTarotPersonaPreview);
+  element("tarot-result")?.addEventListener("click", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!target?.closest("#tarot-new-reading-btn")) {
+      return;
+    }
+    setResult("tarot-result", "");
+    form.hidden = false;
+    setTarotFormStatus("");
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  togglePersonaMode();
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (redirectGuestFromForm()) {
+      setTarotFormStatus(i18n.signInRedirecting);
+      return;
+    }
+    setResult("tarot-result", "");
+    setFormBusy(form, true, i18n.readingTarot);
+    try {
+      setTarotFormStatus(i18n.readingTarot);
+      const personaMode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
+      const manualPersona = personaPayloadFromPrefix("tarot-persona");
+      let personaId = personaMode === "saved" ? Number(element("tarot-persona-select")?.value || 0) : 0;
+      if (personaMode === "saved" && !personaId) {
+        throw new Error(i18n.personaRequired);
+      }
+      if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
+        throw new Error(i18n.personaRequired);
+      }
+      if (personaMode === "manual" && element("tarot-save-persona")?.checked && manualPersona.name && manualPersona.birth_date) {
+        const persona = await createPersona(manualPersona);
+        personaId = Number(persona?.id || 0);
+        await loadPersonas();
+        const select = element("tarot-persona-select");
+        if (select && personaId) {
+          select.value = String(personaId);
+          updateTarotPersonaPreview();
+        }
+        setTarotFormStatus(i18n.personaSaved);
+      }
+      const result = await apiRequest("/api/tarot/reading", "POST", {
+        question: element("tarot-question").value.trim(),
+        topic: element("tarot-topic")?.value || "full_portrait",
+        spread: "natal_map",
+        persona_id: personaId,
+        persona_name: personaMode === "manual" ? manualPersona.name : "",
+        persona_birth_date: personaMode === "manual" ? manualPersona.birth_date : "",
+        persona_birth_time: personaMode === "manual" ? manualPersona.birth_time : "",
+        persona_birth_place: personaMode === "manual" ? manualPersona.birth_place : "",
+        persona_note: personaMode === "manual" ? manualPersona.note : "",
+        language: lang,
+      }, { redirectOnUnauthorized: true });
+      setTarotFormStatus("");
+      showTarotReadingResult(result.result);
+      setBalance(result.balance);
+    } catch (error) {
+      setTarotFormStatus(error.message);
+    } finally {
+      setFormBusy(form, false);
+    }
+  });
+}
+
+function wireAstrologyForm() {
+  const form = element("astrology-form");
+  if (!form) {
+    return;
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (redirectGuestFromForm()) {
+      setResult("astrology-result", i18n.signInRedirecting);
+      return;
+    }
+    setResult("astrology-result", i18n.buildingForecast);
+    setFormBusy(form, true, i18n.buildingForecast);
+    try {
+      const result = await apiRequest("/api/astrology/forecast", "POST", {
+        name: element("astrology-name").value.trim(),
+        birth_date: element("astrology-birth-date").value.trim(),
+        birth_time: element("astrology-birth-time").value.trim(),
+        birth_place: element("astrology-birth-place").value.trim(),
+        focus: element("astrology-focus").value.trim(),
+        language: lang,
+      }, { redirectOnUnauthorized: true });
+      setResult("astrology-result", result.result);
+      setBalance(result.balance);
+    } catch (error) {
+      setResult("astrology-result", error.message);
+    } finally {
+      setFormBusy(form, false);
     }
   });
 }
@@ -1669,33 +2352,94 @@ async function loadNumerologyReport() {
   }
 }
 
-function renderAdminOverview(overview) {
-  const container = element("admin-overview");
+function adminFormatNumber(value) {
+  return Number(value || 0).toLocaleString(lang === "en" ? "en-US" : "ru-RU");
+}
+
+function renderAdminKpi(overview) {
+  const container = element("admin-kpi");
   if (!container) {
     return;
   }
-  const entries = Object.entries(overview || {});
-  if (!entries.length) {
-    container.textContent = i18n.noAdminData;
-    return;
-  }
-  container.innerHTML = entries
-    .map(([key, value]) => `<article class="history-row"><strong>${key}</strong><div>${value}</div></article>`)
+  const items = [
+    ["Users total", overview.users_total],
+    ["New users", overview.new_users],
+    ["Active users", overview.active_users],
+    ["Requests", overview.period_requests],
+    ["Successful payments", overview.period_succeeded_payments],
+    ["Revenue", `${adminFormatNumber(overview.period_revenue)} ₽`],
+    ["Sparks charged", overview.sparks_charged],
+    ["Sparks added", overview.sparks_added],
+    ["Open tickets", overview.open_tickets],
+  ];
+  container.innerHTML = items
+    .map(([label, value]) => `<article class="admin-kpi-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`)
     .join("");
 }
 
-function renderAdminModules(modules) {
-  const container = element("admin-modules");
+function renderAdminBars(containerId, items, labelKey, valueKey, emptyText = i18n.noAdminData) {
+  const container = element(containerId);
   if (!container) {
     return;
   }
-  if (!modules.length) {
-    container.textContent = i18n.noAdminData;
+  const rows = (items || []).filter((item) => Number(item[valueKey] || 0) !== 0);
+  if (!rows.length) {
+    container.innerHTML = `<div class="muted">${escapeHtml(emptyText)}</div>`;
     return;
   }
-  container.innerHTML = modules
-    .map((item) => `<article class="history-row"><strong>${item.module}</strong><div>${item.total}</div></article>`)
+  const max = Math.max(...rows.map((item) => Math.abs(Number(item[valueKey] || 0))), 1);
+  container.innerHTML = rows
+    .map((item) => {
+      const value = Number(item[valueKey] || 0);
+      const width = Math.max(4, Math.round((Math.abs(value) / max) * 100));
+      return `<article class="admin-bar-row">
+        <div class="admin-bar-top"><strong>${escapeHtml(item[labelKey])}</strong><span>${adminFormatNumber(value)}</span></div>
+        <div class="admin-bar-track"><span style="width:${width}%"></span></div>
+      </article>`;
+    })
     .join("");
+}
+
+function renderAdminLineChart(containerId, title, days, valueKey) {
+  const container = element(containerId);
+  if (!container) {
+    return;
+  }
+  const rows = days || [];
+  if (!rows.length) {
+    container.innerHTML = `<div class="muted">${i18n.noAdminData}</div>`;
+    return;
+  }
+  const width = 320;
+  const height = 120;
+  const max = Math.max(...rows.map((row) => Number(row[valueKey] || 0)), 1);
+  const points = rows.map((row, index) => {
+    const x = rows.length === 1 ? width / 2 : (index / (rows.length - 1)) * width;
+    const y = height - (Number(row[valueKey] || 0) / max) * (height - 18) - 8;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  container.insertAdjacentHTML("beforeend", `<article class="admin-chart-card">
+    <h3>${escapeHtml(title)}</h3>
+    <svg viewBox="0 0 ${width} ${height}" class="admin-line-chart" role="img" aria-label="${escapeHtml(title)}">
+      <polyline points="${points}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+    </svg>
+  </article>`);
+}
+
+function renderAdminDailyCharts(days) {
+  const container = element("admin-daily-charts");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  renderAdminLineChart("admin-daily-charts", "New users by day", days, "new_users");
+  renderAdminLineChart("admin-daily-charts", "Requests by day", days, "requests");
+  renderAdminLineChart("admin-daily-charts", "Revenue by day", days, "revenue");
+  renderAdminLineChart("admin-daily-charts", "Support tickets by day", days, "tickets_opened");
+}
+
+function renderAdminModules(modules) {
+  renderAdminBars("admin-modules", modules || [], "module", "total");
 }
 
 function renderAdminTickets(tickets) {
@@ -1710,11 +2454,11 @@ function renderAdminTickets(tickets) {
   container.innerHTML = tickets
     .map((ticket) => `<article class="history-row">
       <div class="payment-row-top">
-        <strong>#${ticket.id} ${ticket.subject}</strong>
-        <span class="payment-status">${supportTicketStatusLabel(ticket.status)}</span>
+        <strong>#${Number(ticket.id) || 0} ${escapeHtml(ticket.subject)}</strong>
+        <span class="payment-status">${escapeHtml(supportTicketStatusLabel(ticket.status))}</span>
       </div>
-      <div class="muted">${ticket.username || `user:${ticket.user_id}`}</div>
-      <button class="secondary-btn admin-ticket-open" type="button" data-ticket-id="${ticket.id}">
+      <div class="muted">${escapeHtml(ticket.username || `user:${ticket.user_id}`)}</div>
+      <button class="secondary-btn admin-ticket-open" type="button" data-ticket-id="${Number(ticket.id) || 0}">
         ${lang === "en" ? "Open" : "Открыть"}
       </button>
     </article>`)
@@ -1727,23 +2471,159 @@ function renderAdminTicketMessages(messages) {
     return;
   }
   container.innerHTML = messages
-    .map((item) => `<article class="history-row"><strong>${item.username}</strong><div>${item.message_text}</div></article>`)
+    .map((item) => `<article class="history-row"><strong>${escapeHtml(item.username)}</strong><div>${escapeHtml(item.message_text)}</div></article>`)
     .join("");
 }
 
+function renderAdminPaymentFunnel(payments) {
+  const grouped = {};
+  (payments || []).forEach((item) => {
+    grouped[item.status] = (grouped[item.status] || 0) + Number(item.total || 0);
+  });
+  renderAdminBars(
+    "admin-payment-funnel",
+    Object.entries(grouped).map(([status, total]) => ({ status, total })),
+    "status",
+    "total",
+  );
+}
+
+function renderAdminSparks(sparks) {
+  const grouped = {};
+  (sparks || []).forEach((item) => {
+    const key = item.type || item.reason || "spark";
+    grouped[key] = (grouped[key] || 0) + Number(item.amount || 0);
+  });
+  renderAdminBars(
+    "admin-sparks-chart",
+    Object.entries(grouped).map(([type, amount]) => ({ type, amount })),
+    "type",
+    "amount",
+  );
+}
+
+function renderAdminProviders(providers) {
+  renderAdminBars("admin-providers", providers || [], "provider", "total");
+}
+
+function renderAdminAudit(items) {
+  const container = element("admin-audit-log");
+  if (!container) {
+    return;
+  }
+  if (!items.length) {
+    container.innerHTML = `<div class="muted">${i18n.noAdminData}</div>`;
+    return;
+  }
+  container.innerHTML = items
+    .map((item) => `<article class="history-row">
+      <div class="history-card-top">
+        <strong>${escapeHtml(item.action)}</strong>
+        <span class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</span>
+      </div>
+      <div class="muted">admin: ${escapeHtml(item.admin_username || `#${item.admin_user_id}`)} · target: ${escapeHtml(item.target_username || item.target_user_id || "-")}</div>
+      <div>${escapeHtml(item.metadata || "")}</div>
+    </article>`)
+    .join("");
+}
+
+function renderAdminUserDetail(payload) {
+  const container = element("admin-user-detail");
+  const roleForm = document.querySelector(".admin-role-form");
+  if (!container) {
+    return;
+  }
+  if (!payload || !payload.user) {
+    container.innerHTML = `<div class="muted">${adminLabel("selectUser")}</div>`;
+    if (roleForm) {
+      roleForm.hidden = true;
+    }
+    return;
+  }
+  const user = payload.user;
+  const display = user.username || user.provider_user_id || `#${user.id}`;
+  container.innerHTML = `<article class="history-row">
+    <strong>#${user.id} · ${escapeHtml(display)}</strong>
+    <div class="muted">${escapeHtml(user.provider)} · ${escapeHtml(user.role || "user")}</div>
+    <div>${adminFormatNumber(user.credits)} ${adminLabel("sparks")}</div>
+    <div class="muted">created: ${escapeHtml(new Date(user.created_at).toLocaleString())}</div>
+    <div class="muted">last request: ${escapeHtml(user.last_request_at ? new Date(user.last_request_at).toLocaleString() : "-")}</div>
+    <div>requests: ${adminFormatNumber(user.requests_total)} · paid: ${adminFormatNumber(user.succeeded_payments)} · revenue: ${adminFormatNumber(user.revenue_total)} ₽</div>
+  </article>`;
+  if (roleForm) {
+    roleForm.hidden = false;
+  }
+  const roleSelect = element("admin-user-role");
+  if (roleSelect) {
+    roleSelect.value = user.role || "user";
+  }
+  const personasContainer = element("admin-user-personas");
+  if (personasContainer) {
+    const personas = payload.personas || [];
+    personasContainer.innerHTML = `<h3>Personas</h3>${personas.length ? personas
+      .map((persona) => `<article class="history-row"><strong>${escapeHtml(persona.name)}</strong><div class="muted">${escapeHtml(persona.birth_date)} · ${escapeHtml(persona.birth_time || "")} · ${escapeHtml(persona.birth_place || "")}</div><div>${escapeHtml(persona.note || "")}</div></article>`)
+      .join("") : `<div class="muted">${i18n.noAdminData}</div>`}`;
+  }
+}
+
+function renderAdminUserRelated(containerId, title, rows, formatter) {
+  const container = element(containerId);
+  if (!container) {
+    return;
+  }
+  container.innerHTML = `<h3>${escapeHtml(title)}</h3>${rows.length ? rows.map(formatter).join("") : `<div class="muted">${i18n.noAdminData}</div>`}`;
+}
+
+async function loadAdminUserDetail(userId) {
+  if (!userId) {
+    renderAdminUserDetail(null);
+    return;
+  }
+  const [detail, history, transactions, payments] = await Promise.all([
+    apiRequest(`/api/admin/users/${userId}`, "GET"),
+    apiRequest(`/api/admin/users/${userId}/history`, "GET"),
+    apiRequest(`/api/admin/users/${userId}/transactions`, "GET"),
+    apiRequest(`/api/admin/users/${userId}/payments`, "GET"),
+  ]);
+  renderAdminUserDetail(detail);
+  renderAdminUserRelated("admin-user-history", "Request history", history.items || [], (item) => {
+    const summary = formatHistorySummary(item);
+    return `<article class="history-row"><strong>${escapeHtml(summary.title)}</strong><div class="muted">${escapeHtml(summary.subtitle || "")}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`;
+  });
+  renderAdminUserRelated("admin-user-transactions", "Transactions", transactions.transactions || [], (item) => `<article class="history-row"><strong>${escapeHtml(item.type)} · ${adminFormatNumber(item.amount)}</strong><div>${escapeHtml(item.reason)}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`);
+  renderAdminUserRelated("admin-user-payments", "Payments", payments.payments || [], (item) => `<article class="history-row"><strong>${escapeHtml(item.status)} · ${adminFormatNumber(item.amount)} ₽</strong><div>${adminFormatNumber(item.sparks)} ${adminLabel("sparks")}</div><div class="muted">${escapeHtml(new Date(item.created_at).toLocaleString())}</div></article>`);
+}
+
+function adminRangeQuery() {
+  const from = element("admin-date-from")?.value || "";
+  const to = element("admin-date-to")?.value || "";
+  return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+}
+
 async function loadAdminDashboard() {
-  if (!element("admin-overview")) {
+  if (!element("admin-kpi")) {
     return;
   }
   setResult("admin-result", i18n.loading);
   try {
-    const [overview, modules, tickets] = await Promise.all([
-      apiRequest("/api/admin/stats/overview", "GET"),
-      apiRequest("/api/admin/stats/modules", "GET"),
-      apiRequest("/api/admin/support/tickets", "GET"),
+    const query = adminRangeQuery();
+    const [overview, daily, modules, paymentsStats, sparksStats, providers, audit, tickets] = await Promise.all([
+      apiRequest(`/api/admin/stats/overview?${query}`, "GET"),
+      apiRequest(`/api/admin/stats/daily?${query}`, "GET"),
+      apiRequest(`/api/admin/stats/modules?${query}`, "GET"),
+      apiRequest(`/api/admin/stats/payments?${query}`, "GET"),
+      apiRequest(`/api/admin/stats/sparks?${query}`, "GET"),
+      apiRequest(`/api/admin/stats/providers?${query}`, "GET"),
+      apiRequest("/api/admin/audit-log?limit=50", "GET"),
+      apiRequest(`/api/admin/support/tickets?status=${encodeURIComponent(element("admin-support-status")?.value || "")}`, "GET"),
     ]);
-    renderAdminOverview(overview);
+    renderAdminKpi(overview);
+    renderAdminDailyCharts(daily.days || []);
     renderAdminModules(modules.modules || []);
+    renderAdminPaymentFunnel(paymentsStats.payments || []);
+    renderAdminSparks(sparksStats.sparks || []);
+    renderAdminProviders(providers.providers || []);
+    renderAdminAudit(audit.items || []);
     renderAdminTickets(tickets.tickets || []);
     setResult("admin-result", "");
   } catch (error) {
@@ -1752,6 +2632,8 @@ async function loadAdminDashboard() {
 }
 
 let adminUsersCache = [];
+let selectedAdminUserId = 0;
+let selectedAdminTicketId = 0;
 
 function adminLabel(key) {
   const ru = {
@@ -1808,6 +2690,7 @@ function renderAdminUserList(users) {
             <span class="muted">${escapeHtml(user.provider)}</span>
             <span>${escapeHtml(display)}</span>
             <span class="muted">${user.credits} ${adminLabel("sparks")} · ${escapeHtml(role)}</span>
+            <span class="muted">${escapeHtml(user.created_at ? new Date(user.created_at).toLocaleString() : "")}</span>
           </div>
           <button type="button" class="secondary-btn admin-user-select-btn" data-user-id="${user.id}">
             ${adminLabel("select")}
@@ -1828,18 +2711,22 @@ function renderAdminSelectedUser(user) {
     card.textContent = adminLabel("selectUser");
     hiddenId.value = "";
     form.hidden = true;
+    selectedAdminUserId = 0;
     return;
   }
   const display = user.username || user.provider_user_id || `#${user.id}`;
   card.innerHTML = `<strong>${adminLabel("selected")}:</strong> #${user.id} · ${escapeHtml(user.provider)} · ${escapeHtml(display)} · ${user.credits} ${adminLabel("sparks")}`;
   hiddenId.value = String(user.id);
+  selectedAdminUserId = Number(user.id) || 0;
   form.hidden = false;
 }
 
 async function loadAdminUsers(query = "") {
   setResult("admin-credits-result", i18n.loading);
   try {
-    const result = await apiRequest(`/api/admin/users/search?q=${encodeURIComponent(query)}`, "GET");
+    const provider = element("admin-user-provider")?.value || "";
+    const role = element("admin-user-role-filter")?.value || "";
+    const result = await apiRequest(`/api/admin/users/search?q=${encodeURIComponent(query)}&provider=${encodeURIComponent(provider)}&role=${encodeURIComponent(role)}`, "GET");
     renderAdminUserList(result.users || []);
     setResult("admin-credits-result", "");
   } catch (error) {
@@ -1883,6 +2770,7 @@ function wireAdminCreditsForm() {
     const userId = Number(row.dataset.userId || 0);
     const user = adminUsersCache.find((item) => item.id === userId);
     renderAdminSelectedUser(user || null);
+    loadAdminUserDetail(userId).catch((error) => setResult("admin-credits-result", error.message));
   });
 
   form.addEventListener("submit", async (event) => {
@@ -1912,6 +2800,8 @@ function wireAdminCreditsForm() {
       await loadAdminUsers(queryInput?.value.trim() || "");
       const refreshed = adminUsersCache.find((item) => item.id === result.user_id);
       renderAdminSelectedUser(refreshed || null);
+      await loadAdminUserDetail(result.user_id);
+      await loadAdminDashboard();
     } catch (error) {
       setResult("admin-credits-result", error.message);
     }
@@ -1920,6 +2810,74 @@ function wireAdminCreditsForm() {
 
 function wireAdminEvents() {
   wireAdminCreditsForm();
+  document.querySelectorAll(".admin-period-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const days = Number(button.dataset.days || 30);
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - Math.max(days - 1, 0));
+      const toInput = element("admin-date-to");
+      const fromInput = element("admin-date-from");
+      if (toInput) {
+        toInput.value = end.toISOString().slice(0, 10);
+      }
+      if (fromInput) {
+        fromInput.value = start.toISOString().slice(0, 10);
+      }
+      loadAdminDashboard();
+    });
+  });
+  element("admin-analytics-apply")?.addEventListener("click", () => loadAdminDashboard());
+  element("admin-user-provider")?.addEventListener("change", () => loadAdminUsers(element("admin-user-query")?.value.trim() || ""));
+  element("admin-user-role-filter")?.addEventListener("change", () => loadAdminUsers(element("admin-user-query")?.value.trim() || ""));
+  element("admin-role-apply")?.addEventListener("click", async () => {
+    if (!selectedAdminUserId) {
+      setResult("admin-credits-result", adminLabel("findFirst"));
+      return;
+    }
+    try {
+      const role = element("admin-user-role")?.value || "user";
+      await apiRequest(`/api/admin/users/${selectedAdminUserId}/role`, "PATCH", { role });
+      await loadAdminUsers(element("admin-user-query")?.value.trim() || "");
+      await loadAdminUserDetail(selectedAdminUserId);
+      await loadAdminDashboard();
+      setResult("admin-credits-result", "Role updated");
+    } catch (error) {
+      setResult("admin-credits-result", error.message);
+    }
+  });
+  element("admin-support-refresh")?.addEventListener("click", () => loadAdminDashboard());
+  const replyForm = element("admin-ticket-reply-form");
+  replyForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!selectedAdminTicketId) {
+      return;
+    }
+    try {
+      const messageText = element("admin-ticket-reply-text")?.value.trim() || "";
+      const result = await apiRequest(`/api/admin/support/tickets/${selectedAdminTicketId}/messages`, "POST", { message_text: messageText });
+      renderAdminTicketMessages(result.messages || []);
+      element("admin-ticket-reply-text").value = "";
+      await loadAdminDashboard();
+    } catch (error) {
+      setResult("admin-result", error.message);
+    }
+  });
+  const updateTicketStatus = async (status) => {
+    if (!selectedAdminTicketId) {
+      return;
+    }
+    try {
+      await apiRequest(`/api/admin/support/tickets/${selectedAdminTicketId}`, "PATCH", { status });
+      await loadAdminDashboard();
+      const result = await apiRequest(`/api/admin/support/tickets/${selectedAdminTicketId}`, "GET");
+      renderAdminTicketMessages(result.messages || []);
+    } catch (error) {
+      setResult("admin-result", error.message);
+    }
+  };
+  element("admin-ticket-close-btn")?.addEventListener("click", () => updateTicketStatus("closed"));
+  element("admin-ticket-open-btn")?.addEventListener("click", () => updateTicketStatus("open"));
   const container = element("admin-tickets");
   if (!container) {
     return;
@@ -1938,6 +2896,15 @@ function wireAdminEvents() {
       return;
     }
     try {
+      selectedAdminTicketId = ticketId;
+      const hiddenTicket = element("admin-selected-ticket-id");
+      if (hiddenTicket) {
+        hiddenTicket.value = String(ticketId);
+      }
+      const form = element("admin-ticket-reply-form");
+      if (form) {
+        form.hidden = false;
+      }
       const result = await apiRequest(`/api/admin/support/tickets/${ticketId}`, "GET");
       renderAdminTicketMessages(result.messages || []);
     } catch (error) {
@@ -1953,7 +2920,12 @@ function wireCompatibilityForms() {
   if (namesForm) {
     namesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (redirectGuestFromForm()) {
+        setResult("compat-result", i18n.signInRedirecting);
+        return;
+      }
       setResult("compat-result", i18n.calculating);
+      setFormBusy(namesForm, true, i18n.calculating);
       try {
         const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
           name1: element("compat-name1").value.trim(),
@@ -1964,6 +2936,8 @@ function wireCompatibilityForms() {
         setBalance(result.balance);
       } catch (error) {
         setResult("compat-result", error.message);
+      } finally {
+        setFormBusy(namesForm, false);
       }
     });
   }
@@ -1971,7 +2945,12 @@ function wireCompatibilityForms() {
   if (namesDatesForm) {
     namesDatesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (redirectGuestFromForm()) {
+        setResult("compat-result", i18n.signInRedirecting);
+        return;
+      }
       setResult("compat-result", i18n.calculating);
+      setFormBusy(namesDatesForm, true, i18n.calculating);
       try {
         const result = await apiRequest("/api/sovmestimost/by-names-dates", "POST", {
           name1: element("compat-nd-name1").value.trim(),
@@ -1984,15 +2963,21 @@ function wireCompatibilityForms() {
         setBalance(result.balance);
       } catch (error) {
         setResult("compat-result", error.message);
+      } finally {
+        setFormBusy(namesDatesForm, false);
       }
     });
   }
 
   document.querySelectorAll(".tab-btn").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach((item) => item.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach((item) => {
+        item.classList.remove("active");
+        item.setAttribute("aria-selected", "false");
+      });
       document.querySelectorAll(".tab-content").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
+      button.setAttribute("aria-selected", "true");
       if (button.dataset.tab === "names-only") {
         element("compat-names-form")?.classList.add("active");
       } else {
@@ -2005,6 +2990,7 @@ function wireCompatibilityForms() {
 async function boot() {
   await initAuthStaticPage();
   toggleHeaderAuthLinks();
+  syncAuthRequiredSections(!isLoggedIn());
   wirePaymentForms();
   wireAuthPages();
   wireAuthRequiredLinks();
@@ -2014,8 +3000,11 @@ async function boot() {
   wirePaymentsHistoryActions();
   wireSupportForms();
   wireAdminEvents();
+  wireProfilePersonas();
   wireSonnikForm();
   wireNumerologyForm();
+  wireTarotForm();
+  wireAstrologyForm();
   wireCompatibilityForms();
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();
@@ -2039,6 +3028,7 @@ async function boot() {
   }
   toggleEmailAuthEntry();
   syncAuthChrome(profile);
+  await loadPersonas();
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();

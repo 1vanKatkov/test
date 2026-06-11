@@ -325,10 +325,13 @@ async def require_telegram_auth(
 
 
 async def optional_telegram_auth(
+    x_active_auth_provider: str = Header(default="", alias="X-Active-Auth-Provider"),
     x_telegram_auth_token: str = Header(default="", alias="X-Telegram-Auth-Token"),
     x_telegram_init_data: str = Header(default="", alias="X-Telegram-Init-Data"),
     telegram_auth_token: str = Cookie(default="", alias="telegram_auth_token"),
 ) -> TelegramIdentity | None:
+    if x_active_auth_provider.strip().lower() == "email" and not x_telegram_auth_token and not x_telegram_init_data:
+        return None
     token = x_telegram_auth_token or telegram_auth_token
     if token:
         try:

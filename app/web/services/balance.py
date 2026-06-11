@@ -124,3 +124,19 @@ def charge(user_id: int, amount: int, reason: str, metadata: Optional[dict] = No
 def refund(user_id: int, amount: int, reason: str, metadata: Optional[dict] = None) -> int:
     return credit(user_id, amount, reason, metadata, tx_type="refund")
 
+
+def admin_debit(user_id: int, amount: int, reason: str, metadata: Optional[dict] = None) -> int:
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    with db.transaction() as conn:
+        row = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        current = int(row["credits"])
+        if current < amount:
+            raise HTTPException(status_code=400, detail="Insufficient credits")
+        updated = current - amount
+        conn.execute("UPDATE users SET credits = ?, updated_at = ? WHERE id = ?", (updated, _now(), user_id))
+        _add_transaction(conn, user_id, -amount, "admin_debit", reason, metadata)
+        return updated
+

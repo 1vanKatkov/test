@@ -26,6 +26,44 @@ class SovmestimostNamesDatesRequest(BaseModel):
     language: str = Field(default="", max_length=8)
 
 
+class TarotRequest(BaseModel):
+    question: str = Field(default="", max_length=1000)
+    topic: str = Field(default="full_portrait", max_length=64)
+    spread: str = Field(default="natal_map", max_length=32)
+    persona_id: int = Field(default=0, ge=0)
+    persona_name: str = Field(default="", max_length=100)
+    persona_birth_date: str = Field(default="", max_length=10)
+    persona_birth_time: str = Field(default="", max_length=5)
+    persona_birth_place: str = Field(default="", max_length=120)
+    persona_note: str = Field(default="", max_length=1000)
+    language: str = Field(default="", max_length=8)
+
+
+class PersonaCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    birth_date: str = Field(min_length=8, max_length=10)
+    birth_time: str = Field(default="", max_length=5)
+    birth_place: str = Field(default="", max_length=120)
+    note: str = Field(default="", max_length=1000)
+
+
+class PersonaUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    birth_date: str = Field(min_length=8, max_length=10)
+    birth_time: str = Field(default="", max_length=5)
+    birth_place: str = Field(default="", max_length=120)
+    note: str = Field(default="", max_length=1000)
+
+
+class AstrologyForecastRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    birth_date: str = Field(min_length=8, max_length=10)
+    birth_time: str = Field(default="", max_length=5)
+    birth_place: str = Field(default="", max_length=120)
+    focus: str = Field(default="", max_length=1000)
+    language: str = Field(default="", max_length=8)
+
+
 class EmailRegisterStartRequest(BaseModel):
     email: str = Field(min_length=5, max_length=254)
     password: str = Field(min_length=8, max_length=128)
@@ -85,4 +123,16 @@ class AdminAdjustCreditsRequest(BaseModel):
     user_id: int = Field(gt=0)
     amount: int = Field(ge=-100000, le=100000)
     reason: str = Field(default="admin_adjustment", min_length=1, max_length=200)
+
+
+class AdminSetRoleRequest(BaseModel):
+    role: str = Field(pattern="^(user|admin)$")
+
+
+class AdminSupportReplyRequest(BaseModel):
+    message_text: str = Field(min_length=1, max_length=4000)
+
+
+class AdminTicketStatusRequest(BaseModel):
+    status: str = Field(pattern="^(open|closed)$")
 

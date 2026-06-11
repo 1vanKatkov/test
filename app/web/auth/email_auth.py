@@ -19,6 +19,8 @@ from config import settings
 
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_RUNTIME_EMAIL_SECRET = secrets.token_urlsafe(48)
+_WEAK_EMAIL_SECRETS = {"", "change-me-email-auth-secret", "replace-with-long-random-secret"}
 
 
 @dataclass
@@ -34,14 +36,14 @@ def _now() -> str:
 
 
 def _secret() -> str:
-    if settings.email_auth_secret:
+    if settings.email_auth_secret and settings.email_auth_secret not in _WEAK_EMAIL_SECRETS:
         return settings.email_auth_secret
     if settings.max_auth_secret:
         return settings.max_auth_secret
     for token in (settings.telegram_bot_token, settings.telegram_bot_token_en):
         if token:
             return hashlib.sha256((token + "\nastrolhub_email_session_v1").encode("utf-8")).hexdigest()
-    return "change-me-email-auth-secret"
+    return _RUNTIME_EMAIL_SECRET
 
 
 def _code_pepper() -> str:
@@ -351,9 +353,12 @@ def ensure_seed_accounts() -> None:
 
 
 async def optional_email_auth(
+    x_active_auth_provider: str = Header(default="", alias="X-Active-Auth-Provider"),
     x_email_auth_token: str = Header(default="", alias="X-Email-Auth-Token"),
     email_auth_token: str = Cookie(default="", alias="email_auth_token"),
 ) -> EmailIdentity | None:
+    if x_active_auth_provider.strip().lower() == "telegram" and not x_email_auth_token:
+        return None
     token = x_email_auth_token or email_auth_token
     if not token:
         return None

@@ -1,0 +1,15 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#fff0ff" stop-opacity="0.96"/>
+      <stop offset="0.42" stop-color="#c566ff" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#2b0d64" stop-opacity="0.98"/>
+    </radialGradient>
+    <filter id="glow" x="-45%" y="-45%" width="190%" height="190%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <circle cx="64" cy="64" r="52" fill="#16072f"/>
+  <circle cx="64" cy="64" r="43" fill="url(#bg)" opacity="0.88" filter="url(#glow)"/>
+  <g fill="none" stroke="#fff4ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"><path d="M52 88S26 72 26 52c0-11 8-19 18-19 5 0 9 2 12 7 3-5 7-7 12-7 10 0 18 8 18 19 0 20-34 36-34 36Z"/><path d="M78 96s24-15 24-33c0-10-7-17-16-17-5 0-8 2-11 6"/></g>
+  <circle cx="31" cy="33" r="3" fill="#fff4ff" opacity="0.9"/>
+  <circle cx="99" cy="91" r="2.5" fill="#fff4ff" opacity="0.72"/>
+</svg>

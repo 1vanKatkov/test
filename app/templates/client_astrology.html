@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.numerology }}</title>
+  <title>{{ brand_name }} - {{ t.astrology }}</title>
   <link rel="stylesheet" href="/static/style.css?v=divination-v1" />
 </head>
 <body
@@ -11,9 +11,8 @@
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
-  data-cost-sonnik="{{ cost_sonnik }}"
-  data-cost-numerology="{{ cost_numerology }}"
-  data-cost-sovmestimost="{{ cost_sovmestimost }}"
+  data-cost-tarot="{{ cost_tarot }}"
+  data-cost-astrology="{{ cost_astrology }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
@@ -25,7 +24,7 @@
   <main class="mobile-client">
     <section class="card compact-card client-page-hero">
       <div>
-        <h2>{{ t.numerology }}</h2>
+        <h2>{{ t.astrology }}</h2>
         <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
       </div>
       <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
@@ -38,23 +37,26 @@
       <div class="auth-required-panel" hidden>
         <h3>{{ t.sign_in_required_title }}</h3>
         <p>{{ t.sign_in_required_text }}</p>
-        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/numerology%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/astrology%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_numerology }} {{ t.sparks }}</div>
-        <form id="numerology-form" class="form-grid">
-          <label>{{ t.full_name }} <input id="full-name" required /></label>
-          <label>{{ t.birth_date }} <input id="birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>
-          <button type="submit" class="primary-btn">{{ t.generate_report }}</button>
+        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_astrology }} {{ t.sparks }}</div>
+        <form id="astrology-form" class="form-grid">
+          <label>{{ t.astrology_name }} <input id="astrology-name" required /></label>
+          <label>{{ t.birth_date }} <input id="astrology-birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>
+          <label>{{ t.astrology_birth_time }} <input id="astrology-birth-time" placeholder="14:30" inputmode="numeric" /></label>
+          <label>{{ t.astrology_birth_place }} <input id="astrology-birth-place" /></label>
+          <label>{{ t.astrology_focus }}
+            <textarea id="astrology-focus" rows="4"></textarea>
+          </label>
+          <button type="submit" class="primary-btn">{{ t.get_astrology_forecast }}</button>
         </form>
-        <div id="numerology-result" class="result rich-result" aria-live="polite" hidden></div>
+        <div id="astrology-result" class="result rich-result" aria-live="polite" hidden></div>
       </div>
     </section>
-
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
   <script defer src="/static/app.js?v=divination-v1"></script>
 </body>
 </html>
-

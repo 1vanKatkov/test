@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.history }}</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=divination-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -27,11 +27,11 @@
 
     <section class="card">
       <div id="request-history" class="history-list"></div>
-      <pre id="history-result" class="result"></pre>
+      <div id="history-result" class="result rich-result" aria-live="polite" hidden></div>
     </section>
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=telegram-lazy-auth-v1"></script>
+  <script defer src="/static/app.js?v=divination-v1"></script>
 </body>
 </html>

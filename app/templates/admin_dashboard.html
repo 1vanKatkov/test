@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.admin_panel }}</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=divination-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -26,10 +26,61 @@
     </section>
 
     <section class="card">
+      <h2>Analytics period</h2>
+      <div class="admin-period-controls">
+        <button type="button" class="secondary-btn admin-period-btn" data-days="1">Today</button>
+        <button type="button" class="secondary-btn admin-period-btn" data-days="7">7 days</button>
+        <button type="button" class="secondary-btn admin-period-btn" data-days="30">30 days</button>
+      </div>
+      <div class="form-grid admin-date-range">
+        <label>From <input id="admin-date-from" type="date" /></label>
+        <label>To <input id="admin-date-to" type="date" /></label>
+        <button type="button" id="admin-analytics-apply" class="primary-btn">Apply range</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>KPI</h2>
+      <div id="admin-kpi" class="admin-kpi-grid"></div>
+    </section>
+
+    <section class="card">
+      <h2>Growth charts</h2>
+      <div id="admin-daily-charts" class="admin-chart-stack"></div>
+    </section>
+
+    <section class="card">
+      <h2>Module and provider charts</h2>
+      <div id="admin-modules" class="admin-chart-stack"></div>
+      <div id="admin-providers" class="admin-chart-stack"></div>
+    </section>
+
+    <section class="card">
+      <h2>Payments and sparks</h2>
+      <div id="admin-payment-funnel" class="admin-chart-stack"></div>
+      <div id="admin-sparks-chart" class="admin-chart-stack"></div>
+    </section>
+
+    <section class="card">
       <h2>{{ t.admin_users or 'Пользователи' }}</h2>
       <div class="form-grid">
         <label>{{ t.admin_user_lookup or 'ID, email или ник (пусто = все)' }}
           <input id="admin-user-query" type="text" autocomplete="off" />
+        </label>
+        <label>Provider
+          <select id="admin-user-provider">
+            <option value="">All</option>
+            <option value="email">Email</option>
+            <option value="telegram">Telegram</option>
+            <option value="max">MAX</option>
+          </select>
+        </label>
+        <label>Role
+          <select id="admin-user-role-filter">
+            <option value="">All</option>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
         </label>
         <button type="button" id="admin-user-search-btn" class="secondary-btn">{{ t.admin_find_user or 'Найти' }}</button>
       </div>
@@ -50,23 +101,53 @@
     </section>
 
     <section class="card">
-      <h2>Overview</h2>
-      <div id="admin-overview" class="history-list"></div>
-    </section>
-
-    <section class="card">
-      <h2>Module stats</h2>
-      <div id="admin-modules" class="history-list"></div>
+      <h2>User detail</h2>
+      <div id="admin-user-detail" class="history-list"></div>
+      <div class="form-grid admin-role-form" hidden>
+        <label>Role
+          <select id="admin-user-role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        <button type="button" id="admin-role-apply" class="secondary-btn">Update role</button>
+      </div>
+      <div id="admin-user-history" class="history-list"></div>
+      <div id="admin-user-transactions" class="history-list"></div>
+      <div id="admin-user-payments" class="history-list"></div>
+      <div id="admin-user-personas" class="history-list"></div>
     </section>
 
     <section class="card">
       <h2>Support tickets</h2>
+      <div class="form-grid">
+        <label>Status
+          <select id="admin-support-status">
+            <option value="">All</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <button type="button" id="admin-support-refresh" class="secondary-btn">Refresh support</button>
+      </div>
       <div id="admin-tickets" class="history-list"></div>
       <div id="admin-ticket-messages" class="history-list"></div>
+      <form id="admin-ticket-reply-form" class="form-grid" hidden>
+        <input id="admin-selected-ticket-id" type="hidden" />
+        <label>Reply <textarea id="admin-ticket-reply-text" rows="3"></textarea></label>
+        <button type="submit" class="primary-btn">Send reply</button>
+        <button type="button" id="admin-ticket-close-btn" class="secondary-btn">Close ticket</button>
+        <button type="button" id="admin-ticket-open-btn" class="secondary-btn">Reopen ticket</button>
+      </form>
       <pre id="admin-result" class="result"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Audit log</h2>
+      <div id="admin-audit-log" class="history-list"></div>
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=telegram-lazy-auth-v1"></script>
+  <script defer src="/static/app.js?v=divination-v1"></script>
 </body>
 </html>

@@ -4,13 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.sonnik }}</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=divination-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
+  data-cost-sonnik="{{ cost_sonnik }}"
+  data-cost-numerology="{{ cost_numerology }}"
+  data-cost-sovmestimost="{{ cost_sovmestimost }}"
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
@@ -20,25 +23,39 @@
   </header>
 
   <main class="mobile-client">
-    <section class="card compact-card">
-      <h2>{{ t.sonnik }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+    <section class="card compact-card client-page-hero">
+      <div>
+        <h2>{{ t.sonnik }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </section>
 
-    <section class="card">
-      <form id="sonnik-form" class="form-grid">
-        <label>{{ t.dream_description }}
-          <textarea id="dream-text" rows="6" required></textarea>
-        </label>
-        <button type="submit" class="primary-btn">{{ t.get_interpretation }}</button>
-      </form>
-      <pre id="sonnik-result" class="result"></pre>
+    <section class="card auth-gated-card">
+      <div class="auth-required-panel" hidden>
+        <h3>{{ t.sign_in_required_title }}</h3>
+        <p>{{ t.sign_in_required_text }}</p>
+        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/sonnik%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+      </div>
+      <div class="auth-required-content">
+        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_sonnik }} {{ t.sparks }}</div>
+        <form id="sonnik-form" class="form-grid">
+          <label>{{ t.dream_description }}
+            <textarea id="dream-text" rows="6" required></textarea>
+          </label>
+          <button type="submit" class="primary-btn">{{ t.get_interpretation }}</button>
+        </form>
+        <div id="sonnik-result" class="result rich-result" aria-live="polite" hidden></div>
+      </div>
     </section>
 
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=telegram-lazy-auth-v1"></script>
+  <script defer src="/static/app.js?v=divination-v1"></script>
 </body>
 </html>
 
