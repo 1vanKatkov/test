@@ -45,6 +45,7 @@ const i18n = lang === "en"
     balance: "Balance",
     analyzingDream: "Analyzing dream...",
     readingTarot: "Building natal chart...",
+    readingTarotCards: "Reading tarot cards...",
     buildingForecast: "Building forecast...",
     generatingReport: "Generating report...",
     reportReady: "Report is ready",
@@ -88,6 +89,12 @@ const i18n = lang === "en"
     personaEmpty: "No saved personas yet",
     choosePersona: "Choose persona",
     personaRequired: "Choose a saved persona or enter at least name and birth date.",
+    chooseTarotCards: "The deck is drawing three cards for your spread...",
+    tarotCardsSelected: "Your spread",
+    tarotCardsNeedExact: "Choose exactly the required number of cards for this spread.",
+    tarotCardsDrawing: "Drawing your cards...",
+    tarotCardsDrawn: "The cards are on the table. Ask your question.",
+    tarotCardsDrawFailed: "Could not draw cards. Refresh the page and try again.",
   }
   : {
     guest: "Гость",
@@ -111,6 +118,7 @@ const i18n = lang === "en"
     balance: "Баланс",
     analyzingDream: "Выполняется анализ...",
     readingTarot: "Строим натальную карту...",
+    readingTarotCards: "Гадаем по картам Таро...",
     buildingForecast: "Строим прогноз...",
     generatingReport: "Генерация отчета...",
     reportReady: "Отчет готов",
@@ -154,6 +162,12 @@ const i18n = lang === "en"
     personaEmpty: "Сохранённых персон пока нет",
     choosePersona: "Выберите персону",
     personaRequired: "Выберите сохранённую персону или введите минимум имя и дату рождения.",
+    chooseTarotCards: "Колода вытягивает три карты для вашего расклада...",
+    tarotCardsSelected: "Ваш расклад",
+    tarotCardsNeedExact: "Выберите ровно нужное количество карт для этого расклада.",
+    tarotCardsDrawing: "Вытягиваем карты...",
+    tarotCardsDrawn: "Карты на столе. Задайте вопрос.",
+    tarotCardsDrawFailed: "Не удалось вытянуть карты. Обновите страницу и попробуйте снова.",
   };
 
 const authPageCopy = {
@@ -425,6 +439,101 @@ function setResult(id, text) {
   }
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function sparkLoaderMarkup(label = i18n.loading) {
+  return `<div class="ai-loading-card" role="status" aria-live="polite" aria-atomic="true">
+    <div class="ai-spark-loader" aria-hidden="true">
+      <span class="ai-spark-core">✦</span>
+      <span class="ai-spark">✦</span>
+      <span class="ai-spark">✦</span>
+      <span class="ai-spark">✦</span>
+      <span class="ai-spark">✦</span>
+    </div>
+    <span class="visually-hidden">${escapeHtml(label)}</span>
+  </div>`;
+}
+
+function showSparkLoading(resultId, label = i18n.loading) {
+  const node = element(resultId);
+  if (!node) {
+    return;
+  }
+  node.innerHTML = sparkLoaderMarkup(label);
+  node.hidden = false;
+  node.classList.remove("ai-result-enter");
+}
+
+function collapseAiForm(form) {
+  if (!form) {
+    return;
+  }
+  form.style.maxHeight = `${form.scrollHeight}px`;
+  form.setAttribute("aria-busy", "true");
+  form.setAttribute("inert", "");
+  window.requestAnimationFrame(() => {
+    form.classList.add("ai-form-exit");
+  });
+}
+
+function restoreAiForm(form) {
+  if (!form) {
+    return;
+  }
+  form.classList.remove("ai-form-exit");
+  form.removeAttribute("aria-busy");
+  form.removeAttribute("inert");
+  form.style.maxHeight = "";
+}
+
+function revealAiResult(resultId, content, options = {}) {
+  setResult(resultId, content);
+  const node = element(resultId);
+  if (!node || !content) {
+    return;
+  }
+  node.setAttribute("tabindex", "-1");
+  node.classList.remove("ai-result-enter");
+  void node.offsetWidth;
+  node.classList.add("ai-result-enter");
+  if (options.scroll !== false) {
+    node.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  }
+}
+
+async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess, onError, collapseForm = true, scrollToResult = true }) {
+  if (redirectGuestFromForm()) {
+    setResult(resultId, i18n.signInRedirecting);
+    return null;
+  }
+  setResult(resultId, "");
+  showSparkLoading(resultId, loadingLabel);
+  if (collapseForm) {
+    collapseAiForm(form);
+  }
+  setFormBusy(form, true, null);
+  try {
+    const data = await request();
+    if (onSuccess) {
+      onSuccess(data, { revealResult: (content) => revealAiResult(resultId, content, { scroll: scrollToResult }) });
+    } else {
+      revealAiResult(resultId, data?.result || data?.interpretation || "", { scroll: scrollToResult });
+    }
+    return data;
+  } catch (error) {
+    restoreAiForm(form);
+    setResult(resultId, error.message);
+    if (onError) {
+      onError(error);
+    }
+    return null;
+  } finally {
+    setFormBusy(form, false);
+  }
+}
+
 function setBalance(value) {
   const headerSparks = element("header-sparks");
   if (headerSparks) {
@@ -666,7 +775,7 @@ function hydrateUiFromCache() {
     setAuthBadge(`${i18n.tgPrefix}: ${profile.username}`);
     setAuthUsername(profile.username);
   } else if (profile?.provider === "email") {
-    setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
+    setAuthBadge(profile.username);
     setAuthUsername(profile.username);
   } else {
     setAuthUsername(i18n.guest);
@@ -833,7 +942,9 @@ function setFormBusy(form, isBusy, loadingText = i18n.loading) {
   if (isBusy) {
     submitButton.dataset.originalText = submitButton.textContent || "";
     submitButton.disabled = true;
-    submitButton.textContent = loadingText;
+    if (loadingText !== null) {
+      submitButton.textContent = loadingText;
+    }
     return;
   }
   submitButton.disabled = false;
@@ -1099,7 +1210,7 @@ function applyProfileUi(profile) {
     return;
   }
   if (profile.provider === "email") {
-    setAuthBadge(`${i18n.emailPrefix}: ${profile.username}`);
+    setAuthBadge(profile.username);
     setAuthUsername(profile.username);
     syncAuthChrome(profile);
     return;
@@ -1413,6 +1524,7 @@ function moduleLabel(module) {
     sovmestimost_names: lang === "en" ? "Compatibility" : "Совместимость",
     sovmestimost_names_dates: lang === "en" ? "Compatibility" : "Совместимость",
     tarot: lang === "en" ? "Natal Charts" : "Натальные карты",
+    tarot_cards: lang === "en" ? "Tarot" : "Таро",
     astrology: lang === "en" ? "Astrology" : "Астропрогноз",
   };
   return labels[module] || module || (lang === "en" ? "Request" : "Запрос");
@@ -1431,7 +1543,6 @@ function natalTopicLabel(topic) {
       child_potential: "Child Potential",
       strengths: "Natural Strengths",
       decisions: "Decision-Making Style",
-      relationship_compatibility: "Relationship Compatibility",
       full_portrait: "Full Personality Portrait",
     }
     : {
@@ -1445,7 +1556,6 @@ function natalTopicLabel(topic) {
       child_potential: "Потенциал ребёнка",
       strengths: "Природные сильные качества",
       decisions: "Как вы принимаете решения",
-      relationship_compatibility: "Совместимость в отношениях",
       full_portrait: "Полный портрет личности",
     };
   return labels[topic] || topic || moduleLabel("tarot");
@@ -1474,6 +1584,14 @@ function formatHistorySummary(item) {
       title: personaName ? `${natalTopicLabel(topic)} · ${personaName}` : natalTopicLabel(topic),
       subtitle: compactText(question, lang === "en" ? "Natal chart by selected topic" : "Натальная карта по выбранной теме"),
       chips: [natalTopicLabel(topic), personaName ? `${lang === "en" ? "Persona" : "Персона"}: ${personaName}` : ""].filter(Boolean),
+    };
+  }
+  if (item.module === "tarot_cards") {
+    const parts = raw.split(";").map((part) => part.trim()).filter(Boolean);
+    return {
+      title: lang === "en" ? "Tarot reading" : "Гадание Таро",
+      subtitle: compactText(parts[1] || parts[2] || "", lang === "en" ? "Selected cards" : "Выбранные карты"),
+      chips: [parts[0] || "", parts[1] || ""].filter(Boolean),
     };
   }
   if (item.module === "numerology") {
@@ -1872,24 +1990,19 @@ function wireSonnikForm() {
   }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (redirectGuestFromForm()) {
-      setResult("sonnik-result", i18n.signInRedirecting);
-      return;
-    }
-    setResult("sonnik-result", i18n.analyzingDream);
-    setFormBusy(form, true, i18n.analyzingDream);
-    try {
-      const result = await apiRequest("/api/sonnik/interpret", "POST", {
+    await runReportFlow({
+      form,
+      resultId: "sonnik-result",
+      loadingLabel: i18n.analyzingDream,
+      request: () => apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
         language: lang,
-      }, { redirectOnUnauthorized: true });
-      setResult("sonnik-result", result.interpretation);
-      setBalance(result.balance);
-    } catch (error) {
-      setResult("sonnik-result", error.message);
-    } finally {
-      setFormBusy(form, false);
-    }
+      }, { redirectOnUnauthorized: true }),
+      onSuccess: (result, { revealResult }) => {
+        revealResult(result.interpretation);
+        setBalance(result.balance);
+      },
+    });
   });
 }
 
@@ -1898,32 +2011,35 @@ function wireNumerologyForm() {
   if (!form) {
     return;
   }
+  wirePersonaPicker("numerology-persona");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (redirectGuestFromForm()) {
-      setResult("numerology-result", i18n.signInRedirecting);
-      return;
-    }
-    setResult("numerology-result", i18n.generatingReport);
-    setFormBusy(form, true, i18n.generatingReport);
+    let personaPayload;
     try {
-      const result = await apiRequest("/api/numerology/generate", "POST", {
-        full_name: element("full-name").value.trim(),
-        birth_date: element("birth-date").value.trim(),
-        language: lang,
-      }, { redirectOnUnauthorized: true });
-      const resultNode = element("numerology-result");
-      if (resultNode) {
-        const separator = result.report_url.includes("?") ? "&" : "?";
-        const reportUrl = `${result.report_url}${separator}lang=${encodeURIComponent(lang)}`;
-        resultNode.innerHTML = `${i18n.reportReady}: <a href="${reportUrl}">${lang === "en" ? "Open report" : "Открыть разбор"}</a>`;
-      }
-      setBalance(result.balance);
+      personaPayload = await resolvePersonaForPrefix("numerology-persona");
     } catch (error) {
       setResult("numerology-result", error.message);
-    } finally {
-      setFormBusy(form, false);
+      return;
     }
+    const resolvedPersona = personaPayload.resolvedPersona || {};
+    const fullName = personaPayload.persona_name || resolvedPersona.name || "";
+    const birthDate = personaPayload.persona_birth_date || resolvedPersona.birth_date || "";
+    await runReportFlow({
+      form,
+      resultId: "numerology-result",
+      loadingLabel: i18n.generatingReport,
+      request: () => apiRequest("/api/numerology/generate", "POST", {
+        full_name: fullName,
+        birth_date: birthDate,
+        language: lang,
+      }, { redirectOnUnauthorized: true }),
+      onSuccess: (result) => {
+        const separator = result.report_url.includes("?") ? "&" : "?";
+        const reportUrl = `${result.report_url}${separator}lang=${encodeURIComponent(lang)}`;
+        setBalance(result.balance);
+        window.location.assign(reportUrl);
+      },
+    });
   });
 }
 
@@ -1944,6 +2060,136 @@ function personaPreview(persona) {
   return [persona.name, persona.birth_date, persona.birth_time, persona.birth_place]
     .filter(Boolean)
     .join(" · ");
+}
+
+function personaModeValue(prefix) {
+  return document.querySelector(`input[name='${prefix}-mode']:checked`)?.value || "manual";
+}
+
+function renderPersonaSelect(prefix) {
+  const select = element(`${prefix}-select`);
+  const choices = element(`${prefix}-choices`);
+  if (!select && !choices) {
+    return;
+  }
+  const selectedValue = select?.value || choices?.dataset.selectedPersonaId || "";
+  const selectedPersona = state.personas.some((persona) => String(persona.id) === selectedValue)
+    ? selectedValue
+    : String(state.personas[0]?.id || "");
+  if (select) {
+    select.innerHTML = state.personas.length
+      ? state.personas.map((persona) => `<option value="${persona.id}">${escapeHtml(persona.name)} · ${escapeHtml(persona.birth_date)}</option>`).join("")
+      : `<option value="">${escapeHtml(i18n.personaEmpty)}</option>`;
+    select.value = selectedPersona;
+  }
+  if (choices) {
+    choices.dataset.selectedPersonaId = selectedPersona;
+    if (!state.personas.length) {
+      choices.innerHTML = `<div class="persona-choice-empty" role="option" aria-disabled="true">${escapeHtml(i18n.personaEmpty)}</div>`;
+    } else {
+      choices.innerHTML = state.personas
+        .map((persona, index) => {
+          const isSelected = String(persona.id) === selectedPersona;
+          return `<button type="button" class="persona-choice-card${isSelected ? " is-selected" : ""}" data-persona-id="${persona.id}" role="option" aria-selected="${isSelected ? "true" : "false"}" style="--choice-index:${index}">
+            <span class="persona-choice-glow" aria-hidden="true"></span>
+            <strong>${escapeHtml(persona.name)}</strong>
+            <span>${escapeHtml(persona.birth_date)}</span>
+            ${persona.birth_time || persona.birth_place ? `<small>${escapeHtml([persona.birth_time, persona.birth_place].filter(Boolean).join(" · "))}</small>` : ""}
+          </button>`;
+        })
+        .join("");
+    }
+  }
+  updatePersonaPreview(prefix);
+}
+
+function updatePersonaPreview(prefix) {
+  const preview = element(`${prefix}-preview`);
+  const select = element(`${prefix}-select`);
+  const choices = element(`${prefix}-choices`);
+  if (!preview || (!select && !choices)) {
+    return;
+  }
+  const selectedId = select?.value || choices?.dataset.selectedPersonaId || "";
+  const persona = state.personas.find((item) => String(item.id) === String(selectedId));
+  preview.textContent = persona ? personaPreview(persona) : "";
+}
+
+function togglePersonaPanels(prefix) {
+  const mode = personaModeValue(prefix);
+  const savedPanel = element(`${prefix}-saved-persona-panel`);
+  const manualPanel = element(`${prefix}-manual-persona-panel`);
+  document.querySelectorAll(`input[name='${prefix}-mode']`).forEach((radio) => {
+    radio.closest("label")?.classList.toggle("is-active", radio.checked);
+  });
+  if (savedPanel) {
+    savedPanel.hidden = mode !== "saved";
+  }
+  if (manualPanel) {
+    manualPanel.hidden = mode !== "manual";
+  }
+}
+
+function wirePersonaPicker(prefix) {
+  document.querySelectorAll(`input[name='${prefix}-mode']`).forEach((radio) => {
+    radio.addEventListener("change", () => togglePersonaPanels(prefix));
+  });
+  element(`${prefix}-select`)?.addEventListener("change", () => updatePersonaPreview(prefix));
+  element(`${prefix}-choices`)?.addEventListener("click", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const button = target?.closest(".persona-choice-card");
+    if (!button) {
+      return;
+    }
+    element(`${prefix}-choices`).dataset.selectedPersonaId = button.dataset.personaId || "";
+    element(`${prefix}-choices`)?.querySelectorAll(".persona-choice-card").forEach((item) => {
+      const isSelected = item === button;
+      item.classList.toggle("is-selected", isSelected);
+      item.setAttribute("aria-selected", isSelected ? "true" : "false");
+    });
+    updatePersonaPreview(prefix);
+  });
+  togglePersonaPanels(prefix);
+}
+
+async function resolvePersonaForPrefix(prefix, options = {}) {
+  const mode = personaModeValue(prefix);
+  const manualPersona = personaPayloadFromPrefix(prefix);
+  let personaId = mode === "saved"
+    ? Number(element(`${prefix}-select`)?.value || element(`${prefix}-choices`)?.dataset.selectedPersonaId || 0)
+    : 0;
+  if (mode === "saved" && !personaId) {
+    throw new Error(i18n.personaRequired);
+  }
+  if (mode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
+    throw new Error(i18n.personaRequired);
+  }
+  if (mode === "manual" && element(`${prefix}-save-persona`)?.checked && manualPersona.name && manualPersona.birth_date) {
+    const persona = await createPersona(manualPersona);
+    personaId = Number(persona?.id || 0);
+    await loadPersonas();
+    const select = element(`${prefix}-select`);
+    if (select && personaId) {
+      select.value = String(personaId);
+      updatePersonaPreview(prefix);
+    }
+    const choices = element(`${prefix}-choices`);
+    if (choices && personaId) {
+      choices.dataset.selectedPersonaId = String(personaId);
+      renderPersonaSelect(prefix);
+    }
+  }
+  return {
+    [`${options.idKey || "persona_id"}`]: personaId,
+    [`${options.nameKey || "persona_name"}`]: mode === "manual" ? manualPersona.name : "",
+    [`${options.birthDateKey || "persona_birth_date"}`]: mode === "manual" ? manualPersona.birth_date : "",
+    [`${options.birthTimeKey || "persona_birth_time"}`]: mode === "manual" ? manualPersona.birth_time : "",
+    [`${options.birthPlaceKey || "persona_birth_place"}`]: mode === "manual" ? manualPersona.birth_place : "",
+    [`${options.noteKey || "persona_note"}`]: mode === "manual" ? manualPersona.note : "",
+    resolvedPersona: mode === "manual"
+      ? manualPersona
+      : state.personas.find((persona) => Number(persona.id) === personaId),
+  };
 }
 
 async function createPersona(payload) {
@@ -1989,6 +2235,7 @@ async function loadPersonas() {
   if (!isLoggedIn()) {
     state.personas = [];
     renderTarotPersonaSelect();
+    ["numerology-persona", "compat-persona1", "compat-persona2"].forEach(renderPersonaSelect);
     renderProfilePersonas();
     return [];
   }
@@ -1999,6 +2246,7 @@ async function loadPersonas() {
     state.personas = [];
   }
   renderTarotPersonaSelect();
+  ["numerology-persona", "compat-persona1", "compat-persona2"].forEach(renderPersonaSelect);
   renderProfilePersonas();
   return state.personas;
 }
@@ -2164,6 +2412,9 @@ function wireTarotForm() {
     form.hidden = true;
     setResult("tarot-result", text);
     if (resultNode) {
+      resultNode.classList.remove("ai-result-enter");
+      void resultNode.offsetWidth;
+      resultNode.classList.add("ai-result-enter");
       resultNode.insertAdjacentHTML(
         "beforeend",
         `<div class="reading-result-actions">
@@ -2195,30 +2446,32 @@ function wireTarotForm() {
       return;
     }
     setResult("tarot-result", "");
+    restoreAiForm(form);
     form.hidden = false;
     setTarotFormStatus("");
-    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    form.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   });
   togglePersonaMode();
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (redirectGuestFromForm()) {
-      setTarotFormStatus(i18n.signInRedirecting);
+    setResult("tarot-result", "");
+    setTarotFormStatus("");
+    const personaMode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
+    const manualPersona = personaPayloadFromPrefix("tarot-persona");
+    let personaId = personaMode === "saved" ? Number(element("tarot-persona-select")?.value || 0) : 0;
+    if (personaMode === "saved" && !personaId) {
+      setTarotFormStatus(i18n.personaRequired);
       return;
     }
-    setResult("tarot-result", "");
-    setFormBusy(form, true, i18n.readingTarot);
-    try {
-      setTarotFormStatus(i18n.readingTarot);
-      const personaMode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
-      const manualPersona = personaPayloadFromPrefix("tarot-persona");
-      let personaId = personaMode === "saved" ? Number(element("tarot-persona-select")?.value || 0) : 0;
-      if (personaMode === "saved" && !personaId) {
-        throw new Error(i18n.personaRequired);
-      }
-      if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
-        throw new Error(i18n.personaRequired);
-      }
+    if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
+      setTarotFormStatus(i18n.personaRequired);
+      return;
+    }
+    await runReportFlow({
+      form,
+      resultId: "tarot-result",
+      loadingLabel: i18n.readingTarot,
+      request: async () => {
       if (personaMode === "manual" && element("tarot-save-persona")?.checked && manualPersona.name && manualPersona.birth_date) {
         const persona = await createPersona(manualPersona);
         personaId = Number(persona?.id || 0);
@@ -2230,7 +2483,7 @@ function wireTarotForm() {
         }
         setTarotFormStatus(i18n.personaSaved);
       }
-      const result = await apiRequest("/api/tarot/reading", "POST", {
+      return apiRequest("/api/tarot/reading", "POST", {
         question: element("tarot-question").value.trim(),
         topic: element("tarot-topic")?.value || "full_portrait",
         spread: "natal_map",
@@ -2242,14 +2495,296 @@ function wireTarotForm() {
         persona_note: personaMode === "manual" ? manualPersona.note : "",
         language: lang,
       }, { redirectOnUnauthorized: true });
+      },
+      onSuccess: (result) => {
       setTarotFormStatus("");
       showTarotReadingResult(result.result);
       setBalance(result.balance);
-    } catch (error) {
+      },
+      onError: (error) => {
       setTarotFormStatus(error.message);
-    } finally {
-      setFormBusy(form, false);
+      },
+      scrollToResult: false,
+    });
+  });
+}
+
+let tarotCardsDeck = [];
+let tarotCardsSpreads = [];
+let selectedTarotCardIds = [];
+let drawnTarotCards = [];
+let tarotDrawToken = "";
+const TAROT_REQUIRED_CARDS = 3;
+
+function selectedTarotSpread() {
+  return tarotCardsSpreads.find((spread) => spread.id === "three_cards") || { id: "three_cards", size: TAROT_REQUIRED_CARDS, title: lang === "en" ? "Three cards" : "Три карты" };
+}
+
+function tarotCardById(cardId) {
+  return tarotCardsDeck.find((card) => card.id === cardId);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function renderTarotCardButton(card, isSelected = false, index = 0, extraClass = "") {
+  const name = escapeHtml(card.name);
+  const symbol = escapeHtml(card.symbol || "✦");
+  const arcana = card.arcana === "major" ? (lang === "en" ? "Major Arcana" : "Старший аркан") : (lang === "en" ? "Minor Arcana" : "Младший аркан");
+  return `<button
+    type="button"
+    class="tarot-card ${extraClass} ${isSelected ? "is-flipped is-selected" : ""}"
+    data-card-id="${escapeHtml(card.id)}"
+    style="--card-index:${index}"
+    aria-pressed="${isSelected ? "true" : "false"}"
+  >
+    <span class="tarot-card-inner">
+      <span class="tarot-card-face tarot-card-back">
+        <span class="tarot-card-back-symbol">✦</span>
+      </span>
+      <span class="tarot-card-face tarot-card-front">
+        <span class="tarot-card-corner">${symbol}</span>
+        <span class="tarot-card-symbol">${symbol}</span>
+        <span class="tarot-card-name">${name}</span>
+        <span class="tarot-card-arcana">${escapeHtml(arcana)}</span>
+      </span>
+    </span>
+  </button>`;
+}
+
+function renderTarotCardBack(card, index = 0, extraClass = "") {
+  const cardId = escapeHtml(card?.id || `drawn-${index}`);
+  return `<div
+    class="tarot-card ${extraClass}"
+    data-card-id="${cardId}"
+    style="--card-index:${index}"
+    role="button"
+    tabindex="0"
+    aria-label="${lang === "en" ? "Closed tarot card" : "Закрытая карта Таро"}"
+  >
+    <span class="tarot-card-inner">
+      <span class="tarot-card-face tarot-card-back">
+        <span class="tarot-card-back-symbol">✦</span>
+      </span>
+      <span class="tarot-card-face tarot-card-front"></span>
+    </span>
+  </div>`;
+}
+
+function renderTarotCardsDeck() {
+  const deck = element("tarot-card-deck");
+  if (!deck) {
+    return;
+  }
+  deck.innerHTML = `<div class="tarot-deck-pile" aria-hidden="true">
+    ${Array.from({ length: 9 }, (_item, index) => `<span class="tarot-deck-layer" style="--layer-index:${index}"></span>`).join("")}
+  </div>`;
+}
+
+function setTarotStagePhase(phase) {
+  const stage = element("tarot-stage");
+  if (stage) {
+    stage.dataset.phase = phase;
+  }
+}
+
+function renderTarotCardsResult(result) {
+  const container = element("tarot-cards-result");
+  if (!container) {
+    return;
+  }
+  const cards = result.cards || [];
+  container.innerHTML = `<div class="tarot-result-cards">
+    ${cards.map((card, index) => `<article class="tarot-result-card" style="--reveal-index:${index}">
+      ${renderTarotCardButton(card, false, index)}
+      <strong>${escapeHtml(card.position || "")}</strong>
+      <span>${escapeHtml(card.name || "")}</span>
+    </article>`).join("")}
+  </div>
+  <div class="tarot-interpretation">${renderMarkdownText(result.interpretation || "")}</div>`;
+  container.hidden = false;
+  container.querySelectorAll(".tarot-result-card .tarot-card").forEach((card, index) => {
+    window.setTimeout(() => {
+      card.classList.add("is-flipped", "is-selected");
+      card.setAttribute("aria-pressed", "true");
+    }, prefersReducedMotion() ? 0 : 260 + index * 260);
+  });
+}
+
+function setTarotDrawStatus(message) {
+  const status = element("tarot-draw-status");
+  if (status) {
+    status.textContent = message;
+  }
+}
+
+function revealTarotCardsForm() {
+  const form = element("tarot-cards-form");
+  if (!form) {
+    return;
+  }
+  form.hidden = false;
+  form.classList.remove("is-collapsed");
+  form.classList.add("is-revealed");
+  form.removeAttribute("inert");
+  form.querySelector("textarea")?.focus({ preventScroll: true });
+}
+
+function hideTarotCardsForm() {
+  const form = element("tarot-cards-form");
+  if (!form) {
+    return;
+  }
+  form.classList.add("is-collapsed");
+  form.classList.remove("is-revealed");
+  form.setAttribute("inert", "");
+}
+
+async function requestTarotDraw() {
+  const spread = selectedTarotSpread();
+  const result = await apiRequest("/api/tarot-cards/draw", "POST", {
+    spread: spread.id,
+    language: lang,
+  });
+  const cards = result.cards || [];
+  if (cards.length !== TAROT_REQUIRED_CARDS) {
+    throw new Error(i18n.tarotCardsDrawFailed);
+  }
+  drawnTarotCards = cards;
+  selectedTarotCardIds = cards.map((card) => card.id);
+  tarotDrawToken = result.draw_token || "";
+  if (!tarotDrawToken) {
+    throw new Error(i18n.tarotCardsDrawFailed);
+  }
+}
+
+async function placeTarotCardOnTable(card, index) {
+  const slot = document.querySelector(`.tarot-spread-slot[data-slot="${index}"]`);
+  if (!slot) {
+    return;
+  }
+  slot.innerHTML = renderTarotCardBack(card, index, "is-dealing-to-table");
+  slot.classList.add("is-filled");
+  const cardNode = slot.querySelector(".tarot-card");
+  if (prefersReducedMotion()) {
+    cardNode?.classList.remove("is-dealing-to-table");
+    return;
+  }
+  await wait(180 + index * 180);
+  cardNode?.classList.add("is-arrived");
+  await wait(460);
+}
+
+async function startTarotAutoDraw() {
+  const deck = element("tarot-card-deck");
+  const slots = document.querySelectorAll(".tarot-spread-slot");
+  if (!deck || !slots.length) {
+    return;
+  }
+  hideTarotCardsForm();
+  setTarotStagePhase("dealing");
+  setTarotDrawStatus(i18n.tarotCardsDrawing);
+  tarotDrawToken = "";
+  selectedTarotCardIds = [];
+  drawnTarotCards = [];
+  slots.forEach((slot) => {
+    slot.innerHTML = "";
+    slot.classList.remove("is-filled");
+  });
+  try {
+    await requestTarotDraw();
+    deck.classList.add("is-dealing");
+    for (let index = 0; index < drawnTarotCards.length; index += 1) {
+      await placeTarotCardOnTable(drawnTarotCards[index], index);
     }
+    deck.classList.remove("is-dealing");
+    setTarotStagePhase("ready");
+    setTarotDrawStatus(i18n.tarotCardsDrawn);
+    revealTarotCardsForm();
+  } catch (error) {
+    setTarotStagePhase("error");
+    setTarotDrawStatus(error.message || i18n.tarotCardsDrawFailed);
+  }
+}
+
+async function loadTarotCardsDeck() {
+  if (!element("tarot-card-deck")) {
+    return;
+  }
+  const result = await apiRequest(`/api/tarot-cards/deck?lang=${encodeURIComponent(lang)}`, "GET");
+  tarotCardsDeck = result.deck || [];
+  tarotCardsSpreads = result.spreads || [];
+  renderTarotCardsDeck();
+  await startTarotAutoDraw();
+}
+
+function wireTarotCardsForm() {
+  const form = element("tarot-cards-form");
+  const deck = element("tarot-card-deck");
+  const spreadRow = element("tarot-spread-row");
+  if (!form || !deck) {
+    return;
+  }
+  const shakeLockedTableCard = (target) => {
+    const card = target?.closest(".tarot-card");
+    if (!card) {
+      return;
+    }
+    if (prefersReducedMotion()) {
+      return;
+    }
+    const inner = card.querySelector(".tarot-card-inner") || card;
+    inner.classList.remove("is-locked-shake");
+    void inner.offsetWidth;
+    inner.classList.add("is-locked-shake");
+    window.setTimeout(() => inner.classList.remove("is-locked-shake"), 520);
+  };
+  spreadRow?.addEventListener("pointerdown", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    shakeLockedTableCard(target);
+  });
+  spreadRow?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    shakeLockedTableCard(target);
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const spread = selectedTarotSpread();
+    if (selectedTarotCardIds.length !== TAROT_REQUIRED_CARDS || !tarotDrawToken) {
+      setResult("tarot-cards-form-result", i18n.tarotCardsNeedExact);
+      return;
+    }
+    setResult("tarot-cards-form-result", "");
+    setResult("tarot-cards-result", "");
+    deck.classList.add("is-reading");
+    await runReportFlow({
+      form,
+      resultId: "tarot-cards-result",
+      loadingLabel: i18n.readingTarotCards,
+      request: () => apiRequest("/api/tarot-cards/reading", "POST", {
+        question: element("tarot-cards-question")?.value.trim() || "",
+        spread: spread.id,
+        selected_card_ids: selectedTarotCardIds,
+        draw_token: tarotDrawToken,
+        language: lang,
+      }, { redirectOnUnauthorized: true }),
+      onSuccess: (result) => {
+        setResult("tarot-cards-form-result", "");
+        renderTarotCardsResult(result);
+        element("tarot-cards-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        setBalance(result.balance);
+      },
+      onError: (error) => {
+        setResult("tarot-cards-form-result", error.message);
+        setResult("tarot-cards-result", "");
+      },
+    });
+    deck.classList.remove("is-reading");
   });
 }
 
@@ -2260,28 +2795,23 @@ function wireAstrologyForm() {
   }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (redirectGuestFromForm()) {
-      setResult("astrology-result", i18n.signInRedirecting);
-      return;
-    }
-    setResult("astrology-result", i18n.buildingForecast);
-    setFormBusy(form, true, i18n.buildingForecast);
-    try {
-      const result = await apiRequest("/api/astrology/forecast", "POST", {
+    await runReportFlow({
+      form,
+      resultId: "astrology-result",
+      loadingLabel: i18n.buildingForecast,
+      request: () => apiRequest("/api/astrology/forecast", "POST", {
         name: element("astrology-name").value.trim(),
         birth_date: element("astrology-birth-date").value.trim(),
         birth_time: element("astrology-birth-time").value.trim(),
         birth_place: element("astrology-birth-place").value.trim(),
         focus: element("astrology-focus").value.trim(),
         language: lang,
-      }, { redirectOnUnauthorized: true });
-      setResult("astrology-result", result.result);
-      setBalance(result.balance);
-    } catch (error) {
-      setResult("astrology-result", error.message);
-    } finally {
-      setFormBusy(form, false);
-    }
+      }, { redirectOnUnauthorized: true }),
+      onSuccess: (result, { revealResult }) => {
+        revealResult(result.result);
+        setBalance(result.balance);
+      },
+    });
   });
 }
 
@@ -2294,6 +2824,137 @@ function numerologySectionValue(section, keys) {
     }
   }
   return "";
+}
+
+function numerologyText(key) {
+  const ru = {
+    summary: "Ключевые числа",
+    consciousness: "Число сознания",
+    destiny: "Число судьбы",
+    action: "Число действия",
+    character: "Число характера",
+    energy: "Число энергии",
+    matrix: "Психоматрица",
+    innate: "Врождённые энергии",
+    missing: "Недостающие энергии",
+    plus: "Плюс",
+    minus: "Минус",
+    comment: "Комментарий",
+    actionFocus: "Действие",
+    guidance: "Наставление",
+    positiveActions: "Поступки (+)",
+    negativeActions: "Поступки (-)",
+    noData: "Нет данных для этого блока",
+    repetitions: "повторений",
+  };
+  const en = {
+    summary: "Key numbers",
+    consciousness: "Consciousness number",
+    destiny: "Destiny number",
+    action: "Action number",
+    character: "Character number",
+    energy: "Energy number",
+    matrix: "Psychomatrix",
+    innate: "Innate energies",
+    missing: "Missing energies",
+    plus: "Strengths",
+    minus: "Weaknesses",
+    comment: "Comment",
+    actionFocus: "Action focus",
+    guidance: "Guidance",
+    positiveActions: "Positive actions",
+    negativeActions: "Negative actions",
+    noData: "No data for this section",
+    repetitions: "repetitions",
+  };
+  return (lang === "en" ? en : ru)[key] || key;
+}
+
+function numerologyIconMarkup(value, className = "numerology-number-icon") {
+  const normalized = String(value ?? "").trim();
+  const allowed = new Set(["1", "2", "3", "4", "5", "6", "7", "8", "9", "11", "22", "33"]);
+  if (!allowed.has(normalized)) {
+    return `<span class="${className} is-empty" aria-hidden="true">-</span>`;
+  }
+  return `<img class="${className}" src="/static/img/numerology/${encodeURIComponent(normalized)}.svg" alt="${escapeHtml(normalized)}" loading="lazy" />`;
+}
+
+function renderNumerologyNumberTile(id, value, index) {
+  return `<article class="numerology-number-tile" style="--reveal-index:${index}">
+    ${numerologyIconMarkup(value)}
+    <div>
+      <span>${escapeHtml(numerologyText(id))}</span>
+    </div>
+  </article>`;
+}
+
+function renderNumerologyInsight(label, value, variant = "") {
+  if (!value) {
+    return "";
+  }
+  return `<div class="numerology-insight ${variant}">
+    <span>${escapeHtml(label)}</span>
+    <div>${renderMarkdownText(value)}</div>
+  </div>`;
+}
+
+function renderNumerologySectionCard(title, numberValue, body, index) {
+  return `<article class="numerology-section-card" style="--section-index:${index}">
+    <header>
+      ${numerologyIconMarkup(numberValue, "numerology-section-icon")}
+      <div>
+        <h3>${escapeHtml(title)}</h3>
+      </div>
+    </header>
+    <div class="numerology-section-body">${body || `<p>${escapeHtml(numerologyText("noData"))}</p>`}</div>
+  </article>`;
+}
+
+function renderNumerologyMeaningSection(titleKey, section, numberValue, index) {
+  const body = [
+    renderNumerologyInsight(numerologyText("plus"), section?.plus || "", "is-plus"),
+    renderNumerologyInsight(numerologyText("minus"), section?.minus || "", "is-minus"),
+    renderNumerologyInsight(numerologyText("comment"), section?.comment || "", "is-comment"),
+  ].join("");
+  return renderNumerologySectionCard(numerologyText(titleKey), numberValue, body, index);
+}
+
+function renderNumerologyMatrix(matrix) {
+  const order = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  return `<section class="numerology-matrix-card numerology-section-card" style="--section-index:5">
+    <header>
+      <div class="numerology-mini-orb" aria-hidden="true">✦</div>
+      <div>
+        <h3>${escapeHtml(numerologyText("matrix"))}</h3>
+        <span>${lang === "en" ? "1-9 code grid" : "кодовая сетка 1-9"}</span>
+      </div>
+    </header>
+    <div class="numerology-matrix-grid">
+      ${order.map((digit, index) => {
+        const count = Number(matrix?.[digit] || 0);
+        return `<div class="numerology-matrix-cell${count ? "" : " is-empty"}" style="--cell-index:${index}">
+          ${numerologyIconMarkup(digit, "numerology-matrix-icon")}
+          <span>${count} ${escapeHtml(numerologyText("repetitions"))}</span>
+        </div>`;
+      }).join("")}
+    </div>
+  </section>`;
+}
+
+function renderNumerologyEnergyList(titleKey, items, variant, sectionIndex) {
+  const cards = Array.isArray(items) && items.length
+    ? items.map((item, index) => `<article class="numerology-energy-card ${variant}" style="--energy-index:${index}">
+        ${numerologyIconMarkup(item.number, "numerology-energy-icon")}
+        <div>
+          <strong>${escapeHtml(item.title || "")}</strong>
+          ${item.description ? `<div>${renderMarkdownText(item.description)}</div>` : ""}
+        </div>
+      </article>`).join("")
+    : `<div class="numerology-energy-empty">${escapeHtml(numerologyText("noData"))}</div>`;
+  return `<section class="numerology-energy-section" style="--section-index:${sectionIndex}">
+    <h3>${escapeHtml(numerologyText(titleKey))}</h3>
+    <div class="numerology-energy-grid">${cards}</div>
+  </section>`;
 }
 
 function renderNumerologyReport(report) {
@@ -2312,42 +2973,58 @@ function renderNumerologyReport(report) {
   const actionGuidance = numerologySectionValue(actionSection, ["guidance", "наставление"]);
   const actionPlus = numerologySectionValue(actionSection, ["plus_actions", "поступки_плюс"]);
   const actionMinus = numerologySectionValue(actionSection, ["minus_actions", "поступки_минус"]);
-  const plusLabel = lang === "en" ? "Strengths" : "Плюс";
-  const minusLabel = lang === "en" ? "Weaknesses" : "Минус";
-  const commentLabel = lang === "en" ? "Comment" : "Комментарий";
-  const actionLabel = lang === "en" ? "Action focus" : "Действие";
-  const guidanceLabel = lang === "en" ? "Guidance" : "Наставление";
-  const positiveActionsLabel = lang === "en" ? "Positive actions" : "Поступки (+)";
-  const negativeActionsLabel = lang === "en" ? "Negative actions" : "Поступки (-)";
+  const numberOrder = ["consciousness", "destiny", "action", "character", "energy"];
+  const actionBody = [
+    renderNumerologyInsight(numerologyText("actionFocus"), actionFocus, "is-comment"),
+    renderNumerologyInsight(numerologyText("comment"), actionComment, "is-comment"),
+    renderNumerologyInsight(numerologyText("guidance"), actionGuidance, "is-plus"),
+    renderNumerologyInsight(numerologyText("positiveActions"), actionPlus, "is-plus"),
+    renderNumerologyInsight(numerologyText("negativeActions"), actionMinus, "is-minus"),
+  ].join("");
   container.innerHTML = `
-    <h3>${report.full_name || ""}</h3>
-    <div class="muted">${report.birth_date || ""}</div>
-    <div class="history-row"><b>${lang === "en" ? "Consciousness" : "Сознание"}:</b> ${numbers.consciousness ?? "-"}</div>
-    <div class="history-row"><b>${lang === "en" ? "Destiny" : "Судьба"}:</b> ${numbers.destiny ?? "-"}</div>
-    <div class="history-row"><b>${lang === "en" ? "Action" : "Действие"}:</b> ${numbers.action ?? "-"}</div>
-    <div class="history-row"><b>${lang === "en" ? "Character" : "Характер"}:</b> ${numbers.character ?? "-"}</div>
-    <div class="history-row"><b>${lang === "en" ? "Energy" : "Энергия"}:</b> ${numbers.energy ?? "-"}</div>
-    <article class="history-row"><h4>${lang === "en" ? "Consciousness" : "Число сознания"}</h4><div><b>${plusLabel}:</b> ${sections.consciousness?.plus || ""}</div><div><b>${minusLabel}:</b> ${sections.consciousness?.minus || ""}</div><div><b>${commentLabel}:</b> ${sections.consciousness?.comment || ""}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Destiny" : "Число судьбы"}</h4><div><b>${plusLabel}:</b> ${sections.destiny?.plus || ""}</div><div><b>${minusLabel}:</b> ${sections.destiny?.minus || ""}</div><div><b>${commentLabel}:</b> ${sections.destiny?.comment || ""}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Action" : "Число действия"}</h4><div><b>${actionLabel}:</b> ${actionFocus}</div><div><b>${commentLabel}:</b> ${actionComment}</div><div><b>${guidanceLabel}:</b> ${actionGuidance}</div><div><b>${positiveActionsLabel}:</b> ${actionPlus}</div><div><b>${negativeActionsLabel}:</b> ${actionMinus}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Character" : "Число характера"}</h4><div>${sections.character_text || ""}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Energy" : "Число энергии"}</h4><div>${sections.energy_text || ""}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Matrix" : "Матрица"}</h4><div>${Object.entries(matrix).map(([key, value]) => `${key}: ${value}`).join(", ")}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Innate energies" : "Врожденные энергии"}</h4><div>${innate.map((item) => `${item.number}. ${item.title}`).join("<br>")}</div></article>
-    <article class="history-row"><h4>${lang === "en" ? "Missing energies" : "Недостающие энергии"}</h4><div>${missing.map((item) => `${item.number}. ${item.title}<br>${item.description}`).join("<hr>")}</div></article>
+    <section class="numerology-report-intro ai-result-enter">
+      <div>
+        <span>${escapeHtml(numerologyText("summary"))}</span>
+        <h3>${escapeHtml(report.full_name || "")}</h3>
+        <p>${escapeHtml(report.birth_date || "")}</p>
+      </div>
+      <img src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
+    </section>
+    <section class="numerology-summary-grid">
+      ${numberOrder.map((key, index) => renderNumerologyNumberTile(key, numbers[key], index)).join("")}
+    </section>
+    <section class="numerology-sections">
+      ${renderNumerologyMeaningSection("consciousness", sections.consciousness || {}, numbers.consciousness, 0)}
+      ${renderNumerologyMeaningSection("destiny", sections.destiny || {}, numbers.destiny, 1)}
+      ${renderNumerologySectionCard(numerologyText("action"), numbers.action, actionBody, 2)}
+      ${renderNumerologySectionCard(numerologyText("character"), numbers.character, renderNumerologyInsight(numerologyText("comment"), sections.character_text || "", "is-comment"), 3)}
+      ${renderNumerologySectionCard(numerologyText("energy"), numbers.energy, renderNumerologyInsight(numerologyText("comment"), sections.energy_text || "", "is-comment"), 4)}
+      ${renderNumerologyMatrix(matrix)}
+      ${renderNumerologyEnergyList("innate", innate, "is-innate", 6)}
+      ${renderNumerologyEnergyList("missing", missing, "is-missing", 7)}
+    </section>
   `;
+  container.hidden = false;
+  container.classList.remove("ai-result-enter");
+  void container.offsetWidth;
+  container.classList.add("ai-result-enter");
 }
 
 async function loadNumerologyReport() {
   if (!element("numerology-report-view") || !currentReportId) {
     return;
   }
-  setResult("numerology-result", i18n.loading);
+  showSparkLoading("numerology-report-view", i18n.loading);
   try {
     const result = await apiRequest(`/api/numerology/report/${currentReportId}?lang=${encodeURIComponent(lang)}`, "GET", undefined, { redirectOnUnauthorized: true });
     renderNumerologyReport(result.report || {});
     setResult("numerology-result", "");
   } catch (error) {
+    const reportView = element("numerology-report-view");
+    if (reportView) {
+      reportView.innerHTML = "";
+      reportView.hidden = true;
+    }
     setResult("numerology-result", error.message);
   }
 }
@@ -3050,77 +3727,60 @@ function wireAdminEvents() {
 }
 
 function wireCompatibilityForms() {
-  const namesForm = element("compat-names-form");
   const namesDatesForm = element("compat-names-dates-form");
-
-  if (namesForm) {
-    namesForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (redirectGuestFromForm()) {
-        setResult("compat-result", i18n.signInRedirecting);
-        return;
-      }
-      setResult("compat-result", i18n.calculating);
-      setFormBusy(namesForm, true, i18n.calculating);
-      try {
-        const result = await apiRequest("/api/sovmestimost/by-names", "POST", {
-          name1: element("compat-name1").value.trim(),
-          name2: element("compat-name2").value.trim(),
-          language: lang,
-        }, { redirectOnUnauthorized: true });
-        setResult("compat-result", result.result);
-        setBalance(result.balance);
-      } catch (error) {
-        setResult("compat-result", error.message);
-      } finally {
-        setFormBusy(namesForm, false);
-      }
-    });
-  }
+  wirePersonaPicker("compat-persona1");
+  wirePersonaPicker("compat-persona2");
 
   if (namesDatesForm) {
     namesDatesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (redirectGuestFromForm()) {
-        setResult("compat-result", i18n.signInRedirecting);
-        return;
-      }
-      setResult("compat-result", i18n.calculating);
-      setFormBusy(namesDatesForm, true, i18n.calculating);
+      let firstPersona;
+      let secondPersona;
       try {
-        const result = await apiRequest("/api/sovmestimost/by-names-dates", "POST", {
-          name1: element("compat-nd-name1").value.trim(),
-          date1: element("compat-date1").value.trim(),
-          name2: element("compat-nd-name2").value.trim(),
-          date2: element("compat-date2").value.trim(),
-          language: lang,
-        }, { redirectOnUnauthorized: true });
-        setResult("compat-result", result.result);
-        setBalance(result.balance);
+        firstPersona = await resolvePersonaForPrefix("compat-persona1", {
+          idKey: "persona1_id",
+          nameKey: "persona1_name",
+          birthDateKey: "persona1_birth_date",
+          birthTimeKey: "persona1_birth_time",
+          birthPlaceKey: "persona1_birth_place",
+          noteKey: "persona1_note",
+        });
+        secondPersona = await resolvePersonaForPrefix("compat-persona2", {
+          idKey: "persona2_id",
+          nameKey: "persona2_name",
+          birthDateKey: "persona2_birth_date",
+          birthTimeKey: "persona2_birth_time",
+          birthPlaceKey: "persona2_birth_place",
+          noteKey: "persona2_note",
+        });
       } catch (error) {
         setResult("compat-result", error.message);
-      } finally {
-        setFormBusy(namesDatesForm, false);
+        return;
       }
+      const firstResolved = firstPersona.resolvedPersona || {};
+      const secondResolved = secondPersona.resolvedPersona || {};
+      delete firstPersona.resolvedPersona;
+      delete secondPersona.resolvedPersona;
+      await runReportFlow({
+        form: namesDatesForm,
+        resultId: "compat-result",
+        loadingLabel: i18n.calculating,
+        request: () => apiRequest("/api/sovmestimost/by-names-dates", "POST", {
+          name1: firstPersona.persona1_name || firstResolved.name || "",
+          date1: firstPersona.persona1_birth_date || firstResolved.birth_date || "",
+          name2: secondPersona.persona2_name || secondResolved.name || "",
+          date2: secondPersona.persona2_birth_date || secondResolved.birth_date || "",
+          ...firstPersona,
+          ...secondPersona,
+          language: lang,
+        }, { redirectOnUnauthorized: true }),
+        onSuccess: (result, { revealResult }) => {
+          revealResult(result.result);
+          setBalance(result.balance);
+        },
+      });
     });
   }
-
-  document.querySelectorAll(".tab-btn").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach((item) => {
-        item.classList.remove("active");
-        item.setAttribute("aria-selected", "false");
-      });
-      document.querySelectorAll(".tab-content").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      button.setAttribute("aria-selected", "true");
-      if (button.dataset.tab === "names-only") {
-        element("compat-names-form")?.classList.add("active");
-      } else {
-        element("compat-names-dates-form")?.classList.add("active");
-      }
-    });
-  });
 }
 
 async function boot() {
@@ -3140,6 +3800,7 @@ async function boot() {
   wireSonnikForm();
   wireNumerologyForm();
   wireTarotForm();
+  wireTarotCardsForm();
   wireAstrologyForm();
   wireCompatibilityForms();
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
@@ -3165,6 +3826,7 @@ async function boot() {
   toggleEmailAuthEntry();
   syncAuthChrome(profile);
   await loadPersonas();
+  await loadTarotCardsDeck().catch(() => {});
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();

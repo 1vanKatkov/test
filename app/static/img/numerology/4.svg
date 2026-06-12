@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Numerology number 4">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="72%"><stop offset="0" stop-color="#381177"/><stop offset=".58" stop-color="#170b3b"/><stop offset="1" stop-color="#070914"/></radialGradient>
+    <linearGradient id="num" x1="36" y1="24" x2="94" y2="104"><stop offset="0" stop-color="#fff1cf"/><stop offset=".45" stop-color="#ff79df"/><stop offset="1" stop-color="#8d62ff"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect x="5" y="5" width="118" height="118" rx="30" fill="url(#bg)" stroke="#7d49ff" stroke-opacity=".58" stroke-width="2"/>
+  <circle cx="64" cy="64" r="43" fill="none" stroke="#b965ff" stroke-opacity=".26" stroke-width="1.6"/>
+  <circle cx="64" cy="64" r="31" fill="none" stroke="#ffe59a" stroke-opacity=".18" stroke-width="1"/>
+  <g fill="none" stroke="#d7b8ff" stroke-linecap="round" opacity=".6"><path d="M64 16v10M64 102v10M16 64h10M102 64h10"/><path d="M33 28l6 8M95 28l-6 8M33 100l6-8M95 100l-6-8"/></g>
+  <text x="64" y="82" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="700" fill="url(#num)" filter="url(#glow)">4</text>
+  <path d="M99 40l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z" fill="#fff6ff" filter="url(#glow)"/>
+</svg>

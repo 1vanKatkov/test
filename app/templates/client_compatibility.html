@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.compatibility }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=persona-tabs-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -41,24 +41,50 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/compatibility%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_sovmestimost }} <span class="spark-icon" aria-hidden="true">✦</span></div>
-        <div class="tabs" role="tablist">
-          <button class="tab-btn active" data-tab="names-only" type="button" role="tab" aria-selected="true">{{ t.by_names }}</button>
-          <button class="tab-btn" data-tab="names-dates" type="button" role="tab" aria-selected="false">{{ t.by_names_dates }}</button>
-        </div>
-
-        <form id="compat-names-form" class="form-grid tab-content active service-theme-form">
-          <label>{{ t.name_1 }} <input id="compat-name1" required /></label>
-          <label>{{ t.name_2 }} <input id="compat-name2" required /></label>
-          <button type="submit" class="primary-btn">{{ t.calc_compatibility }}</button>
-        </form>
-
-        <form id="compat-names-dates-form" class="form-grid tab-content service-theme-form">
-          <label>{{ t.name_1 }} <input id="compat-nd-name1" required /></label>
-          <label>{{ t.date_1 }} <input id="compat-date1" inputmode="numeric" required /></label>
-          <label>{{ t.name_2 }} <input id="compat-nd-name2" required /></label>
-          <label>{{ t.date_2 }} <input id="compat-date2" inputmode="numeric" required /></label>
-          <button type="submit" class="primary-btn">{{ t.calc_compatibility }}</button>
+        <form id="compat-names-dates-form" class="form-grid service-theme-form">
+          <section class="persona-picker-card">
+            <h3>{{ t.name_1 }}</h3>
+            <div class="persona-mode-tabs">
+              <label><input type="radio" name="compat-persona1-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
+              <label><input type="radio" name="compat-persona1-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
+            </div>
+            <div id="compat-persona1-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel" hidden>
+              <div id="compat-persona1-choices" class="persona-choice-list" role="listbox" aria-label="{{ t.persona_select_placeholder }}"></div>
+            </div>
+            <div id="compat-persona1-manual-persona-panel" class="form-grid persona-subpanel persona-manual-panel">
+              <label>{{ t.persona_name }} <input id="compat-persona1-name" /></label>
+              <label>{{ t.birth_date }} <input id="compat-persona1-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
+              <label>{{ t.astrology_birth_time }} <input id="compat-persona1-birth-time" placeholder="14:30" inputmode="numeric" /></label>
+              <label>{{ t.astrology_birth_place }} <input id="compat-persona1-birth-place" /></label>
+              <label>{{ t.persona_note }} <textarea id="compat-persona1-note" rows="3"></textarea></label>
+              <label class="payment-offer-consent">
+                <input id="compat-persona1-save-persona" type="checkbox" />
+                <span>{{ t.persona_save_offer }}</span>
+              </label>
+            </div>
+          </section>
+          <section class="persona-picker-card">
+            <h3>{{ t.name_2 }}</h3>
+            <div class="persona-mode-tabs">
+              <label><input type="radio" name="compat-persona2-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
+              <label><input type="radio" name="compat-persona2-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
+            </div>
+            <div id="compat-persona2-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel" hidden>
+              <div id="compat-persona2-choices" class="persona-choice-list" role="listbox" aria-label="{{ t.persona_select_placeholder }}"></div>
+            </div>
+            <div id="compat-persona2-manual-persona-panel" class="form-grid persona-subpanel persona-manual-panel">
+              <label>{{ t.persona_name }} <input id="compat-persona2-name" /></label>
+              <label>{{ t.birth_date }} <input id="compat-persona2-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
+              <label>{{ t.astrology_birth_time }} <input id="compat-persona2-birth-time" placeholder="14:30" inputmode="numeric" /></label>
+              <label>{{ t.astrology_birth_place }} <input id="compat-persona2-birth-place" /></label>
+              <label>{{ t.persona_note }} <textarea id="compat-persona2-note" rows="3"></textarea></label>
+              <label class="payment-offer-consent">
+                <input id="compat-persona2-save-persona" type="checkbox" />
+                <span>{{ t.persona_save_offer }}</span>
+              </label>
+            </div>
+          </section>
+          <button type="submit" class="primary-btn">{{ t.calc_compatibility }} · {{ cost_sovmestimost }} <span class="spark-icon" aria-hidden="true">✦</span></button>
         </form>
         <div id="compat-result" class="result rich-result" aria-live="polite" hidden></div>
       </div>
@@ -67,7 +93,7 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=spark-icon-v1"></script>
+  <script defer src="/static/app.js?v=persona-tabs-v1"></script>
 </body>
 </html>
 

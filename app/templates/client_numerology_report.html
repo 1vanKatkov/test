@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.numerology_report }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=service-theme-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=numerology-report-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -20,10 +20,13 @@
     </div>
   </header>
 
-  <main class="mobile-client card-readings-page service-theme-page">
-    <section class="card compact-card service-theme-hero">
-      <h2>{{ t.numerology_report }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+  <main class="mobile-client card-readings-page service-theme-page numerology-report-page">
+    <section class="card compact-card client-page-hero service-theme-hero numerology-report-hero">
+      <img class="numerology-report-hero-icon" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
+      <div>
+        <h2>{{ t.numerology_report }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
     </section>
     <section id="numerology-report-view" class="card service-theme-report"></section>
     <div id="numerology-result" class="result rich-result" hidden></div>
@@ -31,6 +34,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=service-theme-v1"></script>
+  <script defer src="/static/app.js?v=numerology-report-v1"></script>
 </body>
 </html>

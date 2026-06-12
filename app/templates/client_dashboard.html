@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=friendly-errors-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -73,20 +73,20 @@
         </span>
         <span class="feature-list-arrow" aria-hidden="true">›</span>
       </a>
-      <span class="feature-icon-tile feature-list-card feature-icon-tile-disabled" aria-disabled="true">
-        <img class="tile-icon-img" src="/static/img/icons/lunar-locked-neon.svg" alt="" loading="lazy" />
+      <a class="feature-icon-tile feature-list-card" href="/client/tarot-cards?lang={{ lang }}">
+        <img class="tile-icon-img" src="/static/img/card-readings/hidden-scenarios.svg" alt="" loading="lazy" />
         <span class="feature-list-copy">
-          <span class="tile-title">{{ t.lunar_calendar }}</span>
-          <span class="tile-description">{{ t.feature_lunar_desc }}</span>
+          <span class="tile-title">{{ t.tarot_cards }}</span>
+          <span class="tile-description">{{ t.feature_tarot_cards_desc }}</span>
         </span>
-        <span class="tile-soon">{{ t.soon }}</span>
-      </span>
+        <span class="feature-list-arrow" aria-hidden="true">›</span>
+      </a>
     </section>
 
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=spark-icon-v1"></script>
+  <script defer src="/static/app.js?v=friendly-errors-v1"></script>
 </body>
 </html>
 

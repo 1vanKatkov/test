@@ -58,13 +58,15 @@ from app.web.schemas import (
     SovmestimostNamesDatesRequest,
     SovmestimostNamesRequest,
     AstrologyForecastRequest,
+    TarotCardDrawRequest,
+    TarotCardReadingRequest,
     TarotRequest,
     TelegramLinkVerifyRequest,
     TelegramMintUsernameLinkRequest,
     TelegramVerifyRequest,
     YooKassaCreatePaymentRequest,
 )
-from app.web.services import compatibility, divination, numerology, payments, sonnik
+from app.web.services import compatibility, divination, numerology, payments, sonnik, tarot_cards
 from app.web.services.balance import admin_debit, charge, credit, get_balance, record_transaction, refund
 from config import settings
 
@@ -113,6 +115,39 @@ def _validate_card_reading_topic(topic: str) -> str:
     return normalized
 
 
+def _service_failure_message(service: str, language: str) -> str:
+    messages = {
+        "compatibility": {
+            "ru": "Не удалось рассчитать совместимость, попробуйте позже",
+            "en": "Could not calculate compatibility, please try again later",
+        },
+        "numerology": {
+            "ru": "Не удалось сформировать разбор, попробуйте позже",
+            "en": "Could not generate the reading, please try again later",
+        },
+        "reading": {
+            "ru": "Не удалось сформировать разбор, попробуйте позже",
+            "en": "Could not generate the reading, please try again later",
+        },
+        "sonnik": {
+            "ru": "Не удалось получить толкование, попробуйте позже",
+            "en": "Could not interpret the dream, please try again later",
+        },
+        "astrology": {
+            "ru": "Не удалось построить прогноз, попробуйте позже",
+            "en": "Could not build the forecast, please try again later",
+        },
+    }
+    lang = _normalize_lang(language)
+    return messages.get(service, messages["reading"]).get(lang, messages.get(service, messages["reading"])["ru"])
+
+
+def _public_error_detail(exc: HTTPException, service: str, language: str) -> str:
+    if exc.status_code >= 500:
+        return _service_failure_message(service, language)
+    return str(exc.detail)
+
+
 def _validate_optional_birth_time(value: str) -> str:
     normalized = (value or "").strip()
     if not normalized:
@@ -147,18 +182,29 @@ def _serialize_persona(row) -> dict:
     }
 
 
-def _tarot_persona_context(user_id: int, payload: TarotRequest) -> dict | None:
-    if payload.persona_id:
-        row = db.get_persona(user_id=user_id, persona_id=payload.persona_id)
+def _persona_context_from_values(
+    user_id: int,
+    persona_id: int = 0,
+    name: str = "",
+    birth_date: str = "",
+    birth_time: str = "",
+    birth_place: str = "",
+    note: str = "",
+    required: bool = True,
+) -> dict | None:
+    if persona_id:
+        row = db.get_persona(user_id=user_id, persona_id=persona_id)
         if not row:
             raise HTTPException(status_code=404, detail="Persona not found")
         return _serialize_persona(row)
 
-    name = payload.persona_name.strip()
-    birth_date = payload.persona_birth_date.strip()
-    birth_time = _validate_optional_birth_time(payload.persona_birth_time)
-    birth_place = payload.persona_birth_place.strip()
-    note = payload.persona_note.strip()
+    name = name.strip()
+    birth_date = birth_date.strip()
+    birth_time = _validate_optional_birth_time(birth_time)
+    birth_place = birth_place.strip()
+    note = note.strip()
+    if not required and not (name or birth_date or birth_time or birth_place or note):
+        return None
     if not name or not birth_date:
         raise HTTPException(status_code=400, detail="Choose a saved persona or enter name and birth date")
     if birth_date:
@@ -170,6 +216,19 @@ def _tarot_persona_context(user_id: int, payload: TarotRequest) -> dict | None:
         "birth_place": birth_place,
         "note": note,
     }
+
+
+def _tarot_persona_context(user_id: int, payload: TarotRequest) -> dict | None:
+    return _persona_context_from_values(
+        user_id=user_id,
+        persona_id=payload.persona_id,
+        name=payload.persona_name,
+        birth_date=payload.persona_birth_date,
+        birth_time=payload.persona_birth_time,
+        birth_place=payload.persona_birth_place,
+        note=payload.persona_note,
+        required=True,
+    )
 
 
 def _landing_telegram_bot_url(lang: str) -> str:
@@ -264,6 +323,7 @@ def _translations(lang: str) -> dict:
             "compatibility": "Compatibility",
             "tarot": "Natal Charts",
             "natal_maps": "Natal Charts",
+            "tarot_cards": "Tarot",
             "astrology": "Astrology Forecast",
             "topup": "Top Up",
             "home": "Home",
@@ -283,13 +343,17 @@ def _translations(lang: str) -> dict:
             "tarot_spread_three_cards": "Three cards",
             "tarot_spread_choice": "Choice",
             "tarot_spread_relationship": "Relationship",
+            "tarot_cards_question": "Question or situation",
+            "tarot_cards_choose_hint": "The deck is drawing three cards. The question form will appear after the cards are on the table.",
+            "tarot_cards_selected": "Selected cards",
+            "get_tarot_cards_reading": "Get tarot reading",
             "get_tarot_reading": "Get natal chart",
             "open_natal_map_form": "Open natal chart form",
             "persona_required_error": "Choose a saved persona or enter at least name and birth date.",
             "personas": "Personas",
             "my_personas": "My personas",
-            "persona_use_saved": "Use saved persona",
-            "persona_manual": "Enter new data",
+            "persona_use_saved": "Choose",
+            "persona_manual": "Enter",
             "persona_save_offer": "Save this persona for future readings",
             "persona_save": "Save persona",
             "persona_add": "Add persona",
@@ -373,6 +437,7 @@ def _translations(lang: str) -> dict:
             "feature_numerology_desc": "Personal report based on full name and birth date.",
             "feature_compatibility_desc": "Relationship and compatibility analysis in two modes.",
             "feature_tarot_desc": "Personal natal-style maps for money, love, career, strengths, and life patterns.",
+            "feature_tarot_cards_desc": "Classic tarot reading with cards, spreads, and symbolic guidance.",
             "feature_astrology_desc": "Personal astrological forecast by date, place, and current focus.",
             "feature_lunar_desc": "Lunar calendar will be available soon.",
             "landing_title": "Astrolhub - Dreambook, Numerology, Compatibility",
@@ -449,6 +514,7 @@ def _translations(lang: str) -> dict:
         "compatibility": "Совместимость",
         "tarot": "Натальные карты",
         "natal_maps": "Натальные карты",
+        "tarot_cards": "Таро",
         "astrology": "Астропрогноз",
         "topup": "Пополнение",
         "home": "На главную",
@@ -468,13 +534,17 @@ def _translations(lang: str) -> dict:
         "tarot_spread_three_cards": "Три карты",
         "tarot_spread_choice": "Выбор",
         "tarot_spread_relationship": "Отношения",
+        "tarot_cards_question": "Вопрос или ситуация",
+        "tarot_cards_choose_hint": "Колода вытягивает три карты. Форма вопроса появится после того, как карты лягут на стол.",
+        "tarot_cards_selected": "Выбранные карты",
+        "get_tarot_cards_reading": "Получить гадание Таро",
         "get_tarot_reading": "Получить натальную карту",
         "open_natal_map_form": "Открыть форму натальной карты",
         "persona_required_error": "Выберите сохранённую персону или введите минимум имя и дату рождения.",
         "personas": "Персоны",
         "my_personas": "Мои персоны",
-        "persona_use_saved": "Выбрать сохранённую персону",
-        "persona_manual": "Ввести новые данные",
+        "persona_use_saved": "Выбрать",
+        "persona_manual": "Ввести",
         "persona_save_offer": "Сохранить эту персону для следующих разборов",
         "persona_save": "Сохранить персону",
         "persona_add": "Добавить персону",
@@ -558,6 +628,7 @@ def _translations(lang: str) -> dict:
         "feature_numerology_desc": "Персональный разбор по ФИО и дате рождения.",
         "feature_compatibility_desc": "Анализ отношений и совместимости в двух режимах.",
         "feature_tarot_desc": "Персональные натальные карты про деньги, любовь, карьеру, сильные качества и жизненные сценарии.",
+        "feature_tarot_cards_desc": "Классическое гадание по картам Таро с раскладами и символическими подсказками.",
         "feature_astrology_desc": "Персональный астропрогноз по дате, месту и текущему фокусу.",
         "feature_lunar_desc": "Лунный календарь скоро будет доступен.",
         "landing_title": "Astrolhub - Сонник, Нумерология, Совместимость",
@@ -636,7 +707,6 @@ def _card_reading_topics(lang: str) -> list[dict[str, str | bool]]:
         "child_potential": "child-potential.svg",
         "strengths": "strengths.svg",
         "decisions": "decisions.svg",
-        "relationship_compatibility": "relationship-compatibility.svg",
         "full_portrait": "full-portrait.svg",
     }
     return [
@@ -754,6 +824,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
         "cost_numerology": settings.cost_numerology,
         "cost_sovmestimost": settings.cost_sovmestimost,
         "cost_tarot": settings.cost_tarot,
+        "cost_tarot_cards": settings.cost_tarot_cards,
         "cost_astrology": settings.cost_astrology,
         "card_reading_topics": _card_reading_topics(page_lang),
         "card_reading_default_topic": divination.CARD_READING_TOPICS["full_portrait"][page_lang],
@@ -864,6 +935,15 @@ async def client_tarot_topic(request: Request, topic: str, lang: str = Query(def
         request=request,
         name="client_tarot.html",
         context=_client_template_context(request, page_lang, selected_card_topic=topic),
+    )
+
+
+@app.get("/client/tarot-cards", response_class=HTMLResponse, include_in_schema=False)
+async def client_tarot_cards(request: Request, lang: str = Query(default="")):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_tarot_cards.html",
+        context=_client_template_context(request, lang),
     )
 
 
@@ -1838,10 +1918,10 @@ async def api_sonnik(
         interpretation = sonnik.interpret_dream(payload.dream_text, requested_language)
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "sonnik", requested_language), "balance": new_balance})
     except Exception as exc:
         new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
-        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
+        return JSONResponse(status_code=502, content={"error": _service_failure_message("sonnik", requested_language), "balance": new_balance})
 
     db.record_history(user_id, "sonnik", payload.dream_text, interpretation)
     return {"success": True, "interpretation": interpretation, "balance": get_balance(user_id)}
@@ -1861,10 +1941,10 @@ async def api_numerology(
         report_payload = numerology.generate_web_report(payload.full_name, payload.birth_date, requested_language)
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "numerology", requested_language), "balance": new_balance})
     except Exception as exc:
         new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
-        return JSONResponse(status_code=500, content={"error": str(exc), "balance": new_balance})
+        return JSONResponse(status_code=500, content={"error": _service_failure_message("numerology", requested_language), "balance": new_balance})
 
     report_id = db.record_html_report(
         user_id=user_id,
@@ -1932,7 +2012,7 @@ async def api_sovmestimost_names(
             "sovmestimost_refund",
             {"module": "sovmestimost"},
         )
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "compatibility", requested_language), "balance": new_balance})
     except Exception as exc:
         new_balance = refund(
             user_id,
@@ -1940,7 +2020,7 @@ async def api_sovmestimost_names(
             "sovmestimost_refund",
             {"module": "sovmestimost"},
         )
-        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
+        return JSONResponse(status_code=502, content={"error": _service_failure_message("compatibility", requested_language), "balance": new_balance})
 
     db.record_history(user_id, "sovmestimost_names", f"{payload.name1};{payload.name2}", result)
     return {"success": True, "result": result, "balance": get_balance(user_id)}
@@ -1955,6 +2035,30 @@ async def api_sovmestimost_names_dates(
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
+    persona1 = _persona_context_from_values(
+        user_id=user_id,
+        persona_id=payload.persona1_id,
+        name=payload.persona1_name or payload.name1,
+        birth_date=payload.persona1_birth_date or payload.date1,
+        birth_time=payload.persona1_birth_time,
+        birth_place=payload.persona1_birth_place,
+        note=payload.persona1_note,
+        required=True,
+    )
+    persona2 = _persona_context_from_values(
+        user_id=user_id,
+        persona_id=payload.persona2_id,
+        name=payload.persona2_name or payload.name2,
+        birth_date=payload.persona2_birth_date or payload.date2,
+        birth_time=payload.persona2_birth_time,
+        birth_place=payload.persona2_birth_place,
+        note=payload.persona2_note,
+        required=True,
+    )
+    name1 = persona1["name"]
+    date1 = persona1["birth_date"]
+    name2 = persona2["name"]
+    date2 = persona2["birth_date"]
     charge(
         user_id,
         settings.cost_sovmestimost,
@@ -1963,10 +2067,10 @@ async def api_sovmestimost_names_dates(
     )
     try:
         result = compatibility.by_names_dates(
-            payload.name1,
-            payload.date1,
-            payload.name2,
-            payload.date2,
+            name1,
+            date1,
+            name2,
+            date2,
             requested_language,
         )
     except HTTPException as exc:
@@ -1976,7 +2080,7 @@ async def api_sovmestimost_names_dates(
             "sovmestimost_refund",
             {"module": "sovmestimost"},
         )
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "compatibility", requested_language), "balance": new_balance})
     except Exception as exc:
         new_balance = refund(
             user_id,
@@ -1985,12 +2089,13 @@ async def api_sovmestimost_names_dates(
             {"module": "sovmestimost"},
         )
         status_code = 400 if "Invalid date format" in str(exc) else 502
-        return JSONResponse(status_code=status_code, content={"error": str(exc), "balance": new_balance})
+        error = str(exc) if status_code == 400 else _service_failure_message("compatibility", requested_language)
+        return JSONResponse(status_code=status_code, content={"error": error, "balance": new_balance})
 
     db.record_history(
         user_id,
         "sovmestimost_names_dates",
-        f"{payload.name1};{payload.date1};{payload.name2};{payload.date2}",
+        f"{name1};{date1};{name2};{date2}",
         result,
     )
     return {"success": True, "result": result, "balance": get_balance(user_id)}
@@ -2013,14 +2118,65 @@ async def api_tarot_reading(
         result = divination.tarot_reading(payload.question, topic, spread, requested_language, persona_context)
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_tarot, "tarot_refund", {"module": "tarot"})
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "reading", requested_language), "balance": new_balance})
     except Exception as exc:
         new_balance = refund(user_id, settings.cost_tarot, "tarot_refund", {"module": "tarot"})
-        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
+        return JSONResponse(status_code=502, content={"error": _service_failure_message("reading", requested_language), "balance": new_balance})
 
     persona_name = f"; persona={persona_context.get('name')}" if persona_context and persona_context.get("name") else ""
     db.record_history(user_id, "tarot", f"{topic}; {spread}{persona_name}; {payload.question}", result)
     return {"success": True, "result": result, "balance": get_balance(user_id)}
+
+
+@app.get("/api/tarot-cards/deck")
+async def api_tarot_cards_deck(lang: str = Query(default="")):
+    requested_language = _normalize_lang(lang)
+    return {
+        "success": True,
+        "deck": tarot_cards.public_deck(requested_language),
+        "spreads": tarot_cards.spread_options(requested_language),
+    }
+
+
+@app.post("/api/tarot-cards/draw")
+async def api_tarot_cards_draw(payload: TarotCardDrawRequest):
+    requested_language = _normalize_lang(payload.language)
+    result = tarot_cards.draw_three_cards(payload.spread, requested_language)
+    return {"success": True, **result}
+
+
+@app.post("/api/tarot-cards/reading")
+async def api_tarot_cards_reading(
+    payload: TarotCardReadingRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
+    try:
+        selected_card_ids = tarot_cards.validate_draw_token(payload.draw_token, payload.spread)
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": get_balance(user_id)})
+    charge(user_id, settings.cost_tarot_cards, "tarot_cards", {"module": "tarot_cards", "spread": payload.spread})
+    try:
+        result = tarot_cards.tarot_card_reading(
+            payload.question,
+            payload.spread,
+            requested_language,
+            selected_card_ids,
+        )
+    except HTTPException as exc:
+        new_balance = refund(user_id, settings.cost_tarot_cards, "tarot_cards_refund", {"module": "tarot_cards"})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "reading", requested_language), "balance": new_balance})
+    except Exception as exc:
+        new_balance = refund(user_id, settings.cost_tarot_cards, "tarot_cards_refund", {"module": "tarot_cards"})
+        return JSONResponse(status_code=502, content={"error": _service_failure_message("reading", requested_language), "balance": new_balance})
+
+    cards_summary = ", ".join(card["name"] for card in result["cards"])
+    input_text = f"{result['spread']['id']}; {cards_summary}; {payload.question.strip() or '-'}"
+    db.record_history(user_id, "tarot_cards", input_text, result["interpretation"])
+    return {"success": True, **result, "balance": get_balance(user_id)}
 
 
 @app.post("/api/astrology/forecast")
@@ -2046,10 +2202,10 @@ async def api_astrology_forecast(
         )
     except HTTPException as exc:
         new_balance = refund(user_id, settings.cost_astrology, "astrology_refund", {"module": "astrology"})
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": new_balance})
+        return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "astrology", requested_language), "balance": new_balance})
     except Exception as exc:
         new_balance = refund(user_id, settings.cost_astrology, "astrology_refund", {"module": "astrology"})
-        return JSONResponse(status_code=502, content={"error": f"Unexpected AI error: {exc}", "balance": new_balance})
+        return JSONResponse(status_code=502, content={"error": _service_failure_message("astrology", requested_language), "balance": new_balance})
 
     input_text = (
         f"{payload.name}; {payload.birth_date}; {birth_time or '-'}; "

@@ -19,10 +19,22 @@ class SovmestimostNamesRequest(BaseModel):
 
 
 class SovmestimostNamesDatesRequest(BaseModel):
-    name1: str = Field(min_length=2, max_length=100)
-    date1: str = Field(min_length=8, max_length=10)
-    name2: str = Field(min_length=2, max_length=100)
-    date2: str = Field(min_length=8, max_length=10)
+    name1: str = Field(default="", max_length=100)
+    date1: str = Field(default="", max_length=10)
+    name2: str = Field(default="", max_length=100)
+    date2: str = Field(default="", max_length=10)
+    persona1_id: int = Field(default=0, ge=0)
+    persona1_name: str = Field(default="", max_length=100)
+    persona1_birth_date: str = Field(default="", max_length=10)
+    persona1_birth_time: str = Field(default="", max_length=5)
+    persona1_birth_place: str = Field(default="", max_length=120)
+    persona1_note: str = Field(default="", max_length=1000)
+    persona2_id: int = Field(default=0, ge=0)
+    persona2_name: str = Field(default="", max_length=100)
+    persona2_birth_date: str = Field(default="", max_length=10)
+    persona2_birth_time: str = Field(default="", max_length=5)
+    persona2_birth_place: str = Field(default="", max_length=120)
+    persona2_note: str = Field(default="", max_length=1000)
     language: str = Field(default="", max_length=8)
 
 
@@ -36,6 +48,19 @@ class TarotRequest(BaseModel):
     persona_birth_time: str = Field(default="", max_length=5)
     persona_birth_place: str = Field(default="", max_length=120)
     persona_note: str = Field(default="", max_length=1000)
+    language: str = Field(default="", max_length=8)
+
+
+class TarotCardReadingRequest(BaseModel):
+    question: str = Field(default="", max_length=1000)
+    spread: str = Field(default="three_cards", max_length=32)
+    selected_card_ids: list[str] = Field(default_factory=list, max_length=3)
+    draw_token: str = Field(default="", max_length=2000)
+    language: str = Field(default="", max_length=8)
+
+
+class TarotCardDrawRequest(BaseModel):
+    spread: str = Field(default="three_cards", max_length=32)
     language: str = Field(default="", max_length=8)
 
 

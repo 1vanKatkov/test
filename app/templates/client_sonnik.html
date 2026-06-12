@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.sonnik }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=friendly-errors-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -41,12 +41,11 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/sonnik%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_sonnik }} <span class="spark-icon" aria-hidden="true">✦</span></div>
         <form id="sonnik-form" class="form-grid service-theme-form">
           <label>{{ t.dream_description }}
             <textarea id="dream-text" rows="6" required></textarea>
           </label>
-          <button type="submit" class="primary-btn">{{ t.get_interpretation }}</button>
+          <button type="submit" class="primary-btn">{{ t.get_interpretation }} · {{ cost_sonnik }} <span class="spark-icon" aria-hidden="true">✦</span></button>
         </form>
         <div id="sonnik-result" class="result rich-result" aria-live="polite" hidden></div>
       </div>
@@ -55,7 +54,7 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=spark-icon-v1"></script>
+  <script defer src="/static/app.js?v=friendly-errors-v1"></script>
 </body>
 </html>
 

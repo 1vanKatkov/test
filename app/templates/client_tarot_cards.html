@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} - {{ t.tarot_cards }}</title>
+  <link rel="stylesheet" href="/static/style.css?v=friendly-errors-v1" />
+</head>
+<body
+  class="app-shell mobile-client-shell"
+  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
+  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
+  data-lang="{{ lang }}"
+  data-cost-tarot-cards="{{ cost_tarot_cards }}"
+>
+  <header class="app-topbar client-topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      {% include "partials/client_user_chip.html" %}
+    </div>
+  </header>
+
+  <main class="mobile-client card-readings-page tarot-cards-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
+      <div>
+        <h2>{{ t.tarot_cards }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
+    </section>
+
+    <section class="card auth-gated-card service-theme-shell">
+      <div class="auth-required-panel" hidden>
+        <h3>{{ t.sign_in_required_title }}</h3>
+        <p>{{ t.sign_in_required_text }}</p>
+        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/tarot-cards%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+      </div>
+      <div class="auth-required-content">
+        <div id="tarot-stage" class="tarot-stage" data-phase="loading">
+          <div class="tarot-stage-table">
+            <div>
+              <h3 class="tarot-section-title">{{ t.tarot_cards_selected }}</h3>
+              <p id="tarot-draw-status" class="muted" aria-live="polite">{{ t.tarot_cards_choose_hint }}</p>
+            </div>
+            <div id="tarot-spread-row" class="tarot-spread-row" role="list" aria-label="{{ t.tarot_cards_selected }}">
+              <div class="tarot-spread-slot" data-slot="0" role="listitem"></div>
+              <div class="tarot-spread-slot" data-slot="1" role="listitem"></div>
+              <div class="tarot-spread-slot" data-slot="2" role="listitem"></div>
+            </div>
+          </div>
+          <div id="tarot-card-deck" class="tarot-card-deck tarot-deck-stack" aria-label="{{ t.tarot_cards }}"></div>
+        </div>
+        <form id="tarot-cards-form" class="form-grid service-theme-form tarot-cards-form is-collapsed" inert>
+          <label>{{ t.tarot_cards_question }}
+            <textarea id="tarot-cards-question" rows="4"></textarea>
+          </label>
+          <button type="submit" class="primary-btn">{{ t.get_tarot_cards_reading }} · {{ cost_tarot_cards }} <span class="spark-icon" aria-hidden="true">✦</span></button>
+          <div id="tarot-cards-form-result" class="result rich-result" aria-live="polite" hidden></div>
+        </form>
+        <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite" hidden></div>
+      </div>
+    </section>
+  </main>
+
+  {% include "partials/client_bottom_nav.html" %}
+  <script defer src="/static/app.js?v=friendly-errors-v1"></script>
+</body>
+</html>

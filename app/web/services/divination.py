@@ -152,18 +152,6 @@ CARD_READING_TOPICS = {
             "focus": "thinking style, decision-making, intuition, logic, and choice mistakes",
         },
     },
-    "relationship_compatibility": {
-        "ru": {
-            "title": "Совместимость в отношениях",
-            "description": "Сильные стороны союза и возможные точки роста",
-            "focus": "совместимость, динамика союза, сильные стороны и точки роста",
-        },
-        "en": {
-            "title": "Relationship Compatibility",
-            "description": "Strengths of the bond and possible growth points",
-            "focus": "compatibility, relationship dynamic, strengths, and growth points",
-        },
-    },
     "full_portrait": {
         "ru": {
             "title": "Полный портрет личности",

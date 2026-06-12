@@ -105,6 +105,7 @@ class Settings:
     cost_numerology: int = 5
     cost_sovmestimost: int = 5
     cost_tarot: int = 5
+    cost_tarot_cards: int = int(os.getenv("COST_TAROT_CARDS", "5"))
     cost_astrology: int = 5
     max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
     max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))

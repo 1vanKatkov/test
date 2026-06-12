@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.tarot }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=persona-tabs-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -47,7 +47,6 @@
       </div>
       <div class="auth-required-content">
         {% if not selected_card_reading_topic %}
-        <div class="tool-cost-chip card-readings-cost">{{ t.cost_label }}: {{ cost_tarot }} <span class="spark-icon" aria-hidden="true">✦</span></div>
         <div class="card-reading-grid" aria-label="{{ t.tarot }}">
           {% for topic in card_reading_topics %}
           <a
@@ -71,7 +70,6 @@
         {% else %}
         <div class="natal-topic-actions">
           <a class="secondary-btn inline-link-btn natal-back-chip" href="/client/tarot?lang={{ lang }}">{{ t.back_to_natal_maps }}</a>
-          <div class="tool-cost-chip card-readings-cost">{{ t.cost_label }}: {{ cost_tarot }} <span class="spark-icon" aria-hidden="true">✦</span></div>
         </div>
         <form id="tarot-form" class="form-grid natal-topic-form">
           <input id="tarot-topic" type="hidden" value="{{ selected_card_reading_topic.key }}" />
@@ -110,7 +108,7 @@
             <textarea id="tarot-question" rows="4"></textarea>
           </label>
           <div id="tarot-form-result" class="result rich-result" aria-live="polite" hidden></div>
-          <button type="submit" class="primary-btn">{{ t.get_tarot_reading }}</button>
+          <button type="submit" class="primary-btn">{{ t.get_tarot_reading }} · {{ cost_tarot }} <span class="spark-icon" aria-hidden="true">✦</span></button>
         </form>
         {% endif %}
 
@@ -120,6 +118,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=spark-icon-v1"></script>
+  <script defer src="/static/app.js?v=persona-tabs-v1"></script>
 </body>
 </html>

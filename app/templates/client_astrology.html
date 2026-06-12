@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.astrology }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=friendly-errors-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -40,7 +40,6 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/astrology%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_astrology }} <span class="spark-icon" aria-hidden="true">✦</span></div>
         <form id="astrology-form" class="form-grid service-theme-form">
           <label>{{ t.astrology_name }} <input id="astrology-name" required /></label>
           <label>{{ t.birth_date }} <input id="astrology-birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>
@@ -49,7 +48,7 @@
           <label>{{ t.astrology_focus }}
             <textarea id="astrology-focus" rows="4"></textarea>
           </label>
-          <button type="submit" class="primary-btn">{{ t.get_astrology_forecast }}</button>
+          <button type="submit" class="primary-btn">{{ t.get_astrology_forecast }} · {{ cost_astrology }} <span class="spark-icon" aria-hidden="true">✦</span></button>
         </form>
         <div id="astrology-result" class="result rich-result" aria-live="polite" hidden></div>
       </div>
@@ -57,6 +56,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=spark-icon-v1"></script>
+  <script defer src="/static/app.js?v=friendly-errors-v1"></script>
 </body>
 </html>
