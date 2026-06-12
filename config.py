@@ -101,11 +101,11 @@ class Settings:
     model_astrology: str = os.getenv("MODEL_ASTROLOGY", os.getenv("MODEL_SONNIK", "@preset/sonnik"))
     model_astrology_en: str = os.getenv("MODEL_ASTROLOGY_EN", os.getenv("MODEL_SONNIK_EN", "@preset/sonnikeng"))
     starting_credits: int = int(os.getenv("STARTING_CREDITS", "10"))
-    cost_sonnik: int = int(os.getenv("COST_SONNIK", "5"))
-    cost_numerology: int = int(os.getenv("COST_NUMEROLOGY", "5"))
-    cost_sovmestimost: int = int(os.getenv("COST_SOVMESTIMOST", "5"))
-    cost_tarot: int = int(os.getenv("COST_TAROT", os.getenv("COST_SONNIK", "5")))
-    cost_astrology: int = int(os.getenv("COST_ASTROLOGY", os.getenv("COST_SONNIK", "5")))
+    cost_sonnik: int = 5
+    cost_numerology: int = 5
+    cost_sovmestimost: int = 5
+    cost_tarot: int = 5
+    cost_astrology: int = 5
     max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
     max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))
     telegram_auth_skew_seconds: int = int(os.getenv("TELEGRAM_AUTH_SKEW_SECONDS", "86400"))

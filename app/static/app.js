@@ -176,7 +176,7 @@ const authPageCopy = {
     goRegister: "Register",
     goLogin: "Log in",
     back: "Back",
-    sparks: "Sparks",
+    sparks: "✦",
   },
   ru: {
     loginTitle: "Вход",
@@ -197,7 +197,7 @@ const authPageCopy = {
     goRegister: "Зарегистрироваться",
     goLogin: "Войти",
     back: "Назад",
-    sparks: "Искры",
+    sparks: "✦",
   },
 };
 
@@ -1798,7 +1798,7 @@ function renderPaymentsHistory(payments) {
         : "";
       return `<article class="payment-row">
         <div class="payment-row-top">
-          <strong>${payment.sparks} ${lang === "en" ? "sparks" : "искр"}</strong>
+          <strong>${payment.sparks} <span class="spark-icon" aria-hidden="true">✦</span></strong>
           <span class="payment-status">${paymentStatusLabel(payment.status)}</span>
         </div>
         <div class="muted">${payment.amount}₽ • ${createdAt}</div>

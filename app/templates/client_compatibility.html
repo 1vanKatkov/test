@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.compatibility }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=service-theme-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -41,7 +41,7 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/compatibility%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_sovmestimost }} {{ t.sparks }}</div>
+        <div class="tool-cost-chip">{{ t.cost_label }}: {{ cost_sovmestimost }} <span class="spark-icon" aria-hidden="true">✦</span></div>
         <div class="tabs" role="tablist">
           <button class="tab-btn active" data-tab="names-only" type="button" role="tab" aria-selected="true">{{ t.by_names }}</button>
           <button class="tab-btn" data-tab="names-dates" type="button" role="tab" aria-selected="false">{{ t.by_names_dates }}</button>
@@ -67,7 +67,7 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=service-theme-v1"></script>
+  <script defer src="/static/app.js?v=spark-icon-v1"></script>
 </body>
 </html>
 

@@ -752,6 +752,12 @@ button:disabled {
   text-shadow: 0 0 10px rgba(255, 213, 106, 0.85);
 }
 
+.spark-icon {
+  color: #ffe59a;
+  text-shadow: 0 0 10px rgba(255, 213, 106, 0.85);
+  line-height: 1;
+}
+
 .mobile-dashboard-hero::after {
   content: "";
   position: absolute;
@@ -1037,6 +1043,28 @@ button:disabled {
 
 .card-readings-cost {
   margin: 0 0 10px;
+}
+
+.natal-topic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.natal-topic-actions .tool-cost-chip {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.natal-back-chip {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.2;
+  flex: 0 1 auto;
 }
 
 .card-reading-grid {
