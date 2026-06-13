@@ -1523,7 +1523,7 @@ function moduleLabel(module) {
     numerology: lang === "en" ? "Numerology" : "Нумерология",
     sovmestimost_names: lang === "en" ? "Compatibility" : "Совместимость",
     sovmestimost_names_dates: lang === "en" ? "Compatibility" : "Совместимость",
-    tarot: lang === "en" ? "Natal Charts" : "Натальные карты",
+    tarot: lang === "en" ? "Astrology" : "Астрология",
     tarot_cards: lang === "en" ? "Tarot" : "Таро",
     astrology: lang === "en" ? "Astrology" : "Астропрогноз",
   };
@@ -2051,6 +2051,41 @@ function personaPayloadFromPrefix(prefix) {
     birth_place: element(`${prefix}-birth-place`)?.value.trim() || "",
     note: element(`${prefix}-note`)?.value.trim() || "",
   };
+}
+
+function formatBirthDateInput(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+  const parts = [];
+  if (digits.length > 0) {
+    parts.push(digits.slice(0, 2));
+  }
+  if (digits.length > 2) {
+    parts.push(digits.slice(2, 4));
+  }
+  if (digits.length > 4) {
+    parts.push(digits.slice(4, 8));
+  }
+  return parts.filter(Boolean).join(".");
+}
+
+function wireBirthDateMasks() {
+  document.querySelectorAll("input[id$='birth-date'], input[data-date-mask='birth-date']").forEach((input) => {
+    if (!(input instanceof HTMLInputElement) || input.dataset.birthDateMaskWired === "true") {
+      return;
+    }
+    input.dataset.birthDateMaskWired = "true";
+    input.setAttribute("inputmode", "numeric");
+    input.setAttribute("maxlength", "10");
+    input.addEventListener("input", () => {
+      input.value = formatBirthDateInput(input.value);
+    });
+    input.addEventListener("paste", () => {
+      setTimeout(() => {
+        input.value = formatBirthDateInput(input.value);
+      }, 0);
+    });
+    input.value = formatBirthDateInput(input.value);
+  });
 }
 
 function personaPreview(persona) {
@@ -3797,6 +3832,7 @@ async function boot() {
   wireSupportForms();
   wireAdminEvents();
   wireProfilePersonas();
+  wireBirthDateMasks();
   wireSonnikForm();
   wireNumerologyForm();
   wireTarotForm();
