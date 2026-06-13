@@ -2088,6 +2088,34 @@ function wireBirthDateMasks() {
   });
 }
 
+function formatBirthTimeInput(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+}
+
+function wireBirthTimeMasks() {
+  document.querySelectorAll("input[id$='birth-time'], input[data-time-mask='birth-time']").forEach((input) => {
+    if (!(input instanceof HTMLInputElement) || input.dataset.birthTimeMaskWired === "true") {
+      return;
+    }
+    input.dataset.birthTimeMaskWired = "true";
+    input.setAttribute("inputmode", "numeric");
+    input.setAttribute("maxlength", "5");
+    input.addEventListener("input", () => {
+      input.value = formatBirthTimeInput(input.value);
+    });
+    input.addEventListener("paste", () => {
+      setTimeout(() => {
+        input.value = formatBirthTimeInput(input.value);
+      }, 0);
+    });
+    input.value = formatBirthTimeInput(input.value);
+  });
+}
+
 function personaPreview(persona) {
   if (!persona) {
     return "";
@@ -3833,6 +3861,7 @@ async function boot() {
   wireAdminEvents();
   wireProfilePersonas();
   wireBirthDateMasks();
+  wireBirthTimeMasks();
   wireSonnikForm();
   wireNumerologyForm();
   wireTarotForm();
