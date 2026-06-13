@@ -67,24 +67,24 @@ class TarotCardDrawRequest(BaseModel):
 class PersonaCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     birth_date: str = Field(min_length=8, max_length=10)
-    birth_time: str = Field(default="", max_length=5)
-    birth_place: str = Field(default="", max_length=120)
+    birth_time: str = Field(min_length=5, max_length=5)
+    birth_place: str = Field(min_length=1, max_length=120)
     note: str = Field(default="", max_length=1000)
 
 
 class PersonaUpdateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     birth_date: str = Field(min_length=8, max_length=10)
-    birth_time: str = Field(default="", max_length=5)
-    birth_place: str = Field(default="", max_length=120)
+    birth_time: str = Field(min_length=5, max_length=5)
+    birth_place: str = Field(min_length=1, max_length=120)
     note: str = Field(default="", max_length=1000)
 
 
 class AstrologyForecastRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     birth_date: str = Field(min_length=8, max_length=10)
-    birth_time: str = Field(default="", max_length=5)
-    birth_place: str = Field(default="", max_length=120)
+    birth_time: str = Field(min_length=5, max_length=5)
+    birth_place: str = Field(min_length=1, max_length=120)
     focus: str = Field(default="", max_length=1000)
     language: str = Field(default="", max_length=8)
 

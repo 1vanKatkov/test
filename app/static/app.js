@@ -88,7 +88,7 @@ const i18n = lang === "en"
     personaDeleted: "Persona deleted",
     personaEmpty: "No saved personas yet",
     choosePersona: "Choose persona",
-    personaRequired: "Choose a saved persona or enter at least name and birth date.",
+    personaRequired: "Choose a saved persona or enter name, birth date, birth time, and birth place.",
     chooseTarotCards: "The deck is drawing three cards for your spread...",
     tarotCardsSelected: "Your spread",
     tarotCardsNeedExact: "Choose exactly the required number of cards for this spread.",
@@ -161,7 +161,7 @@ const i18n = lang === "en"
     personaDeleted: "Персона удалена",
     personaEmpty: "Сохранённых персон пока нет",
     choosePersona: "Выберите персону",
-    personaRequired: "Выберите сохранённую персону или введите минимум имя и дату рождения.",
+    personaRequired: "Выберите сохранённую персону или введите имя, дату, время и место рождения.",
     chooseTarotCards: "Колода вытягивает три карты для вашего расклада...",
     tarotCardsSelected: "Ваш расклад",
     tarotCardsNeedExact: "Выберите ровно нужное количество карт для этого расклада.",
@@ -2182,15 +2182,20 @@ function togglePersonaPanels(prefix) {
   const mode = personaModeValue(prefix);
   const savedPanel = element(`${prefix}-saved-persona-panel`);
   const manualPanel = element(`${prefix}-manual-persona-panel`);
+  const setPanelActive = (panel, active) => {
+    if (!panel) {
+      return;
+    }
+    panel.hidden = !active;
+    panel.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      control.disabled = !active;
+    });
+  };
   document.querySelectorAll(`input[name='${prefix}-mode']`).forEach((radio) => {
     radio.closest("label")?.classList.toggle("is-active", radio.checked);
   });
-  if (savedPanel) {
-    savedPanel.hidden = mode !== "saved";
-  }
-  if (manualPanel) {
-    manualPanel.hidden = mode !== "manual";
-  }
+  setPanelActive(savedPanel, mode === "saved");
+  setPanelActive(manualPanel, mode === "manual");
 }
 
 function wirePersonaPicker(prefix) {
@@ -2224,7 +2229,7 @@ async function resolvePersonaForPrefix(prefix, options = {}) {
   if (mode === "saved" && !personaId) {
     throw new Error(i18n.personaRequired);
   }
-  if (mode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
+  if (mode === "manual" && (!manualPersona.name || !manualPersona.birth_date || !manualPersona.birth_time || !manualPersona.birth_place)) {
     throw new Error(i18n.personaRequired);
   }
   if (mode === "manual" && element(`${prefix}-save-persona`)?.checked && manualPersona.name && manualPersona.birth_date) {
@@ -2492,12 +2497,17 @@ function wireTarotForm() {
     const mode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
     const savedPanel = element("tarot-saved-persona-panel");
     const manualPanel = element("tarot-manual-persona-panel");
-    if (savedPanel) {
-      savedPanel.hidden = mode !== "saved";
-    }
-    if (manualPanel) {
-      manualPanel.hidden = mode !== "manual";
-    }
+    const setPanelActive = (panel, active) => {
+      if (!panel) {
+        return;
+      }
+      panel.hidden = !active;
+      panel.querySelectorAll("input, select, textarea, button").forEach((control) => {
+        control.disabled = !active;
+      });
+    };
+    setPanelActive(savedPanel, mode === "saved");
+    setPanelActive(manualPanel, mode === "manual");
   };
   document.querySelectorAll("input[name='tarot-persona-mode']").forEach((radio) => {
     radio.addEventListener("change", togglePersonaMode);
@@ -2526,7 +2536,7 @@ function wireTarotForm() {
       setTarotFormStatus(i18n.personaRequired);
       return;
     }
-    if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
+    if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date || !manualPersona.birth_time || !manualPersona.birth_place)) {
       setTarotFormStatus(i18n.personaRequired);
       return;
     }

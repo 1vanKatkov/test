@@ -157,14 +157,24 @@ def _validate_optional_birth_time(value: str) -> str:
     return normalized
 
 
+def _validate_required_birth_time(value: str) -> str:
+    normalized = _validate_optional_birth_time(value)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Birth time is required")
+    return normalized
+
+
 def _clean_persona_payload(payload: PersonaCreateRequest | PersonaUpdateRequest) -> dict[str, str]:
     birth_date = payload.birth_date.strip()
     compatibility.parse_date(birth_date)
+    birth_place = payload.birth_place.strip()
+    if not birth_place:
+        raise HTTPException(status_code=400, detail="Birth place is required")
     return {
         "name": payload.name.strip(),
         "birth_date": birth_date,
-        "birth_time": _validate_optional_birth_time(payload.birth_time),
-        "birth_place": payload.birth_place.strip(),
+        "birth_time": _validate_required_birth_time(payload.birth_time),
+        "birth_place": birth_place,
         "note": payload.note.strip(),
     }
 
@@ -196,6 +206,8 @@ def _persona_context_from_values(
         row = db.get_persona(user_id=user_id, persona_id=persona_id)
         if not row:
             raise HTTPException(status_code=404, detail="Persona not found")
+        if required and (not (row["birth_time"] or "").strip() or not (row["birth_place"] or "").strip()):
+            raise HTTPException(status_code=400, detail="Birth time and birth place are required")
         return _serialize_persona(row)
 
     name = name.strip()
@@ -206,7 +218,11 @@ def _persona_context_from_values(
     if not required and not (name or birth_date or birth_time or birth_place or note):
         return None
     if not name or not birth_date:
-        raise HTTPException(status_code=400, detail="Choose a saved persona or enter name and birth date")
+        raise HTTPException(status_code=400, detail="Choose a saved persona or enter name, birth date, birth time, and birth place")
+    if not birth_time:
+        raise HTTPException(status_code=400, detail="Birth time is required")
+    if not birth_place:
+        raise HTTPException(status_code=400, detail="Birth place is required")
     if birth_date:
         compatibility.parse_date(birth_date)
     return {
@@ -349,7 +365,7 @@ def _translations(lang: str) -> dict:
             "get_tarot_cards_reading": "Get tarot reading",
             "get_tarot_reading": "Get natal chart",
             "open_natal_map_form": "Open natal chart form",
-            "persona_required_error": "Choose a saved persona or enter at least name and birth date.",
+            "persona_required_error": "Choose a saved persona or enter name, birth date, birth time, and birth place.",
             "personas": "Personas",
             "my_personas": "My personas",
             "persona_use_saved": "Choose",
@@ -367,8 +383,8 @@ def _translations(lang: str) -> dict:
             "persona_select_placeholder": "Choose persona",
             "back_to_natal_maps": "Back to Astrology",
             "astrology_name": "Name",
-            "astrology_birth_time": "Birth time (optional)",
-            "astrology_birth_place": "Birth place (optional)",
+            "astrology_birth_time": "Birth time",
+            "astrology_birth_place": "Birth place",
             "astrology_focus": "Question or focus",
             "get_astrology_forecast": "Get forecast",
             "name_1": "Name 1",
@@ -540,7 +556,7 @@ def _translations(lang: str) -> dict:
         "get_tarot_cards_reading": "Получить гадание Таро",
         "get_tarot_reading": "Получить натальную карту",
         "open_natal_map_form": "Открыть форму натальной карты",
-        "persona_required_error": "Выберите сохранённую персону или введите минимум имя и дату рождения.",
+        "persona_required_error": "Выберите сохранённую персону или введите имя, дату, время и место рождения.",
         "personas": "Персоны",
         "my_personas": "Мои персоны",
         "persona_use_saved": "Выбрать",
@@ -558,8 +574,8 @@ def _translations(lang: str) -> dict:
         "persona_select_placeholder": "Выберите персону",
         "back_to_natal_maps": "Назад к Астрологии",
         "astrology_name": "Имя",
-        "astrology_birth_time": "Время рождения (необязательно)",
-        "astrology_birth_place": "Место рождения (необязательно)",
+        "astrology_birth_time": "Время рождения",
+        "astrology_birth_place": "Место рождения",
         "astrology_focus": "Вопрос или фокус",
         "get_astrology_forecast": "Получить прогноз",
         "name_1": "Имя 1",
@@ -2189,14 +2205,17 @@ async def api_astrology_forecast(
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     compatibility.parse_date(payload.birth_date)
-    birth_time = _validate_optional_birth_time(payload.birth_time)
+    birth_time = _validate_required_birth_time(payload.birth_time)
+    birth_place = payload.birth_place.strip()
+    if not birth_place:
+        raise HTTPException(status_code=400, detail="Birth place is required")
     charge(user_id, settings.cost_astrology, "astrology", {"module": "astrology"})
     try:
         result = divination.astrology_forecast(
             payload.name,
             payload.birth_date,
             birth_time,
-            payload.birth_place,
+            birth_place,
             payload.focus,
             requested_language,
         )
@@ -2209,7 +2228,7 @@ async def api_astrology_forecast(
 
     input_text = (
         f"{payload.name}; {payload.birth_date}; {birth_time or '-'}; "
-        f"{payload.birth_place or '-'}; {payload.focus or '-'}"
+        f"{birth_place or '-'}; {payload.focus or '-'}"
     )
     db.record_history(user_id, "astrology", input_text, result)
     return {"success": True, "result": result, "balance": get_balance(user_id)}
