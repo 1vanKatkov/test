@@ -367,6 +367,10 @@ a {
   backdrop-filter: blur(12px);
 }
 
+.mobile-client-shell .app-topbar {
+  border-bottom: 0;
+}
+
 .topbar-inner {
   max-width: 980px;
   margin: 0 auto;
@@ -398,6 +402,15 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+}
+
+.mobile-client > .card,
+.mobile-client > .mobile-dashboard-hero,
+.mobile-client > .card-readings-hero {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .card h2 {
