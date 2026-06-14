@@ -2275,9 +2275,8 @@ button:disabled {
 .profile-personas-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .profile-persona-add-btn {
