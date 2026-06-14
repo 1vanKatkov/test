@@ -620,6 +620,17 @@ button:disabled {
   gap: 12px;
 }
 
+.mobile-client-shell.page-enter-init .mobile-client {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.mobile-client-shell.page-enter-init.page-enter-play .mobile-client {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.34s ease, transform 0.48s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .compact-card h2 {
   font-size: 18px;
   margin-bottom: 8px;
@@ -3651,6 +3662,13 @@ body.modal-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mobile-client-shell.page-enter-init .mobile-client,
+  .mobile-client-shell.page-enter-init.page-enter-play .mobile-client {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
   .dashboard-carousel-track {
     transition: none;
   }

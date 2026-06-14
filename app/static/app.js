@@ -219,6 +219,22 @@ function element(id) {
   return document.getElementById(id);
 }
 
+function initPageEntranceAnimation() {
+  const body = document.body;
+  if (!body || !body.classList.contains("mobile-client-shell") || prefersReducedMotion()) {
+    return;
+  }
+  body.classList.add("page-enter-init");
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      body.classList.add("page-enter-play");
+      window.setTimeout(() => {
+        body.classList.remove("page-enter-init", "page-enter-play");
+      }, 560);
+    });
+  });
+}
+
 function authStaticUrl(page, extraParams = {}) {
   const paths = {
     login: "/static/auth/login.html",
@@ -4246,6 +4262,7 @@ function wireDashboardCarousel() {
 }
 
 async function boot() {
+  initPageEntranceAnimation();
   await initAuthStaticPage();
   toggleHeaderAuthLinks();
   syncAuthRequiredSections(!isLoggedIn());
