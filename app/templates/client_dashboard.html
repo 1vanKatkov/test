@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dashboard-slider-v4" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -21,72 +21,117 @@
   </header>
 
   <main class="mobile-client">
-    <section class="mobile-dashboard-hero">
-      <div class="mobile-dashboard-hero-copy">
-        <h1>{{ brand_name }}</h1>
-        <p>{{ t.mobile_hero_description }}</p>
-        <div class="mobile-dashboard-hero-meta">
-          <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
-          <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
-            <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-            <span id="dashboard-hero-sparks">-</span>
-          </span>
-        </div>
+    <section id="dashboard-carousel" class="dashboard-carousel" data-slide="0" aria-roledescription="carousel" tabindex="0">
+      <div class="dashboard-carousel-track">
+        <section class="dashboard-slide dashboard-slide-intro is-active" aria-label="{{ t.dashboard_slider_dot_intro }}">
+          <section class="mobile-dashboard-hero">
+            <div class="mobile-dashboard-hero-copy">
+              <h1>{{ brand_name }}</h1>
+              <p>{{ t.mobile_hero_description }}</p>
+              <div class="mobile-dashboard-hero-meta">
+                <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
+                <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
+                  <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+                  <span id="dashboard-hero-sparks">-</span>
+                </span>
+              </div>
+            </div>
+            <p id="telegram-auth-status" class="result muted" hidden></p>
+          </section>
+          <section class="dashboard-intro-copy">
+            <p>{{ t.dashboard_slide_intro_text }}</p>
+          </section>
+          <section class="dashboard-intro-grid" aria-label="{{ t.dashboard_slide_intro_title }}">
+            <article class="dashboard-intro-card">
+              <h3>{{ t.dashboard_slide_intro_card_1_title }}</h3>
+              <p>{{ t.dashboard_slide_intro_card_1_text }}</p>
+            </article>
+            <article class="dashboard-intro-card">
+              <h3>{{ t.dashboard_slide_intro_card_2_title }}</h3>
+              <p>{{ t.dashboard_slide_intro_card_2_text }}</p>
+            </article>
+            <article class="dashboard-intro-card">
+              <h3>{{ t.dashboard_slide_intro_card_3_title }}</h3>
+              <p>{{ t.dashboard_slide_intro_card_3_text }}</p>
+            </article>
+          </section>
+          <button id="dashboard-go-services" type="button" class="primary-btn dashboard-go-services-btn">
+            {{ t.dashboard_slide_go_services or "К сервису" }}
+          </button>
+        </section>
+        <section class="dashboard-slide dashboard-slide-services" aria-label="{{ t.dashboard_slider_dot_services }}" aria-hidden="true">
+          <section id="admin-panel-entry" class="card" hidden>
+            <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin?lang={{ lang }}">{{ t.admin_panel }}</a>
+          </section>
+          <h2 class="dashboard-services-title">{{ t.dashboard_slide_services_title }}</h2>
+          <section class="feature-list">
+            <a class="feature-icon-tile feature-list-card" href="/client/sonnik?lang={{ lang }}">
+              <img class="tile-icon-img" src="/static/img/icons/dreambook-neon.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.sonnik }}</span>
+                <span class="tile-description">{{ t.feature_sonnik_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card" href="/client/numerology?lang={{ lang }}">
+              <img class="tile-icon-img" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.numerology }}</span>
+                <span class="tile-description">{{ t.feature_numerology_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card" href="/client/compatibility?lang={{ lang }}">
+              <img class="tile-icon-img" src="/static/img/icons/compatibility-neon.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.compatibility }}</span>
+                <span class="tile-description">{{ t.feature_compatibility_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card" href="/client/tarot?lang={{ lang }}">
+              <img class="tile-icon-img" src="/static/img/card-readings/full-portrait.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.tarot }}</span>
+                <span class="tile-description">{{ t.feature_tarot_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card" href="/client/tarot-cards?lang={{ lang }}">
+              <img class="tile-icon-img" src="/static/img/card-readings/hidden-scenarios.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.tarot_cards }}</span>
+                <span class="tile-description">{{ t.feature_tarot_cards_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+          </section>
+        </section>
       </div>
-      <p id="telegram-auth-status" class="result muted" hidden></p>
-    </section>
-
-    <section id="admin-panel-entry" class="card" hidden>
-      <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin?lang={{ lang }}">{{ t.admin_panel }}</a>
-    </section>
-
-    <section class="feature-list">
-      <a class="feature-icon-tile feature-list-card" href="/client/sonnik?lang={{ lang }}">
-        <img class="tile-icon-img" src="/static/img/icons/dreambook-neon.svg" alt="" loading="lazy" />
-        <span class="feature-list-copy">
-          <span class="tile-title">{{ t.sonnik }}</span>
-          <span class="tile-description">{{ t.feature_sonnik_desc }}</span>
-        </span>
-        <span class="feature-list-arrow" aria-hidden="true">›</span>
-      </a>
-      <a class="feature-icon-tile feature-list-card" href="/client/numerology?lang={{ lang }}">
-        <img class="tile-icon-img" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
-        <span class="feature-list-copy">
-          <span class="tile-title">{{ t.numerology }}</span>
-          <span class="tile-description">{{ t.feature_numerology_desc }}</span>
-        </span>
-        <span class="feature-list-arrow" aria-hidden="true">›</span>
-      </a>
-      <a class="feature-icon-tile feature-list-card" href="/client/compatibility?lang={{ lang }}">
-        <img class="tile-icon-img" src="/static/img/icons/compatibility-neon.svg" alt="" loading="lazy" />
-        <span class="feature-list-copy">
-          <span class="tile-title">{{ t.compatibility }}</span>
-          <span class="tile-description">{{ t.feature_compatibility_desc }}</span>
-        </span>
-        <span class="feature-list-arrow" aria-hidden="true">›</span>
-      </a>
-      <a class="feature-icon-tile feature-list-card" href="/client/tarot?lang={{ lang }}">
-        <img class="tile-icon-img" src="/static/img/card-readings/full-portrait.svg" alt="" loading="lazy" />
-        <span class="feature-list-copy">
-          <span class="tile-title">{{ t.tarot }}</span>
-          <span class="tile-description">{{ t.feature_tarot_desc }}</span>
-        </span>
-        <span class="feature-list-arrow" aria-hidden="true">›</span>
-      </a>
-      <a class="feature-icon-tile feature-list-card" href="/client/tarot-cards?lang={{ lang }}">
-        <img class="tile-icon-img" src="/static/img/card-readings/hidden-scenarios.svg" alt="" loading="lazy" />
-        <span class="feature-list-copy">
-          <span class="tile-title">{{ t.tarot_cards }}</span>
-          <span class="tile-description">{{ t.feature_tarot_cards_desc }}</span>
-        </span>
-        <span class="feature-list-arrow" aria-hidden="true">›</span>
-      </a>
+      <div class="dashboard-carousel-dots" role="tablist" aria-label="{{ t.dashboard_slider_nav_label }}">
+        <button
+          type="button"
+          class="dashboard-carousel-dot is-active"
+          data-slide-index="0"
+          role="tab"
+          aria-selected="true"
+          aria-label="{{ t.dashboard_slider_dot_intro }}"
+        ></button>
+        <button
+          type="button"
+          class="dashboard-carousel-dot"
+          data-slide-index="1"
+          role="tab"
+          aria-selected="false"
+          aria-label="{{ t.dashboard_slider_dot_services }}"
+        ></button>
+      </div>
     </section>
 
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=astrology-date-mask-v1"></script>
+  <script defer src="/static/app.js?v=dashboard-slider-v5"></script>
 </body>
 </html>
 

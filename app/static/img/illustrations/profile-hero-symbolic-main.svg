@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="bgGlow" cx="86%" cy="18%" r="70%">
+      <stop offset="0" stop-color="#2e1f67" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#14123b" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#090b1e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lineNeon" x1="920" y1="30" x2="1560" y2="760">
+      <stop offset="0" stop-color="#90c9ff" stop-opacity="0.72"/>
+      <stop offset="0.55" stop-color="#9a78ff" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#56d7ff" stop-opacity="0.46"/>
+    </linearGradient>
+    <linearGradient id="arcSoft" x1="1020" y1="130" x2="1540" y2="840">
+      <stop offset="0" stop-color="#7b6dff" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#35c8ff" stop-opacity="0.26"/>
+    </linearGradient>
+    <radialGradient id="nodeLight" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#eef5ff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#8ec8ff" stop-opacity="0.1"/>
+    </radialGradient>
+    <filter id="softGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bgGlow)"/>
+
+  <g opacity="0.25" fill="#9f87ff">
+    <circle cx="190" cy="130" r="1.4"/>
+    <circle cx="320" cy="280" r="1.1"/>
+    <circle cx="260" cy="510" r="1"/>
+    <circle cx="470" cy="220" r="1.1"/>
+    <circle cx="540" cy="620" r="1.2"/>
+  </g>
+
+  <g transform="translate(1130 330)">
+    <circle r="320" fill="none" stroke="#7867ff" stroke-opacity="0.15" stroke-width="1.2"/>
+    <circle r="245" fill="none" stroke="#61bfff" stroke-opacity="0.2" stroke-width="1.1"/>
+    <circle r="170" fill="none" stroke="#9e8dff" stroke-opacity="0.18" stroke-width="1"/>
+  </g>
+
+  <g fill="none" stroke="url(#arcSoft)" stroke-linecap="round">
+    <path d="M890 120c210 5 392 156 454 347" stroke-width="1.4"/>
+    <path d="M980 78c229 58 392 258 388 498" stroke-width="1.1" stroke-opacity="0.85"/>
+    <path d="M1060 110c180 90 291 242 320 434" stroke-width="1" stroke-opacity="0.78"/>
+    <path d="M1015 585c118 95 293 130 472 90" stroke-width="1.2" stroke-opacity="0.82"/>
+  </g>
+
+  <g fill="none" stroke="url(#lineNeon)" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M980 190l110-58 136 48 80 132-38 146-132 77-158-53-78-130 40-162 40-40Z"/>
+    <path d="M1160 535l84 100 176 15 92-120-70-166-136-26-146 65Z"/>
+    <path d="M1088 132l218-12 188 88"/>
+    <path d="M974 352l184-14 148 74 206-29"/>
+    <path d="M1048 482l196 153 268-35"/>
+  </g>
+
+  <g filter="url(#softGlow)">
+    <circle cx="980" cy="190" r="4.2" fill="url(#nodeLight)"/>
+    <circle cx="1090" cy="132" r="4.6" fill="url(#nodeLight)"/>
+    <circle cx="1226" cy="180" r="4.4" fill="url(#nodeLight)"/>
+    <circle cx="1306" cy="312" r="4.2" fill="url(#nodeLight)"/>
+    <circle cx="1268" cy="458" r="4.6" fill="url(#nodeLight)"/>
+    <circle cx="1136" cy="535" r="4.5" fill="url(#nodeLight)"/>
+    <circle cx="978" cy="482" r="4" fill="url(#nodeLight)"/>
+    <circle cx="900" cy="352" r="3.8" fill="url(#nodeLight)"/>
+    <circle cx="944" cy="230" r="3.9" fill="url(#nodeLight)"/>
+    <circle cx="1160" cy="535" r="4.2" fill="url(#nodeLight)"/>
+    <circle cx="1244" cy="635" r="4.1" fill="url(#nodeLight)"/>
+    <circle cx="1420" cy="650" r="4.3" fill="url(#nodeLight)"/>
+    <circle cx="1512" cy="530" r="4.5" fill="url(#nodeLight)"/>
+    <circle cx="1442" cy="364" r="4.1" fill="url(#nodeLight)"/>
+    <circle cx="1306" cy="338" r="3.9" fill="url(#nodeLight)"/>
+  </g>
+
+  <g opacity="0.3" fill="#a7ddff">
+    <circle cx="1395" cy="103" r="1.8"/>
+    <circle cx="1486" cy="162" r="1.5"/>
+    <circle cx="1540" cy="274" r="1.7"/>
+    <circle cx="1368" cy="732" r="1.6"/>
+    <circle cx="1515" cy="808" r="1.7"/>
+    <circle cx="1265" cy="760" r="1.3"/>
+  </g>
+</svg>

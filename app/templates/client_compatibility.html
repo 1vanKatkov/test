@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.compatibility }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=compat-step-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -41,9 +41,15 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/compatibility%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <form id="compat-names-dates-form" class="form-grid service-theme-form">
-          <section class="persona-picker-card">
-            <h3>{{ t.name_1 }}</h3>
+        <a class="service-about-inline-link" href="/client/about/compatibility?lang={{ lang }}&back=/client/compatibility">{{ t.about_compatibility or 'О совместимости' }}</a>
+        <form
+          id="compat-names-dates-form"
+          class="form-grid service-theme-form"
+          data-step-first-label="{{ t.compat_step_first }}"
+          data-step-second-label="{{ t.compat_step_second }}"
+        >
+          <p id="compat-step-title" class="compat-step-title">{{ t.compat_step_intro }}</p>
+          <section id="compat-step-1" class="persona-picker-card">
             <div class="persona-mode-tabs">
               <label><input type="radio" name="compat-persona1-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
               <label><input type="radio" name="compat-persona1-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
@@ -63,8 +69,7 @@
               </label>
             </div>
           </section>
-          <section class="persona-picker-card">
-            <h3>{{ t.name_2 }}</h3>
+          <section id="compat-step-2" class="persona-picker-card" hidden>
             <div class="persona-mode-tabs">
               <label><input type="radio" name="compat-persona2-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
               <label><input type="radio" name="compat-persona2-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
@@ -84,7 +89,10 @@
               </label>
             </div>
           </section>
-          <button type="submit" class="primary-btn">{{ t.calc_compatibility }} · {{ cost_sovmestimost }} <span class="spark-icon" aria-hidden="true">✦</span></button>
+          <div class="compat-step-actions">
+            <button id="compat-next-btn" type="button" class="secondary-btn">{{ t.compat_next_button }}</button>
+            <button id="compat-submit-btn" type="submit" class="primary-btn" hidden>{{ t.calc_compatibility }} · {{ cost_sovmestimost }} <span class="spark-icon" aria-hidden="true">✦</span></button>
+          </div>
         </form>
         <div id="compat-result" class="result rich-result" aria-live="polite" hidden></div>
       </div>
@@ -93,7 +101,7 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=birth-required-v1"></script>
+  <script defer src="/static/app.js?v=compat-step-v1"></script>
 </body>
 </html>
 

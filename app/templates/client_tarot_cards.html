@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.tarot_cards }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=service-about-v2" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -40,6 +40,7 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/tarot-cards%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
+        <a class="service-about-inline-link" href="/client/about/tarot-cards?lang={{ lang }}&back=/client/tarot-cards">{{ t.about_tarot_cards or 'О картах Таро' }}</a>
         <div id="tarot-stage" class="tarot-stage" data-phase="loading">
           <div class="tarot-stage-table">
             <div>

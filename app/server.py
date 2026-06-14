@@ -389,6 +389,10 @@ def _translations(lang: str) -> dict:
             "get_astrology_forecast": "Get forecast",
             "name_1": "Name 1",
             "name_2": "Name 2",
+            "compat_step_intro": "Enter the first and second person",
+            "compat_step_first": "Enter the first person",
+            "compat_step_second": "Enter the second person",
+            "compat_next_button": "Next",
             "date_1": "Date 1 (DD.MM.YYYY)",
             "date_2": "Date 2 (DD.MM.YYYY)",
             "calc_compatibility": "Calculate compatibility",
@@ -449,12 +453,32 @@ def _translations(lang: str) -> dict:
             "admin_apply_credits": "Apply",
             "admin_user_not_found": "User not found",
             "mobile_hero_description": "Your personal insights",
+            "dashboard_slide_intro_title": "Astrolhub in one screen",
+            "dashboard_slide_intro_text": "A personalized AI space for dreams, numerology, compatibility, and astrology insights.",
+            "dashboard_slide_intro_card_1_title": "Know yourself deeper",
+            "dashboard_slide_intro_card_1_text": "Each tool gives concise insights about your current state, patterns, and direction.",
+            "dashboard_slide_intro_card_2_title": "Your personal context",
+            "dashboard_slide_intro_card_2_text": "Save personas once and use them across services to build a consistent self-discovery path.",
+            "dashboard_slide_intro_card_3_title": "From overview to practice",
+            "dashboard_slide_intro_card_3_text": "Move to services in one swipe and start exploring yourself right away.",
+            "dashboard_slide_go_services": "Go to services",
+            "dashboard_slide_services_title": "All functionality",
+            "dashboard_slider_nav_label": "Dashboard slides",
+            "dashboard_slider_dot_intro": "Project overview",
+            "dashboard_slider_dot_services": "Feature list",
+            "dashboard_slider_swipe_hint": "Swipe to switch slides",
             "feature_sonnik_desc": "AI-powered dream interpretation with symbols and context.",
             "feature_numerology_desc": "Personal report based on full name and birth date.",
             "feature_compatibility_desc": "Relationship and compatibility analysis in two modes.",
             "feature_tarot_desc": "Personal astrology-style maps for money, love, career, strengths, and life patterns.",
             "feature_tarot_cards_desc": "Classic tarot reading with cards, spreads, and symbolic guidance.",
             "feature_astrology_desc": "Personal astrological forecast by date, place, and current focus.",
+            "about_astrology": "About astrology",
+            "about_tarot_cards": "About Tarot cards",
+            "about_sonnik": "About dreambook",
+            "about_compatibility": "About compatibility",
+            "about_numerology": "About numerology",
+            "about_service_badge": "How this tool works",
             "feature_lunar_desc": "Lunar calendar will be available soon.",
             "landing_title": "Astrolhub - Dreambook, Numerology, Compatibility",
             "landing_nav_features": "Features",
@@ -580,6 +604,10 @@ def _translations(lang: str) -> dict:
         "get_astrology_forecast": "Получить прогноз",
         "name_1": "Имя 1",
         "name_2": "Имя 2",
+        "compat_step_intro": "Введите первую и вторую личность",
+        "compat_step_first": "Введите первую личность",
+        "compat_step_second": "Введите вторую личность",
+        "compat_next_button": "Далее",
         "date_1": "Дата 1 (ДД.ММ.ГГГГ)",
         "date_2": "Дата 2 (ДД.ММ.ГГГГ)",
         "calc_compatibility": "Рассчитать совместимость",
@@ -640,12 +668,32 @@ def _translations(lang: str) -> dict:
         "admin_apply_credits": "Применить",
         "admin_user_not_found": "Пользователь не найден",
         "mobile_hero_description": "Сервис личных инсайтов",
+        "dashboard_slide_intro_title": "Astrolhub в одном экране",
+        "dashboard_slide_intro_text": "Персональное AI-пространство для снов, нумерологии, совместимости и астрологических разборов.",
+        "dashboard_slide_intro_card_1_title": "Познайте себя глубже",
+        "dashboard_slide_intro_card_1_text": "Каждый сервис дает краткие инсайты о вашем состоянии, сценариях и векторе развития.",
+        "dashboard_slide_intro_card_2_title": "Ваш личный контекст",
+        "dashboard_slide_intro_card_2_text": "Сохраните персоны один раз и используйте их во всех сервисах для цельной картины самопознания.",
+        "dashboard_slide_intro_card_3_title": "От обзора к практике",
+        "dashboard_slide_intro_card_3_text": "Переходите к сервисам одним свайпом и сразу начинайте исследовать себя.",
+        "dashboard_slide_go_services": "К сервису",
+        "dashboard_slide_services_title": "Разборы",
+        "dashboard_slider_nav_label": "Слайды кабинета",
+        "dashboard_slider_dot_intro": "О проекте",
+        "dashboard_slider_dot_services": "Функционал",
+        "dashboard_slider_swipe_hint": "Свайпните для переключения слайдов",
         "feature_sonnik_desc": "Разбор снов с помощью AI-интерпретации символов и контекста.",
         "feature_numerology_desc": "Персональный разбор по ФИО и дате рождения.",
         "feature_compatibility_desc": "Анализ отношений и совместимости в двух режимах.",
         "feature_tarot_desc": "Персональная астрология про деньги, любовь, карьеру, сильные качества и жизненные сценарии.",
         "feature_tarot_cards_desc": "Классическое гадание по картам Таро с раскладами и символическими подсказками.",
         "feature_astrology_desc": "Персональный астропрогноз по дате, месту и текущему фокусу.",
+        "about_astrology": "Об астрологии",
+        "about_tarot_cards": "О картах Таро",
+        "about_sonnik": "О соннике",
+        "about_compatibility": "О совместимости",
+        "about_numerology": "О нумерологии",
+        "about_service_badge": "Как работает инструмент",
         "feature_lunar_desc": "Лунный календарь скоро будет доступен.",
         "landing_title": "Astrolhub - Сонник, Нумерология, Совместимость",
         "landing_nav_features": "Возможности",
@@ -742,6 +790,417 @@ def _card_reading_topic_context(topic: str, lang: str) -> dict[str, str | bool]:
     topic_key = _validate_card_reading_topic(topic)
     topic_map = {item["key"]: item for item in _card_reading_topics(page_lang)}
     return topic_map[topic_key]
+
+
+def _service_about_pages(lang: str) -> dict[str, dict]:
+    page_lang = _normalize_lang(lang)
+    if page_lang == "en":
+        return {
+            "astrology": {
+                "title": "About Astrology",
+                "subtitle": "Astrology is a language of cycles, temperament, timing, and personal focus.",
+                "back_url": "/client/tarot",
+                "back_label": "Back to Astrology",
+                "items": [
+                    {
+                        "question": "Why does astrology need exact birth data?",
+                        "answer": (
+                            "Date, time, and place help place the chart in context. Without them, an interpretation becomes too general: "
+                            "it may describe common tendencies, but it loses the personal rhythm of the chart."
+                        ),
+                    },
+                    {
+                        "question": "Is an astrology reading a strict prediction?",
+                        "answer": (
+                            "No. A good reading works with probabilities, inner patterns, and periods of increased attention. "
+                            "It does not replace personal choice; it helps you notice what deserves more care."
+                        ),
+                    },
+                    {
+                        "question": "What should I ask astrology about?",
+                        "answer": (
+                            "It is best suited for themes like self-understanding, work direction, relationships, resources, habits, and timing. "
+                            "The clearer the focus, the more useful the answer."
+                        ),
+                    },
+                    {
+                        "question": "When should an astrology reading be postponed?",
+                        "answer": (
+                            "If you are looking for a medical, legal, or emergency decision, astrology should not be the deciding tool. "
+                            "Use it as reflection, not as a substitute for professional help."
+                        ),
+                    },
+                ],
+            },
+            "tarot-cards": {
+                "title": "About Tarot Cards",
+                "subtitle": "Tarot is a symbolic conversation with a situation, not a way to remove responsibility.",
+                "back_url": "/client/tarot-cards",
+                "back_label": "Back to Tarot",
+                "items": [
+                    {
+                        "question": "Why can Tarot be hard to interpret?",
+                        "answer": (
+                            "A card changes meaning depending on context. The same symbol can speak about fear, opportunity, delay, "
+                            "or an important choice. That is why a clear question matters."
+                        ),
+                    },
+                    {
+                        "question": "Can Tarot cards be wrong?",
+                        "answer": (
+                            "The cards do not work like a machine that prints fate. The risk is usually in interpretation: missing context, "
+                            "reading too literally, or turning a likely scenario into a verdict."
+                        ),
+                    },
+                    {
+                        "question": "What questions should not be asked?",
+                        "answer": (
+                            "Avoid questions about health diagnoses, life and death, gambling, or decisions that require a qualified specialist. "
+                            "Tarot is better for reflection, motives, choices, and possible consequences."
+                        ),
+                    },
+                    {
+                        "question": "What makes a Tarot answer useful?",
+                        "answer": (
+                            "A useful answer does not frighten or command you. It shows the dynamics of the situation, possible blind spots, "
+                            "and a calmer way to act."
+                        ),
+                    },
+                ],
+            },
+            "sonnik": {
+                "title": "About Dreambook",
+                "subtitle": "Dream interpretation works best when symbols are connected to your real emotional context.",
+                "back_url": "/client/sonnik",
+                "back_label": "Back to Dreambook",
+                "items": [
+                    {
+                        "question": "Why can the same dream mean different things?",
+                        "answer": (
+                            "Dream symbols are personal. Water, a house, a road, or an animal can point to different feelings for different people. "
+                            "Details and emotions help narrow the meaning."
+                        ),
+                    },
+                    {
+                        "question": "What should I include in a dream description?",
+                        "answer": (
+                            "Describe what happened, what you felt, who was present, colors or places you remember, and what stayed with you after waking up."
+                        ),
+                    },
+                    {
+                        "question": "Can a dream predict the future?",
+                        "answer": (
+                            "Usually dreams reflect tension, desire, memory, fear, or intuition. Treat them as signals from the psyche, "
+                            "not as literal commands."
+                        ),
+                    },
+                    {
+                        "question": "When is a dream interpretation not enough?",
+                        "answer": (
+                            "If dreams are frightening, recurring, or affect sleep and daily life, interpretation can support reflection, "
+                            "but professional psychological help may be more important."
+                        ),
+                    },
+                ],
+            },
+            "compatibility": {
+                "title": "About Compatibility",
+                "subtitle": "Compatibility is a way to compare rhythms, needs, and communication patterns between two people.",
+                "back_url": "/client/compatibility",
+                "back_label": "Back to Compatibility",
+                "items": [
+                    {
+                        "question": "What does compatibility analysis show?",
+                        "answer": (
+                            "It highlights where two people may understand each other easily and where tension can appear: pace, emotional style, "
+                            "expectations, and ways of making decisions."
+                        ),
+                    },
+                    {
+                        "question": "Does low compatibility mean a relationship is doomed?",
+                        "answer": (
+                            "No. Difficult aspects are not a sentence. They show where more honesty, boundaries, or patience may be needed."
+                        ),
+                    },
+                    {
+                        "question": "Why are names and birth dates important?",
+                        "answer": (
+                            "They give the system stable personal markers. The more complete the data, the less generic the comparison becomes."
+                        ),
+                    },
+                    {
+                        "question": "How should the result be used?",
+                        "answer": (
+                            "Use it as a map for conversation. The goal is not to label a person, but to see where both sides can meet more consciously."
+                        ),
+                    },
+                ],
+            },
+            "numerology": {
+                "title": "About Numerology",
+                "subtitle": "Numerology translates a name and birth date into a structured symbolic portrait.",
+                "back_url": "/client/numerology",
+                "back_label": "Back to Numerology",
+                "items": [
+                    {
+                        "question": "What does a numerology report describe?",
+                        "answer": (
+                            "It looks at key numbers connected with character, energy, talents, challenges, and recurring life themes."
+                        ),
+                    },
+                    {
+                        "question": "Why does the full name matter?",
+                        "answer": (
+                            "The name gives a separate layer from the birth date. Together they create a richer portrait than either field alone."
+                        ),
+                    },
+                    {
+                        "question": "Is numerology a final definition of personality?",
+                        "answer": (
+                            "No. It is a symbolic framework. It can show tendencies and questions worth exploring, but it should not limit how a person sees themselves."
+                        ),
+                    },
+                    {
+                        "question": "How can I get the most from the report?",
+                        "answer": (
+                            "Read it as a reflection tool: note what resonates, what irritates, and what suggests a practical next step."
+                        ),
+                    },
+                ],
+            },
+        }
+
+    return {
+        "astrology": {
+            "title": "Об астрологии",
+            "subtitle": "Астрология помогает увидеть личные ритмы, сильные стороны, периоды внимания и темы, которые сейчас требуют осознанности.",
+            "back_url": "/client/tarot",
+            "back_label": "Назад к Астрологии",
+            "items": [
+                {
+                    "question": "Почему в астрологии важны точное время и место рождения?",
+                    "answer": (
+                        "Дата показывает базовый цикл, но время и место уточняют личный контекст. Без них разбор становится более общим: "
+                        "можно описать характерные тенденции, но сложнее увидеть индивидуальные акценты, дома и точные жизненные сферы."
+                    ),
+                },
+                {
+                    "question": "Астрология предсказывает судьбу буквально?",
+                    "answer": (
+                        "Нет. Хороший астрологический разбор не должен звучать как приговор. Он показывает вероятности, внутренние закономерности "
+                        "и периоды, когда определённые темы становятся заметнее. Решение всё равно остаётся за человеком."
+                    ),
+                },
+                {
+                    "question": "С какими вопросами лучше обращаться к астрологии?",
+                    "answer": (
+                        "Лучше всего подходят вопросы про самоощущение, отношения, работу, деньги, выбор направления, повторяющиеся сценарии "
+                        "и личный ресурс. Чем конкретнее фокус, тем точнее и полезнее получится ответ."
+                    ),
+                },
+                {
+                    "question": "Когда астрологический разбор лучше не использовать?",
+                    "answer": (
+                        "Если вопрос касается диагноза, юридического решения, экстренной ситуации или безопасности, астрология не заменяет специалиста. "
+                        "Её задача — помочь посмотреть на ситуацию шире, а не отменить ответственность и реальные действия."
+                    ),
+                },
+                {
+                    "question": "Чем полезна астрология в повседневной жизни?",
+                    "answer": (
+                        "Она помогает мягче относиться к своим особенностям, замечать подходящие периоды для действий и лучше понимать, "
+                        "какие темы сейчас требуют внимания, дисциплины или отдыха."
+                    ),
+                },
+            ],
+        },
+        "tarot-cards": {
+            "title": "О картах Таро",
+            "subtitle": "Таро — это язык символов и способ посмотреть на ситуацию со стороны, а не инструмент запугивания или жёсткого программирования.",
+            "back_url": "/client/tarot-cards",
+            "back_label": "Назад к Таро",
+            "items": [
+                {
+                    "question": "Почему возникают сложности в интерпретации карт Таро?",
+                    "answer": (
+                        "Одна и та же карта меняет оттенок в зависимости от вопроса и контекста. Люди часто ждут, что карты сами расскажут всё "
+                        "«из воздуха», но точный расклад — это совместная работа: важно понимать ситуацию, эмоции, ограничения и реальный выбор человека."
+                    ),
+                },
+                {
+                    "question": "Какие карты Таро считаются особенно благоприятными?",
+                    "answer": (
+                        "Удачными часто воспринимаются Солнце, Звезда, Мир, Императрица, Император, Туз Пентаклей, Туз Кубков, Туз Жезлов, "
+                        "Четвёрка и Шестёрка Жезлов, Девятка Пентаклей, Десятка Кубков и Десятка Пентаклей. Но даже сложные карты могут быть полезными: "
+                        "они показывают рост, честность и необходимость перемен."
+                    ),
+                },
+                {
+                    "question": "В каких случаях не стоит гадать на Таро?",
+                    "answer": (
+                        "Не стоит спрашивать карты о диагнозах, жизни и смерти, случайных выигрышах, чужой личной воле или решениях, где нужен врач, юрист "
+                        "или другой специалист. Также лучше отложить расклад, если вы сильно устали, находитесь в панике или хотите получить ответ любой ценой."
+                    ),
+                },
+                {
+                    "question": "Чем могут быть опасны карты Таро?",
+                    "answer": (
+                        "Опасны не сами карты, а категоричность. Если воспринимать расклад как неизбежный приговор, можно отказаться от выбора и ответственности. "
+                        "Здоровый подход к Таро помогает увидеть варианты, а не привязать человека к одному сценарию."
+                    ),
+                },
+                {
+                    "question": "Когда карты Таро могут «врать»?",
+                    "answer": (
+                        "Чаще всего ошибается не колода, а трактовка: недостаточно контекста, вопрос сформулирован расплывчато, или человек проецирует на карты "
+                        "собственные страхи. Чем честнее запрос и спокойнее состояние, тем полезнее получается разбор."
+                    ),
+                },
+            ],
+        },
+        "sonnik": {
+            "title": "О соннике",
+            "subtitle": "Сонник помогает перевести образы сна на язык эмоций, внутренних процессов и сигналов, которые психика показывает через символы.",
+            "back_url": "/client/sonnik",
+            "back_label": "Назад к Соннику",
+            "items": [
+                {
+                    "question": "Почему один и тот же сон может значить разное?",
+                    "answer": (
+                        "Символы сна зависят от личного опыта. Вода для одного человека — спокойствие, для другого — тревога; дом может означать безопасность, "
+                        "память, семью или границы. Поэтому важны не только события сна, но и ощущения внутри него."
+                    ),
+                },
+                {
+                    "question": "Что лучше описывать в запросе?",
+                    "answer": (
+                        "Напишите сюжет, людей, место, яркие предметы, цвета, повторяющиеся детали и главное — свои эмоции. Иногда именно чувство после пробуждения "
+                        "становится ключом к толкованию."
+                    ),
+                },
+                {
+                    "question": "Сны действительно предсказывают будущее?",
+                    "answer": (
+                        "Чаще сон не предсказывает событие буквально, а показывает внутреннее напряжение, страх, желание, интуитивную догадку или неосознанную связь. "
+                        "Его полезнее воспринимать как письмо от психики, а не как приказ."
+                    ),
+                },
+                {
+                    "question": "Почему сонник не даёт один универсальный ответ?",
+                    "answer": (
+                        "Универсальные значения могут быть отправной точкой, но точный смысл рождается из контекста. Чем подробнее описан сон, тем меньше риск "
+                        "получить слишком общую интерпретацию."
+                    ),
+                },
+                {
+                    "question": "Когда толкования сна недостаточно?",
+                    "answer": (
+                        "Если кошмары повторяются, нарушают сон или усиливают тревогу, толкование может помочь осмыслить состояние, но не заменяет поддержку психолога "
+                        "или врача."
+                    ),
+                },
+            ],
+        },
+        "compatibility": {
+            "title": "О совместимости",
+            "subtitle": "Совместимость — это не приговор отношениям, а карта различий, точек притяжения и мест, где важно договариваться.",
+            "back_url": "/client/compatibility",
+            "back_label": "Назад к Совместимости",
+            "items": [
+                {
+                    "question": "Что показывает разбор совместимости?",
+                    "answer": (
+                        "Он помогает увидеть, где людям легче понимать друг друга, а где могут возникать трения: темп жизни, эмоциональные реакции, ожидания, "
+                        "способ говорить о чувствах и принимать решения."
+                    ),
+                },
+                {
+                    "question": "Низкая совместимость означает, что отношения обречены?",
+                    "answer": (
+                        "Нет. Сложные сочетания не запрещают отношения. Они показывают зоны, где потребуется больше честности, терпения, уважения к границам "
+                        "и готовности слышать другого."
+                    ),
+                },
+                {
+                    "question": "Почему важны данные обеих персон?",
+                    "answer": (
+                        "Имя, дата, время и место рождения дают больше опор для анализа. Так сравнение становится не абстрактным, а привязанным к двум конкретным людям."
+                    ),
+                },
+                {
+                    "question": "Как правильно использовать результат?",
+                    "answer": (
+                        "Лучше воспринимать его как тему для разговора. Разбор не должен навешивать ярлыки, он помогает увидеть, где пара может стать внимательнее "
+                        "и осознаннее."
+                    ),
+                },
+                {
+                    "question": "Можно ли смотреть совместимость не только в любви?",
+                    "answer": (
+                        "Да. Такой анализ может быть полезен для дружбы, семьи, рабочих партнёрств и любых отношений, где важны ожидания, доверие и общий ритм."
+                    ),
+                },
+            ],
+        },
+        "numerology": {
+            "title": "О нумерологии",
+            "subtitle": "Нумерология превращает имя и дату рождения в символическую структуру, через которую проще увидеть качества, задачи и повторяющиеся темы.",
+            "back_url": "/client/numerology",
+            "back_label": "Назад к Нумерологии",
+            "items": [
+                {
+                    "question": "Что описывает нумерологический разбор?",
+                    "answer": (
+                        "Он показывает ключевые числа, связанные с характером, энергией, сильными сторонами, внутренними противоречиями, задачами развития "
+                        "и привычными сценариями поведения."
+                    ),
+                },
+                {
+                    "question": "Почему важно указывать полное имя?",
+                    "answer": (
+                        "Имя даёт отдельный слой смысла, а дата рождения — другой. Вместе они создают более объёмный портрет, чем один показатель."
+                    ),
+                },
+                {
+                    "question": "Нумерология точно определяет личность?",
+                    "answer": (
+                        "Нет. Это символическая система, а не клетка для человека. Она может подсветить склонности и вопросы для размышления, но не должна ограничивать "
+                        "самовосприятие."
+                    ),
+                },
+                {
+                    "question": "Как читать разбор с пользой?",
+                    "answer": (
+                        "Обращайте внимание не только на то, что приятно совпадает, но и на пункты, которые вызывают сопротивление. Часто именно там находится важная тема."
+                    ),
+                },
+                {
+                    "question": "Когда стоит возвращаться к нумерологическому отчёту?",
+                    "answer": (
+                        "К нему полезно возвращаться в периоды выбора, смены работы, переоценки целей или когда хочется лучше понять свои реакции и повторяющиеся решения."
+                    ),
+                },
+            ],
+        },
+    }
+
+
+def _service_about_page(slug: str, lang: str) -> dict:
+    pages = _service_about_pages(lang)
+    if slug not in pages:
+        raise HTTPException(status_code=404, detail="About page not found")
+    return pages[slug]
+
+
+def _resolve_about_back_url(back: str, default: str) -> str:
+    normalized = (back or "").strip()
+    if not normalized:
+        return default
+    if not normalized.startswith("/client"):
+        return default
+    if normalized.startswith("/client/about"):
+        return default
+    return normalized
 
 
 def _is_recognized_request(request: Request, name: str = "", platform: str = "") -> bool:
@@ -972,12 +1431,47 @@ async def client_astrology(request: Request, lang: str = Query(default="")):
     )
 
 
+@app.get("/client/about/{service_slug}", response_class=HTMLResponse, include_in_schema=False)
+async def client_service_about(
+    request: Request,
+    service_slug: str,
+    lang: str = Query(default=""),
+    back: str = Query(default=""),
+):
+    page_lang = _normalize_lang(lang)
+    about = _service_about_page(service_slug, page_lang)
+    about_context = {**about}
+    about_context["back_url"] = _resolve_about_back_url(back, str(about.get("back_url") or "/client"))
+    context = _client_template_context(request, page_lang)
+    context["about"] = about_context
+    return templates.TemplateResponse(
+        request=request,
+        name="client_service_about.html",
+        context=context,
+    )
+
+
 @app.get("/client/history", response_class=HTMLResponse, include_in_schema=False)
 async def client_history(request: Request, lang: str = Query(default="")):
     return templates.TemplateResponse(
         request=request,
         name="client_history.html",
         context=_client_template_context(request, lang),
+    )
+
+
+@app.get("/client/history/request/{request_id}", response_class=HTMLResponse, include_in_schema=False)
+async def client_history_request_detail(
+    request: Request,
+    request_id: int,
+    lang: str = Query(default=""),
+):
+    context = _client_template_context(request, lang)
+    context["history_request_id"] = request_id
+    return templates.TemplateResponse(
+        request=request,
+        name="client_history_request.html",
+        context=context,
     )
 
 
@@ -1443,6 +1937,25 @@ async def api_request_history(
             item["report_url"] = f"/client/numerology/report/{report_id}"
         items.append(item)
     return {"success": True, "items": items}
+
+
+@app.get("/api/history/requests/{request_id}")
+async def api_request_history_detail(
+    request_id: int,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    row = db.get_request_history_item(user_id=user_id, request_id=request_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="History item not found")
+    item = dict(row)
+    report_id = _extract_numerology_report_id(item.get("output_text", ""))
+    if item.get("module") == "numerology" and report_id:
+        item["report_id"] = report_id
+        item["report_url"] = f"/client/numerology/report/{report_id}"
+    return {"success": True, "item": item}
 
 
 @app.post("/api/support/tickets")

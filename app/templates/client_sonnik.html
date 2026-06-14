@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.sonnik }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=service-about-v2" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -41,6 +41,7 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/sonnik%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
+        <a class="service-about-inline-link" href="/client/about/sonnik?lang={{ lang }}&back=/client/sonnik">{{ t.about_sonnik or 'О соннике' }}</a>
         <form id="sonnik-form" class="form-grid service-theme-form">
           <label>{{ t.dream_description }}
             <textarea id="dream-text" rows="6" required></textarea>

@@ -1569,6 +1569,97 @@ function compactText(text, fallback = "") {
   return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
 }
 
+function formatDateOnly(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return escapeHtml(String(value));
+  }
+  return escapeHtml(parsed.toLocaleDateString());
+}
+
+function formatHistoryDisplay(item) {
+  const raw = item.input_text || "";
+  const astrologyModuleLabel = lang === "en" ? "Astrology" : "Астрология";
+  const result = {
+    service: moduleLabel(item.module),
+    serviceType: "",
+    persona: "",
+    birthDate: "",
+    requestInfo: compactText(raw, ""),
+  };
+
+  if (item.module === "numerology") {
+    const [name, birthDate] = raw.split(";").map((part) => part.trim());
+    result.persona = name || "";
+    result.birthDate = birthDate || "";
+    result.requestInfo = lang === "en" ? "Numerology report request" : "Запрос на нумерологический разбор";
+    return result;
+  }
+
+  if (item.module === "tarot") {
+    const parts = raw.split(";").map((part) => part.trim());
+    const topic = parts[0] || "";
+    const personaPart = parts.find((part) => part.startsWith("persona=")) || "";
+    const personaName = personaPart ? personaPart.replace(/^persona=/, "").trim() : "";
+    const requestText = parts
+      .filter((part, index) => index > 0 && part !== "natal_map" && !part.startsWith("persona="))
+      .join("; ")
+      .trim();
+    result.service = astrologyModuleLabel;
+    result.serviceType = natalTopicLabel(topic);
+    result.persona = personaName || "";
+    result.requestInfo = compactText(requestText, lang === "en" ? "Astrology analysis request" : "Запрос на астрологический разбор");
+    return result;
+  }
+
+  if (item.module === "astrology") {
+    const [name, birthDate, _birthTime, birthPlace, focus] = raw.split(";").map((part) => part.trim());
+    result.service = astrologyModuleLabel;
+    result.serviceType = focus && focus !== "-" ? focus : "";
+    result.persona = name || "";
+    result.birthDate = birthDate || "";
+    const infoParts = [focus, birthPlace].filter((part) => part && part !== "-");
+    result.requestInfo = compactText(infoParts.join(" · "), lang === "en" ? "Astrology forecast request" : "Запрос на астропрогноз");
+    return result;
+  }
+
+  if (item.module === "sovmestimost_names_dates") {
+    const [name1, date1, name2, date2] = raw.split(";").map((part) => part.trim());
+    result.persona = [name1, name2].filter(Boolean).join(" + ") || "";
+    result.birthDate = [date1, date2].filter(Boolean).join(" + ") || "";
+    result.requestInfo = lang === "en" ? "Compatibility request by names and birth dates" : "Запрос совместимости по именам и датам рождения";
+    return result;
+  }
+
+  if (item.module === "sovmestimost_names") {
+    const [name1, name2] = raw.split(";").map((part) => part.trim());
+    result.persona = [name1, name2].filter(Boolean).join(" + ") || "";
+    result.requestInfo = lang === "en" ? "Compatibility request by names" : "Запрос совместимости по именам";
+    return result;
+  }
+
+  if (item.module === "sonnik") {
+    result.requestInfo = compactText(raw, lang === "en" ? "Dream interpretation request" : "Запрос на толкование сна");
+    return result;
+  }
+
+  if (item.module === "tarot_cards") {
+    const parts = raw.split(";").map((part) => part.trim());
+    const cardsSummary = parts[1] || "";
+    const question = parts[2] && parts[2] !== "-" ? parts[2] : "";
+    result.requestInfo = compactText(
+      question || cardsSummary,
+      lang === "en" ? "Tarot cards request" : "Запрос по картам Таро",
+    );
+    return result;
+  }
+
+  return result;
+}
+
 function formatHistorySummary(item) {
   const raw = item.input_text || "";
   if (item.module === "tarot") {
@@ -1637,62 +1728,37 @@ function renderRequestHistory(items) {
   container.innerHTML = items
     .map((item) => {
       const itemId = Number(item.id) || 0;
-      const summary = formatHistorySummary(item);
-      const summaryTitle = escapeHtml(summary.title || moduleLabel(item.module));
-      const summarySubtitle = escapeHtml(summary.subtitle || "");
-      const summaryChips = (summary.chips || [])
-        .map((chip) => `<span class="history-meta-chip">${escapeHtml(chip)}</span>`)
-        .join("");
-      const outputText = renderMarkdownText(item.output_text || "");
-      const createdAt = escapeHtml(new Date(item.created_at).toLocaleString());
-      const label = escapeHtml(moduleLabel(item.module));
-      const reportLink = item.report_url
-        ? `<a class="secondary-btn inline-link-btn" href="${escapeHtml(item.report_url)}">${i18n.openReport}</a>`
+      const detailsUrl = item.module === "numerology" && item.report_url
+        ? `${escapeHtml(item.report_url)}?lang=${encodeURIComponent(lang)}`
+        : `/client/history/request/${itemId}?lang=${encodeURIComponent(lang)}`;
+      const display = formatHistoryDisplay(item);
+      const createdAt = formatDateOnly(item.created_at);
+      const serviceText = display.serviceType
+        ? `${escapeHtml(display.service)} · ${escapeHtml(display.serviceType)}`
+        : escapeHtml(display.service);
+      const personaLine = display.persona
+        ? `<span class="history-summary-main">${lang === "en" ? "Persona" : "Персона"}: ${escapeHtml(display.persona)}</span>`
+        : "";
+      const birthDateLine = display.birthDate
+        ? `<span class="history-summary-subtitle">${lang === "en" ? "Birth date" : "Дата рождения"}: ${escapeHtml(display.birthDate)}</span>`
         : "";
       return `<article class="history-row history-item" data-item-id="${itemId}">
-      <button class="history-summary-btn" type="button" data-item-id="${itemId}">
+      <a class="history-summary-btn" href="${detailsUrl}" data-item-id="${itemId}">
         <span class="history-card-top">
-          <span class="history-module-badge">${label}</span>
-          <span class="muted">${createdAt}</span>
+          <span class="history-module-badge">${serviceText}</span>
+          <span class="history-created-at">${createdAt}</span>
         </span>
-        <span class="history-summary-main">${summaryTitle}</span>
-        ${summarySubtitle ? `<span class="history-summary-subtitle">${summarySubtitle}</span>` : ""}
-        ${summaryChips ? `<span class="history-meta-chips">${summaryChips}</span>` : ""}
-        <span class="history-open-hint">${lang === "en" ? "Open answer" : "Открыть ответ"}</span>
-      </button>
-      <div id="history-answer-${itemId}" class="history-answer">
-        <div class="history-answer-body">${outputText}</div>
-        <div class="history-actions">${reportLink}</div>
-      </div>
+        ${personaLine}
+        ${birthDateLine}
+        <span class="history-summary-subtitle">${escapeHtml(display.requestInfo || "—")}</span>
+      </a>
     </article>`;
     })
     .join("");
 }
 
 function wireRequestHistory() {
-  const container = element("request-history");
-  if (!container) {
-    return;
-  }
-  container.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    const button = target.closest(".history-summary-btn");
-    if (!button) {
-      return;
-    }
-    const itemId = button.dataset.itemId;
-    if (!itemId) {
-      return;
-    }
-    const answer = element(`history-answer-${itemId}`);
-    if (!answer) {
-      return;
-    }
-    answer.classList.toggle("is-open");
-  });
+  // Card click now navigates to a dedicated full analysis page.
 }
 
 async function loadRequestHistory() {
@@ -1706,6 +1772,83 @@ async function loadRequestHistory() {
     setResult("history-result", "");
   } catch (error) {
     setResult("history-result", error.message);
+  }
+}
+
+async function loadHistoryRequestDetail() {
+  const detailsContainer = element("history-detail-body");
+  if (!detailsContainer) {
+    return;
+  }
+  const requestId = Number(document.body?.dataset.historyRequestId || 0);
+  if (!requestId) {
+    setResult("history-detail-result", lang === "en" ? "Request not found" : "Запрос не найден");
+    return;
+  }
+  setResult("history-detail-result", i18n.loading);
+  try {
+    const response = await apiRequest(`/api/history/requests/${requestId}`, "GET", undefined, { redirectOnUnauthorized: true });
+    const item = response.item || {};
+    const display = formatHistoryDisplay(item);
+    const createdAt = formatDateOnly(item.created_at);
+    const serviceText = display.serviceType ? `${display.service} · ${display.serviceType}` : display.service;
+    const meta = element("history-detail-meta");
+    const personaChip = display.persona
+      ? `<span class="history-meta-chip">${lang === "en" ? "Persona" : "Персона"}: ${escapeHtml(display.persona)}</span>`
+      : "";
+    const birthDateChip = display.birthDate
+      ? `<span class="history-meta-chip">${lang === "en" ? "Birth date" : "Дата рождения"}: ${escapeHtml(display.birthDate)}</span>`
+      : "";
+    if (meta) {
+      meta.innerHTML = `
+        <span class="history-module-badge">${escapeHtml(serviceText)}</span>
+        ${personaChip}
+        ${birthDateChip}
+        <span class="history-meta-chip">${createdAt}</span>
+      `;
+    }
+    const requestText = element("history-detail-request-text");
+    if (requestText) {
+      requestText.textContent = display.requestInfo || "—";
+    }
+    if (item.module === "tarot_cards") {
+      detailsContainer.innerHTML = "";
+      const tarotResult = element("tarot-cards-result");
+      if (tarotResult) {
+        tarotResult.hidden = false;
+      }
+      const raw = (item.input_text || "").split(";").map((part) => part.trim());
+      const cardsSummary = raw[1] || "";
+      const cards = cardsSummary
+        .split(",")
+        .map((name, index) => ({
+          id: `history-card-${index + 1}`,
+          name: name.trim(),
+          symbol: "✦",
+          arcana: "major",
+        }))
+        .filter((card) => card.name);
+      renderTarotCardsResult({
+        cards,
+        interpretation: item.output_text || "",
+      });
+    } else {
+      const tarotResult = element("tarot-cards-result");
+      if (tarotResult) {
+        tarotResult.hidden = true;
+        tarotResult.innerHTML = "";
+      }
+      detailsContainer.innerHTML = renderMarkdownText(item.output_text || "");
+    }
+    const actions = element("history-detail-actions");
+    if (actions) {
+      actions.innerHTML = item.report_url
+        ? `<a class="secondary-btn inline-link-btn" href="${escapeHtml(item.report_url)}">${i18n.openReport}</a>`
+        : "";
+    }
+    setResult("history-detail-result", "");
+  } catch (error) {
+    setResult("history-detail-result", error.message);
   }
 }
 
@@ -2232,7 +2375,7 @@ async function resolvePersonaForPrefix(prefix, options = {}) {
   if (mode === "manual" && (!manualPersona.name || !manualPersona.birth_date || !manualPersona.birth_time || !manualPersona.birth_place)) {
     throw new Error(i18n.personaRequired);
   }
-  if (mode === "manual" && element(`${prefix}-save-persona`)?.checked && manualPersona.name && manualPersona.birth_date) {
+  if (!options.skipSave && mode === "manual" && element(`${prefix}-save-persona`)?.checked && manualPersona.name && manualPersona.birth_date) {
     const persona = await createPersona(manualPersona);
     personaId = Number(persona?.id || 0);
     await loadPersonas();
@@ -2353,17 +2496,20 @@ function renderProfilePersonas() {
     return;
   }
   container.innerHTML = state.personas
-    .map((persona) => `<article class="persona-list-row" data-persona-id="${persona.id}">
+    .map((persona) => {
+      const nameLabel = lang === "en" ? "Name" : "Имя";
+      const birthDateLabel = lang === "en" ? "Birth date" : "Дата рождения";
+      return `<article class="persona-list-row" data-persona-id="${persona.id}">
       <div class="persona-list-info">
-        <strong>${escapeHtml(persona.name)}</strong>
-        <span class="muted">${escapeHtml(personaPreview(persona))}</span>
-        ${persona.note ? `<span>${escapeHtml(persona.note)}</span>` : ""}
+        <span class="persona-info-line"><strong>${nameLabel}:</strong> ${escapeHtml(persona.name)}</span>
+        <span class="persona-info-line muted"><strong>${birthDateLabel}:</strong> ${escapeHtml(persona.birth_date || "—")}</span>
       </div>
       <div class="persona-row-actions">
         <button type="button" class="secondary-btn persona-edit-btn" data-persona-id="${persona.id}">${lang === "en" ? "Edit" : "Редактировать"}</button>
         <button type="button" class="secondary-btn persona-delete-btn" data-persona-id="${persona.id}">${lang === "en" ? "Delete" : "Удалить"}</button>
       </div>
-    </article>`)
+    </article>`;
+    })
     .join("");
 }
 
@@ -3805,8 +3951,63 @@ function wireCompatibilityForms() {
   wirePersonaPicker("compat-persona2");
 
   if (namesDatesForm) {
+    const stepTitle = element("compat-step-title");
+    const firstStep = element("compat-step-1");
+    const secondStep = element("compat-step-2");
+    const nextButton = element("compat-next-btn");
+    const submitButton = element("compat-submit-btn");
+    const firstLabel = namesDatesForm.dataset.stepFirstLabel || (lang === "en" ? "Enter the first person" : "Введите первую личность");
+    const secondLabel = namesDatesForm.dataset.stepSecondLabel || (lang === "en" ? "Enter the second person" : "Введите вторую личность");
+    let currentStep = 1;
+
+    const renderStep = () => {
+      const isSecond = currentStep === 2;
+      if (firstStep) {
+        firstStep.hidden = isSecond;
+      }
+      if (secondStep) {
+        secondStep.hidden = !isSecond;
+      }
+      if (nextButton) {
+        nextButton.hidden = isSecond;
+      }
+      if (submitButton) {
+        submitButton.hidden = !isSecond;
+      }
+      if (stepTitle) {
+        stepTitle.textContent = isSecond ? secondLabel : firstLabel;
+      }
+    };
+
+    renderStep();
+
+    if (nextButton) {
+      nextButton.addEventListener("click", async () => {
+        setResult("compat-result", "");
+        try {
+          await resolvePersonaForPrefix("compat-persona1", {
+            idKey: "persona1_id",
+            nameKey: "persona1_name",
+            birthDateKey: "persona1_birth_date",
+            birthTimeKey: "persona1_birth_time",
+            birthPlaceKey: "persona1_birth_place",
+            noteKey: "persona1_note",
+            skipSave: true,
+          });
+        } catch (error) {
+          setResult("compat-result", error.message);
+          return;
+        }
+        currentStep = 2;
+        renderStep();
+      });
+    }
+
     namesDatesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (currentStep !== 2) {
+        return;
+      }
       let firstPersona;
       let secondPersona;
       try {
@@ -3856,6 +4057,194 @@ function wireCompatibilityForms() {
   }
 }
 
+function wireDashboardCarousel() {
+  const carousel = element("dashboard-carousel");
+  if (!carousel) {
+    return;
+  }
+  const track = carousel.querySelector(".dashboard-carousel-track");
+  const slides = Array.from(carousel.querySelectorAll(".dashboard-slide"));
+  const dots = Array.from(carousel.querySelectorAll(".dashboard-carousel-dot"));
+  if (!track || !slides.length || !dots.length) {
+    return;
+  }
+
+  const slideQueryRaw = Number(new URLSearchParams(window.location.search).get("slide"));
+  const slideQuery = Number.isFinite(slideQueryRaw) ? Math.trunc(slideQueryRaw) : 0;
+  let currentSlide = Math.max(
+    0,
+    Math.min(slides.length - 1, Number.isFinite(slideQuery) && slideQuery > 0 ? slideQuery : Number(carousel.dataset.slide || 0)),
+  );
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isAnimating = false;
+  let wheelLockUntil = 0;
+  const transitionMs = prefersReducedMotion() ? 0 : 820;
+  const transitionSafetyMs = transitionMs + 80;
+  const goServicesButton = element("dashboard-go-services");
+
+  const clearTransitionState = (slide) => {
+    slide.classList.remove(
+      "is-entering",
+      "is-leaving",
+      "from-bottom",
+      "from-top",
+      "to-top",
+      "to-bottom",
+    );
+  };
+
+  const canScrollInsideActiveSlide = (deltaY) => {
+    const activeSlide = slides[currentSlide];
+    if (!activeSlide) {
+      return false;
+    }
+    const maxScroll = activeSlide.scrollHeight - activeSlide.clientHeight;
+    if (maxScroll <= 1) {
+      return false;
+    }
+    if (deltaY > 0) {
+      return activeSlide.scrollTop < maxScroll - 1;
+    }
+    return activeSlide.scrollTop > 1;
+  };
+
+  const applySlide = (index, options = {}) => {
+    const force = Boolean(options.force);
+    const next = Math.max(0, Math.min(slides.length - 1, index));
+    if (next === currentSlide && !force) {
+      return false;
+    }
+    if (isAnimating && !force) {
+      return false;
+    }
+    const previous = currentSlide;
+    isAnimating = !force;
+    currentSlide = next;
+    carousel.dataset.slide = String(next);
+    track.style.transform = `translateY(-${next * 100}%)`;
+    slides.forEach((slide, slideIndex) => {
+      const active = slideIndex === next;
+      slide.classList.toggle("is-active", active);
+      slide.setAttribute("aria-hidden", active ? "false" : "true");
+    });
+    dots.forEach((dot, dotIndex) => {
+      const active = dotIndex === next;
+      dot.classList.toggle("is-active", active);
+      dot.setAttribute("aria-selected", active ? "true" : "false");
+    });
+
+    if (previous !== next) {
+      const previousSlide = slides[previous];
+      const nextSlide = slides[next];
+      clearTransitionState(previousSlide);
+      clearTransitionState(nextSlide);
+      if (next > previous) {
+        nextSlide.classList.add("is-entering", "from-bottom");
+        previousSlide.classList.add("is-leaving", "to-top");
+      } else {
+        nextSlide.classList.add("is-entering", "from-top");
+        previousSlide.classList.add("is-leaving", "to-bottom");
+      }
+      if (transitionMs === 0) {
+        clearTransitionState(previousSlide);
+        clearTransitionState(nextSlide);
+      } else {
+        setTimeout(() => {
+          clearTransitionState(previousSlide);
+          clearTransitionState(nextSlide);
+        }, transitionSafetyMs);
+      }
+    }
+
+    if (transitionMs === 0 || force) {
+      isAnimating = false;
+    } else {
+      setTimeout(() => {
+        isAnimating = false;
+      }, transitionMs);
+    }
+    return true;
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      applySlide(Number(dot.dataset.slideIndex || 0));
+    });
+  });
+
+  if (goServicesButton) {
+    goServicesButton.addEventListener("click", () => {
+      applySlide(Math.min(slides.length - 1, 1));
+    });
+  }
+
+  carousel.addEventListener("touchstart", (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) {
+      return;
+    }
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+  }, { passive: true });
+
+  carousel.addEventListener("touchend", (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) {
+      return;
+    }
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+    if (Math.abs(deltaY) < 48 || Math.abs(deltaY) <= Math.abs(deltaX)) {
+      return;
+    }
+    applySlide(currentSlide + (deltaY < 0 ? 1 : -1));
+  }, { passive: true });
+
+  carousel.addEventListener("wheel", (event) => {
+    const deltaY = event.deltaY || 0;
+    if (!deltaY || Math.abs(deltaY) < 18) {
+      return;
+    }
+    if (Date.now() < wheelLockUntil) {
+      event.preventDefault();
+      return;
+    }
+    if (canScrollInsideActiveSlide(deltaY)) {
+      return;
+    }
+    if (deltaY > 0) {
+      if (currentSlide < slides.length - 1) {
+        event.preventDefault();
+        if (applySlide(currentSlide + 1)) {
+          wheelLockUntil = Date.now() + Math.max(360, transitionMs - 80);
+        }
+      }
+      return;
+    }
+    if (currentSlide > 0) {
+      event.preventDefault();
+      if (applySlide(currentSlide - 1)) {
+        wheelLockUntil = Date.now() + Math.max(360, transitionMs - 80);
+      }
+    }
+  }, { passive: false });
+
+  carousel.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      applySlide(currentSlide + 1);
+      return;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      applySlide(currentSlide - 1);
+    }
+  });
+
+  applySlide(currentSlide, { force: true });
+}
+
 async function boot() {
   await initAuthStaticPage();
   toggleHeaderAuthLinks();
@@ -3878,6 +4267,7 @@ async function boot() {
   wireTarotCardsForm();
   wireAstrologyForm();
   wireCompatibilityForms();
+  wireDashboardCarousel();
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();
   await verifyTelegramUsernameLinkFromQuery();
@@ -3905,6 +4295,7 @@ async function boot() {
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();
+  await loadHistoryRequestDetail();
   await loadSupportTickets();
   await loadNumerologyReport();
   await loadAdminDashboard();

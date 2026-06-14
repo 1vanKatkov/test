@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.astrology }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=service-about-v3" />
 </head>
 <body
-  class="app-shell mobile-client-shell"
+  class="app-shell mobile-client-shell astrology-layout-page"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
@@ -40,6 +40,7 @@
         <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/astrology%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
+        <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?lang={{ lang }}&back=/client/astrology">{{ t.about_astrology or 'Об астрологии' }}</a>
         <form id="astrology-form" class="form-grid service-theme-form">
           <label>{{ t.astrology_name }} <input id="astrology-name" required /></label>
           <label>{{ t.birth_date }} <input id="astrology-birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>

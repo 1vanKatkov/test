@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.profile }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=profile-hero-v3" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -20,26 +20,42 @@
     </div>
   </header>
 
-  <main class="mobile-client">
-    <section class="card compact-card">
-      <h2>{{ t.profile }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
-      <a class="secondary-btn profile-support-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
-      <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
+  <main class="mobile-client card-readings-page service-theme-page profile-theme-page">
+    <section class="card compact-card service-theme-hero profile-hero">
+      <div class="profile-hero-head">
+        <div>
+          <h2>{{ t.profile }}</h2>
+          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+        </div>
+        <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+          <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+          <span id="page-sparks">-</span>
+        </span>
+      </div>
+      <div class="profile-hero-actions">
+        <a class="secondary-btn profile-support-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
+        <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
+      </div>
     </section>
 
-    <section class="card profile-personas-card">
+    <section class="card service-theme-shell profile-personas-card">
       <div class="profile-personas-head">
         <h2>{{ t.my_personas }}</h2>
-        <button type="button" id="profile-persona-add-btn" class="secondary-btn">{{ t.persona_add }}</button>
+        <button
+          type="button"
+          id="profile-persona-add-btn"
+          class="profile-persona-add-btn"
+          aria-label="{{ t.persona_add }}"
+          title="{{ t.persona_add }}"
+        >+</button>
       </div>
       <div id="profile-personas-list" class="persona-list"></div>
       <div id="profile-persona-result" class="result rich-result" hidden></div>
     </section>
 
-    <section class="card" id="email-password-reset-panel" hidden>
+    <section class="card service-theme-shell profile-password-card" id="email-password-reset-panel" hidden>
       <h2>{{ t.password_reset }}</h2>
-      <form id="email-password-reset-form" class="form-grid">
+      <form id="email-password-reset-form" class="form-grid service-theme-form">
         <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
         <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" /></label>
         <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" /></label>
@@ -56,7 +72,7 @@
     <section class="natal-modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-persona-modal-title">
       <button class="natal-modal-close" type="button" data-profile-persona-close aria-label="{{ t.close }}">×</button>
       <h2 id="profile-persona-modal-title">{{ t.persona_add }}</h2>
-      <form id="profile-persona-form" class="form-grid">
+      <form id="profile-persona-form" class="form-grid service-theme-form">
         <input id="profile-persona-id" type="hidden" />
         <label>{{ t.persona_name }} <input id="profile-persona-name" required /></label>
         <label>{{ t.birth_date }} <input id="profile-persona-birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>
@@ -71,6 +87,6 @@
   </div>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=birth-required-v1"></script>
+  <script defer src="/static/app.js?v=profile-hero-v3"></script>
 </body>
 </html>

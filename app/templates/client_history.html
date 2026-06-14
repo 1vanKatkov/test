@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.history }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=history-detail-v3" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -22,7 +22,6 @@
   <main class="mobile-client">
     <section class="card compact-card">
       <h2>{{ t.request_history }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
     </section>
 
     <section class="card">
@@ -32,6 +31,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=divination-v1"></script>
+  <script defer src="/static/app.js?v=history-detail-v3"></script>
 </body>
 </html>

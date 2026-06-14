@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.tarot }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dashboard-slider-v1" />
 </head>
 <body
-  class="app-shell mobile-client-shell"
+  class="app-shell mobile-client-shell astrology-layout-page"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
@@ -31,7 +31,19 @@
           <span id="page-sparks">-</span>
         </span>
       </div>
+      {% if selected_card_reading_topic %}
+      <div class="page-heading-with-back">
+        <a
+          class="page-back-arrow"
+          href="/client/tarot?lang={{ lang }}"
+          aria-label="{{ t.back_to_natal_maps }}"
+          title="{{ t.back_to_natal_maps }}"
+        ></a>
+        <h1>{{ t.tarot }}</h1>
+      </div>
+      {% else %}
       <h1>{{ t.tarot }}</h1>
+      {% endif %}
       <p>{{ t.feature_tarot_desc }}</p>
     </section>
 
@@ -46,6 +58,7 @@
         {% endif %}
       </div>
       <div class="auth-required-content">
+        <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?lang={{ lang }}&back=/client/tarot">{{ t.about_astrology or 'Об астрологии' }}</a>
         {% if not selected_card_reading_topic %}
         <div class="card-reading-grid" aria-label="{{ t.tarot }}">
           {% for topic in card_reading_topics %}
@@ -68,9 +81,6 @@
           {% endfor %}
         </div>
         {% else %}
-        <div class="natal-topic-actions">
-          <a class="secondary-btn inline-link-btn natal-back-chip" href="/client/tarot?lang={{ lang }}">{{ t.back_to_natal_maps }}</a>
-        </div>
         <form id="tarot-form" class="form-grid natal-topic-form">
           <input id="tarot-topic" type="hidden" value="{{ selected_card_reading_topic.key }}" />
           <div class="selected-card-reading">

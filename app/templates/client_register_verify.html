@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.verify_registration }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dashboard-slider-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell auth-page"
@@ -22,7 +22,15 @@
 
   <main class="mobile-client">
     <section class="card">
-      <h2>{{ t.verify_registration }}</h2>
+      <div class="page-heading-with-back">
+        <a
+          class="page-back-arrow"
+          href="/static/auth/register.html?lang={{ lang }}"
+          aria-label="{{ t.back }}"
+          title="{{ t.back }}"
+        ></a>
+        <h2>{{ t.verify_registration }}</h2>
+      </div>
       <p class="muted">{{ t.code_sent }}</p>
       <p class="muted"><strong id="verify-email-display">{{ register_email }}</strong></p>
       <form id="email-register-verify-form" class="form-grid" method="post" action="#">
@@ -31,9 +39,6 @@
         <button type="submit" class="primary-btn">{{ t.confirm_registration }}</button>
         <button type="button" id="register-resend-btn" class="secondary-btn">{{ t.send_code }}</button>
       </form>
-      <p class="muted auth-switch-line">
-        <a href="/static/auth/register.html?lang={{ lang }}">{{ t.back }}</a>
-      </p>
       <pre id="auth-result" class="result"></pre>
     </section>
   </main>

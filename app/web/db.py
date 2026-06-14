@@ -404,6 +404,21 @@ class Database:
         finally:
             conn.close()
 
+    def get_request_history_item(self, user_id: int, request_id: int) -> Optional[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, user_id, module, input_text, output_text, created_at
+                FROM request_history
+                WHERE user_id = ? AND id = ?
+                LIMIT 1
+                """,
+                (user_id, request_id),
+            ).fetchone()
+        finally:
+            conn.close()
+
     def create_persona(
         self,
         user_id: int,
