@@ -4359,6 +4359,10 @@ function wireDashboardCarousel() {
   const transitionSafetyMs = transitionMs + 80;
   const goServicesButton = element("dashboard-go-services");
 
+  const goToServicesSlide = () => {
+    applySlide(Math.min(slides.length - 1, 1));
+  };
+
   const clearTransitionState = (slide) => {
     slide.classList.remove(
       "is-entering",
@@ -4450,10 +4454,12 @@ function wireDashboardCarousel() {
   });
 
   if (goServicesButton) {
-    goServicesButton.addEventListener("click", () => {
-      applySlide(Math.min(slides.length - 1, 1));
-    });
+    goServicesButton.addEventListener("click", goToServicesSlide);
   }
+
+  carousel.querySelectorAll(".dashboard-go-services-card").forEach((card) => {
+    card.addEventListener("click", goToServicesSlide);
+  });
 
   carousel.addEventListener("touchstart", (event) => {
     const touch = event.changedTouches?.[0];

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=dashboard-v2-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dashboard-v2-v2" />
 </head>
 <body
   class="app-shell mobile-client-shell client-dashboard-page"
@@ -49,7 +49,7 @@
             <p class="dashboard-template-section-subtitle">{{ t.dashboard_template_section_subtitle }}</p>
           </header>
           <section class="dashboard-template-feature-list" aria-label="{{ t.dashboard_template_cards_label }}">
-            <a class="dashboard-template-feature-card" href="/client/tarot?lang={{ lang }}">
+            <button type="button" class="dashboard-template-feature-card dashboard-go-services-card">
               <span class="dashboard-template-feature-icon" aria-hidden="true">
                 <img src="/static/img/icons/dashboard-spark-star.svg" alt="" loading="lazy" />
               </span>
@@ -58,8 +58,8 @@
                 <small>{{ t.dashboard_template_card_personal_text }}</small>
               </span>
               <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-personal.svg" alt="" loading="lazy" />
-            </a>
-            <a class="dashboard-template-feature-card" href="/client/compatibility?lang={{ lang }}">
+            </button>
+            <button type="button" class="dashboard-template-feature-card dashboard-go-services-card">
               <span class="dashboard-template-feature-icon" aria-hidden="true">
                 <img src="/static/img/icons/dashboard-moon-crescent.svg" alt="" loading="lazy" />
               </span>
@@ -68,8 +68,8 @@
                 <small>{{ t.dashboard_template_card_holistic_text }}</small>
               </span>
               <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-holistic.svg" alt="" loading="lazy" />
-            </a>
-            <a class="dashboard-template-feature-card" href="/client/numerology?lang={{ lang }}">
+            </button>
+            <button type="button" class="dashboard-template-feature-card dashboard-go-services-card">
               <span class="dashboard-template-feature-icon" aria-hidden="true">
                 <img src="/static/img/icons/dashboard-rocket.svg" alt="" loading="lazy" />
               </span>
@@ -78,7 +78,7 @@
                 <small>{{ t.dashboard_template_card_practical_text }}</small>
               </span>
               <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-practical.svg" alt="" loading="lazy" />
-            </a>
+            </button>
           </section>
           <button id="dashboard-go-services" type="button" class="primary-btn dashboard-go-services-btn dashboard-template-cta">
             {{ t.dashboard_template_cta or "Получить первый разбор" }}
@@ -157,6 +157,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=plus-subscription-v1"></script>
+  <script defer src="/static/app.js?v=dashboard-scroll-v1"></script>
 </body>
 </html>

@@ -3482,10 +3482,10 @@ body.modal-open {
   position: relative;
   width: calc(100% + 24px);
   margin: -14px -12px 0;
-  min-height: 300px;
+  min-height: 228px;
   overflow: hidden;
   border-radius: 0 0 24px 24px;
-  padding: calc(22px + env(safe-area-inset-top, 0px)) 18px 22px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 16px;
   background:
     linear-gradient(90deg, rgba(10, 8, 24, 0.94) 0%, rgba(10, 8, 24, 0.62) 38%, rgba(13, 11, 31, 0.18) 100%),
     radial-gradient(circle at 84% 38%, rgba(160, 78, 255, 0.22), transparent 38%),
@@ -3533,8 +3533,8 @@ body.modal-open {
   width: fit-content;
   max-width: 100%;
   min-height: auto;
-  margin-top: 16px;
-  padding: 12px 14px;
+  margin-top: 12px;
+  padding: 10px 12px;
   border: 1px solid rgba(160, 119, 242, 0.3);
   border-radius: 18px;
   background: rgba(22, 14, 48, 0.48);
@@ -3787,6 +3787,7 @@ body.modal-open {
 
 .dashboard-template-feature-card {
   position: relative;
+  width: 100%;
   min-height: 112px;
   padding: 14px 16px;
   display: grid;
@@ -3801,8 +3802,13 @@ body.modal-open {
     linear-gradient(145deg, rgba(13, 11, 31, 0.82), rgba(8, 6, 20, 0.88));
   color: #f8efff;
   text-decoration: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 28px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(12px);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .dashboard-template-feature-card::after {
@@ -3882,7 +3888,11 @@ body.modal-open {
 .dashboard-slide-intro.dashboard-template-slide {
   overflow-y: auto;
   padding-right: 2px;
-  padding-bottom: 8px;
+  padding-bottom: 20px;
+}
+
+.client-dashboard-page .dashboard-slide-intro.dashboard-template-slide {
+  padding-bottom: 28px;
 }
 
 @media (max-width: 390px), (max-height: 760px) {
@@ -3893,23 +3903,24 @@ body.modal-open {
   .dashboard-template-hero {
     width: calc(100% + 20px);
     margin: -14px -10px 0;
-    min-height: 252px;
-    padding: calc(18px + env(safe-area-inset-top, 0px)) 14px 18px;
+    min-height: 196px;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px 14px;
   }
 
   .dashboard-template-hero-copy h1 {
-    font-size: clamp(40px, 12vw, 52px);
+    font-size: clamp(36px, 11vw, 48px);
   }
 
   .dashboard-template-hero-copy p {
-    font-size: 14px;
+    margin-top: 8px;
+    font-size: 13px;
   }
 
   .dashboard-template-user-card {
     width: fit-content;
     max-width: 100%;
-    margin-top: 12px;
-    padding: 10px 12px;
+    margin-top: 10px;
+    padding: 8px 10px;
   }
 
   .dashboard-template-feature-list {
