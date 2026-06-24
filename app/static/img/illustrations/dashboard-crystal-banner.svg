@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" fill="none">
+  <defs>
+    <linearGradient id="facetA" x1="84" y1="26" x2="279" y2="235">
+      <stop stop-color="#fff1b2"/>
+      <stop offset=".28" stop-color="#d778ff"/>
+      <stop offset=".7" stop-color="#7e55ff"/>
+      <stop offset="1" stop-color="#241350"/>
+    </linearGradient>
+    <linearGradient id="facetB" x1="112" y1="39" x2="245" y2="214">
+      <stop stop-color="#5edcff"/>
+      <stop offset=".48" stop-color="#9b63ff"/>
+      <stop offset="1" stop-color="#190c34"/>
+    </linearGradient>
+    <filter id="crystalGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+  <ellipse cx="208" cy="166" rx="116" ry="66" fill="#8d55ff" opacity=".22" filter="url(#crystalGlow)"/>
+  <path d="M91 83 166 35l99 28 47 82-57 78-112 10-78-66 26-84Z" fill="url(#facetA)" opacity=".9"/>
+  <path d="M166 35 178 132 91 83l75-48Z" fill="#fff0b4" opacity=".32"/>
+  <path d="M178 132 265 63l47 82-134-13Z" fill="url(#facetB)" opacity=".72"/>
+  <path d="M178 132 255 223l-112 10 35-101Z" fill="#5c35d0" opacity=".62"/>
+  <path d="M91 83 178 132 143 233 65 167l26-84Z" fill="#2b1659" opacity=".78"/>
+  <path d="M91 83 166 35l99 28 47 82-57 78-112 10-78-66 26-84Z" stroke="#ffd98a" stroke-opacity=".62" stroke-width="2"/>
+  <path d="M91 83 178 132l87-69M178 132l77 91M178 132 143 233M178 132 65 167" stroke="#e9c3ff" stroke-opacity=".45" stroke-width="1.4"/>
+  <g fill="#fff1bb" opacity=".72">
+    <circle cx="287" cy="52" r="3"/>
+    <circle cx="312" cy="93" r="1.8"/>
+    <circle cx="72" cy="39" r="2"/>
+  </g>
+</svg>

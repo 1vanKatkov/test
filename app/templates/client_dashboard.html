@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=page-enter-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dark-gold-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -23,13 +23,18 @@
   <main class="mobile-client">
     <section id="dashboard-carousel" class="dashboard-carousel" data-slide="0" aria-roledescription="carousel" tabindex="0">
       <div class="dashboard-carousel-track">
-        <section class="dashboard-slide dashboard-slide-intro is-active" aria-label="{{ t.dashboard_slider_dot_intro }}">
-          <section class="mobile-dashboard-hero">
-            <div class="mobile-dashboard-hero-copy">
+        <section class="dashboard-slide dashboard-slide-intro dashboard-template-slide is-active" aria-label="{{ t.dashboard_slider_dot_intro }}">
+          <section class="dashboard-template-hero">
+            <div class="dashboard-template-hero-copy">
               <h1>{{ brand_name }}</h1>
-              <p>{{ t.mobile_hero_description }}</p>
-              <div class="mobile-dashboard-hero-meta">
-                <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
+              <p>{{ t.dashboard_template_subtitle }}</p>
+            </div>
+            <div class="dashboard-template-user-card">
+              <div class="dashboard-template-user-row">
+                <span class="dashboard-template-user-name">
+                  <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
+                  <span id="dashboard-hero-plus-badge" class="plus-badge" hidden>{{ t.plus_badge or "Plus" }}</span>
+                </span>
                 <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
                   <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
                   <span id="dashboard-hero-sparks">-</span>
@@ -38,25 +43,47 @@
             </div>
             <p id="telegram-auth-status" class="result muted" hidden></p>
           </section>
-          <section class="dashboard-intro-copy">
-            <p>{{ t.dashboard_slide_intro_text }}</p>
+          <section class="dashboard-template-card-grid" aria-label="{{ t.dashboard_template_cards_label }}">
+            <a class="dashboard-template-feature-card" href="/client/tarot?lang={{ lang }}">
+              <img src="/static/img/icons/dashboard-crystal-ball.svg" alt="" loading="lazy" />
+              <span>
+                <strong>{{ t.dashboard_template_card_personal_title }}</strong>
+                <small>{{ t.dashboard_template_card_personal_text }}</small>
+              </span>
+              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="dashboard-template-feature-card" href="/client/compatibility?lang={{ lang }}">
+              <img src="/static/img/icons/dashboard-heart.svg" alt="" loading="lazy" />
+              <span>
+                <strong>{{ t.dashboard_template_card_relationship_title }}</strong>
+                <small>{{ t.dashboard_template_card_relationship_text }}</small>
+              </span>
+              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="dashboard-template-feature-card" href="/client/numerology?lang={{ lang }}">
+              <img src="/static/img/icons/dashboard-compass.svg" alt="" loading="lazy" />
+              <span>
+                <strong>{{ t.dashboard_template_card_potential_title }}</strong>
+                <small>{{ t.dashboard_template_card_potential_text }}</small>
+              </span>
+              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="dashboard-template-feature-card" href="/client/tarot-cards?lang={{ lang }}">
+              <img src="/static/img/icons/dashboard-lotus.svg" alt="" loading="lazy" />
+              <span>
+                <strong>{{ t.dashboard_template_card_decisions_title }}</strong>
+                <small>{{ t.dashboard_template_card_decisions_text }}</small>
+              </span>
+              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+            </a>
           </section>
-          <section class="dashboard-intro-grid" aria-label="{{ t.dashboard_slide_intro_title }}">
-            <article class="dashboard-intro-card">
-              <h3>{{ t.dashboard_slide_intro_card_1_title }}</h3>
-              <p>{{ t.dashboard_slide_intro_card_1_text }}</p>
-            </article>
-            <article class="dashboard-intro-card">
-              <h3>{{ t.dashboard_slide_intro_card_2_title }}</h3>
-              <p>{{ t.dashboard_slide_intro_card_2_text }}</p>
-            </article>
-            <article class="dashboard-intro-card">
-              <h3>{{ t.dashboard_slide_intro_card_3_title }}</h3>
-              <p>{{ t.dashboard_slide_intro_card_3_text }}</p>
-            </article>
+          <section class="dashboard-template-banner">
+            <span>{{ t.dashboard_template_banner_kicker }}</span>
+            <h2>{{ t.dashboard_template_banner_title }}</h2>
+            <p>{{ t.dashboard_template_banner_text }}</p>
           </section>
-          <button id="dashboard-go-services" type="button" class="primary-btn dashboard-go-services-btn">
-            {{ t.dashboard_slide_go_services or "К сервису" }}
+          <button id="dashboard-go-services" type="button" class="primary-btn dashboard-go-services-btn dashboard-template-cta">
+            {{ t.dashboard_template_cta or "Начать исследование" }} <span aria-hidden="true">✦</span>
           </button>
         </section>
         <section class="dashboard-slide dashboard-slide-services" aria-label="{{ t.dashboard_slider_dot_services }}" aria-hidden="true">
@@ -131,7 +158,7 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=page-enter-v1"></script>
+  <script defer src="/static/app.js?v=plus-subscription-v1"></script>
 </body>
 </html>
 

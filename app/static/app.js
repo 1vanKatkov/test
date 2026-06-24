@@ -21,6 +21,7 @@ const lang = document.body.dataset.lang === "en" ? "en" : "ru";
 const currentReportId = Number(document.body.dataset.reportId || 0);
 const PROFILE_CACHE_KEY = "astrolhub.profileCache";
 const BALANCE_CACHE_KEY = "astrolhub.balanceCache";
+const PLUS_CACHE_KEY = "astrolhub.plusCache";
 const CACHE_TTL_MS = 300000;
 const i18n = lang === "en"
   ? {
@@ -95,6 +96,8 @@ const i18n = lang === "en"
     tarotCardsDrawing: "Drawing your cards...",
     tarotCardsDrawn: "The cards are on the table. Ask your question.",
     tarotCardsDrawFailed: "Could not draw cards. Refresh the page and try again.",
+    insufficientSparksRedirect: "Not enough sparks. Redirecting to top up...",
+    plusSubscriptionActive: "Plus subscription is active",
   }
   : {
     guest: "Гость",
@@ -168,6 +171,8 @@ const i18n = lang === "en"
     tarotCardsDrawing: "Вытягиваем карты...",
     tarotCardsDrawn: "Карты на столе. Задайте вопрос.",
     tarotCardsDrawFailed: "Не удалось вытянуть карты. Обновите страницу и попробуйте снова.",
+    insufficientSparksRedirect: "Недостаточно искр. Перенаправляем на пополнение...",
+    plusSubscriptionActive: "Подписка Plus активна",
   };
 
 const authPageCopy = {
@@ -519,10 +524,85 @@ function revealAiResult(resultId, content, options = {}) {
   }
 }
 
-async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess, onError, collapseForm = true, scrollToResult = true }) {
+function serviceCostFromDataset(key) {
+  const value = Number(document.body?.dataset?.[key] || 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function readCachedBalance() {
+  const value = readTimedCache(BALANCE_CACHE_KEY);
+  return typeof value === "number" ? value : null;
+}
+
+function isInsufficientCreditsError(message) {
+  const text = String(message || "").toLowerCase();
+  return text.includes("insufficient credits") || text.includes("недостаточно");
+}
+
+function computeSparksShortfall(requiredCost) {
+  const balance = readCachedBalance();
+  if (balance === null) {
+    return requiredCost;
+  }
+  return Math.max(0, requiredCost - balance);
+}
+
+function sparksNeededForPurchase(requiredCost) {
+  const shortfall = computeSparksShortfall(requiredCost);
+  return shortfall > 0 ? shortfall : requiredCost;
+}
+
+function recommendPackageId(packages, sparksNeeded) {
+  if (!Array.isArray(packages) || !packages.length || sparksNeeded <= 0) {
+    return "";
+  }
+  const sorted = [...packages].sort((left, right) => Number(left.sparks) - Number(right.sparks));
+  const match = sorted.find((pkg) => Number(pkg.sparks) >= sparksNeeded);
+  return (match || sorted[sorted.length - 1]).id;
+}
+
+function topupRedirectUrl(sparksNeeded, packageId = "") {
+  const params = new URLSearchParams({ lang, tab: "sparks" });
+  if (sparksNeeded > 0) {
+    params.set("sparks", String(sparksNeeded));
+  }
+  if (packageId) {
+    params.set("package", packageId);
+  }
+  return `/client/topup?${params.toString()}`;
+}
+
+async function redirectToTopupForRequiredCost(requiredCost) {
+  const cost = Number(requiredCost) || 0;
+  if (cost <= 0) {
+    return false;
+  }
+  const sparksNeeded = sparksNeededForPurchase(cost);
+  let packageId = "";
+  try {
+    const result = await apiRequest(`/api/payments/packages?for_sparks=${encodeURIComponent(sparksNeeded)}`, "GET");
+    packageId = result.recommended_package_id || recommendPackageId(result.packages, sparksNeeded);
+  } catch {
+    packageId = "";
+  }
+  window.location.href = topupRedirectUrl(sparksNeeded, packageId);
+  return true;
+}
+
+async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess, onError, collapseForm = true, scrollToResult = true, requiredCost = 0 }) {
   if (redirectGuestFromForm()) {
     setResult(resultId, i18n.signInRedirecting);
     return null;
+  }
+  const cost = Number(requiredCost) || 0;
+  if (cost > 0) {
+    const balance = readCachedBalance();
+    if (balance !== null && balance < cost) {
+      setResult(resultId, i18n.insufficientSparksRedirect);
+      if (await redirectToTopupForRequiredCost(cost)) {
+        return null;
+      }
+    }
   }
   setResult(resultId, "");
   showSparkLoading(resultId, loadingLabel);
@@ -540,6 +620,12 @@ async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess,
     return data;
   } catch (error) {
     restoreAiForm(form);
+    if (isInsufficientCreditsError(error.message) && cost > 0) {
+      setResult(resultId, i18n.insufficientSparksRedirect);
+      if (await redirectToTopupForRequiredCost(cost)) {
+        return null;
+      }
+    }
     setResult(resultId, error.message);
     if (onError) {
       onError(error);
@@ -566,6 +652,35 @@ function setBalance(value) {
   const node = element("balance-view");
   if (node) {
     node.textContent = String(value);
+  }
+}
+
+function setPlusStatus(isPlus) {
+  document.querySelectorAll("#header-plus-badge, #dashboard-hero-plus-badge").forEach((node) => {
+    node.hidden = !isPlus;
+  });
+  const plusStatus = element("plus-subscription-status");
+  const plusForm = element("plus-subscription-form");
+  if (plusStatus) {
+    plusStatus.hidden = !isPlus;
+  }
+  if (plusForm) {
+    plusForm.hidden = isPlus;
+  }
+  const plusResult = element("plus-subscription-result");
+  if (plusResult && isPlus) {
+    plusResult.textContent = i18n.plusSubscriptionActive;
+  }
+}
+
+function applyBalanceState(result) {
+  if (typeof result?.balance === "number") {
+    saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+    setBalance(result.balance);
+  }
+  if (typeof result?.is_plus === "boolean") {
+    saveTimedCache(PLUS_CACHE_KEY, result.is_plus);
+    setPlusStatus(result.is_plus);
   }
 }
 
@@ -801,6 +916,10 @@ function hydrateUiFromCache() {
   const balance = readTimedCache(BALANCE_CACHE_KEY);
   if (typeof balance === "number") {
     setBalance(balance);
+  }
+  const isPlus = readTimedCache(PLUS_CACHE_KEY);
+  if (typeof isPlus === "boolean") {
+    setPlusStatus(isPlus);
   }
 }
 
@@ -1451,8 +1570,7 @@ function wirePasswordResetForm() {
 
 async function refreshBalance() {
   const result = await apiRequest("/api/balance", "GET");
-  setBalance(result.balance);
-  saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+  applyBalanceState(result);
 }
 
 async function loadPaymentPackages() {
@@ -1461,7 +1579,11 @@ async function loadPaymentPackages() {
     return;
   }
   try {
-    const result = await apiRequest("/api/payments/packages", "GET");
+    const urlParams = new URLSearchParams(window.location.search);
+    const recommendedSparks = Number(urlParams.get("sparks") || 0);
+    const recommendedPackage = urlParams.get("package") || "";
+    const query = recommendedSparks > 0 ? `?for_sparks=${encodeURIComponent(recommendedSparks)}` : "";
+    const result = await apiRequest(`/api/payments/packages${query}`, "GET");
     select.innerHTML = "";
     result.packages.forEach((item) => {
       const option = document.createElement("option");
@@ -1469,6 +1591,18 @@ async function loadPaymentPackages() {
       option.textContent = item.label;
       select.appendChild(option);
     });
+    const packageId = recommendedPackage || result.recommended_package_id || "";
+    if (packageId) {
+      select.value = packageId;
+    }
+    const notice = element("payment-topup-notice");
+    if (notice && recommendedSparks > 0) {
+      const selectedPackage = result.packages.find((item) => item.id === select.value);
+      notice.textContent = lang === "en"
+        ? `Top up at least ${recommendedSparks} sparks to continue.${selectedPackage ? ` Suggested package: ${selectedPackage.label}.` : ""}`
+        : `Для продолжения пополните баланс минимум на ${recommendedSparks} искр.${selectedPackage ? ` Рекомендуемый пакет: ${selectedPackage.label}.` : ""}`;
+      notice.hidden = false;
+    }
   } catch (error) {
     setResult("payment-result", error.message);
   }
@@ -1504,6 +1638,122 @@ function wirePaymentForms() {
         setResult("payment-result", error.message);
       }
     });
+  }
+}
+
+function wirePlusSubscriptionForm() {
+  const form = element("plus-subscription-form");
+  if (!form) {
+    return;
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setResult("plus-subscription-result", i18n.creatingPayment);
+    try {
+      const receiptEmail = (element("plus-subscription-email")?.value || "").trim();
+      if (!receiptEmail.includes("@")) {
+        throw new Error(i18n.enterEmail);
+      }
+      const offerAccepted = element("plus-subscription-offer-accepted");
+      if (offerAccepted && !offerAccepted.checked) {
+        throw new Error(i18n.acceptPublicOffer);
+      }
+      const result = await apiRequest("/api/payments/yookassa/create", "POST", {
+        package_id: "astrolhub_plus",
+        receipt_email: receiptEmail,
+      }, { redirectOnUnauthorized: true });
+      state.lastPaymentId = result.payment_id;
+      sessionStorage.setItem("astrolhub.lastPaymentId", result.payment_id);
+      setResult("plus-subscription-result", `${i18n.paymentCreated}: ${result.payment_id}`);
+      if (result.confirmation_url) {
+        window.location.href = result.confirmation_url;
+      }
+    } catch (error) {
+      setResult("plus-subscription-result", error.message);
+    }
+  });
+}
+
+function activateTopupTab(tabName) {
+  const normalized = tabName === "plus" ? "plus" : "sparks";
+  document.querySelectorAll(".topup-tab").forEach((button) => {
+    const isActive = button.dataset.topupTab === normalized;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  const sparksPanel = element("topup-panel-sparks");
+  const plusPanel = element("topup-panel-plus");
+  if (sparksPanel) {
+    sparksPanel.hidden = normalized !== "sparks";
+    sparksPanel.classList.toggle("is-active", normalized === "sparks");
+  }
+  if (plusPanel) {
+    plusPanel.hidden = normalized !== "plus";
+    plusPanel.classList.toggle("is-active", normalized === "plus");
+  }
+}
+
+function closeTopupChoiceModal() {
+  const modal = element("topup-choice-modal");
+  if (!modal) {
+    return;
+  }
+  modal.hidden = true;
+  modal.classList.remove("is-open");
+  document.body.classList.remove("modal-open");
+}
+
+function openTopupChoiceModal() {
+  const modal = element("topup-choice-modal");
+  if (!modal) {
+    return;
+  }
+  modal.hidden = false;
+  modal.classList.add("is-open");
+  document.body.classList.add("modal-open");
+}
+
+function shouldSkipTopupChoiceModal() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("tab") === "plus" || params.get("tab") === "sparks") {
+    return true;
+  }
+  if (params.get("sparks") || params.get("package")) {
+    return true;
+  }
+  return false;
+}
+
+function wireTopupPage() {
+  if (!element("topup-panel-sparks")) {
+    return;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const initialTab = params.get("tab") === "plus" ? "plus" : "sparks";
+  activateTopupTab(initialTab);
+  document.querySelectorAll(".topup-tab").forEach((button) => {
+    button.addEventListener("click", () => {
+      activateTopupTab(button.dataset.topupTab || "sparks");
+    });
+  });
+  element("topup-choice-plus-btn")?.addEventListener("click", () => {
+    activateTopupTab("plus");
+    closeTopupChoiceModal();
+  });
+  element("topup-choice-sparks-btn")?.addEventListener("click", () => {
+    activateTopupTab("sparks");
+    closeTopupChoiceModal();
+  });
+  element("topup-choice-modal")?.addEventListener("click", (event) => {
+    if (event.target instanceof HTMLElement && event.target.id === "topup-choice-modal") {
+      closeTopupChoiceModal();
+      activateTopupTab("sparks");
+    }
+  });
+  if (!shouldSkipTopupChoiceModal()) {
+    openTopupChoiceModal();
+  } else {
+    closeTopupChoiceModal();
   }
 }
 
@@ -2093,7 +2343,11 @@ async function loadPaymentsHistory() {
   try {
     const result = await apiRequest("/api/payments/yookassa/history", "GET");
     renderPaymentsHistory(result.payments || []);
-    setBalance(result.balance);
+    await refreshBalance().catch(() => {
+      if (typeof result.balance === "number") {
+        setBalance(result.balance);
+      }
+    });
   } catch (error) {
     setResult("payment-result", error.message);
   }
@@ -2105,8 +2359,8 @@ async function syncPendingPayments() {
     return;
   }
   try {
-    const result = await apiRequest("/api/payments/yookassa/sync-pending", "POST", undefined, { redirectOnUnauthorized: true });
-    setBalance(result.balance);
+    await apiRequest("/api/payments/yookassa/sync-pending", "POST", undefined, { redirectOnUnauthorized: true });
+    await refreshBalance().catch(() => {});
     await loadPaymentsHistory();
   } catch (error) {
     setResult("payment-result", error.message);
@@ -2153,6 +2407,7 @@ function wireSonnikForm() {
       form,
       resultId: "sonnik-result",
       loadingLabel: i18n.analyzingDream,
+      requiredCost: serviceCostFromDataset("costSonnik"),
       request: () => apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
         language: lang,
@@ -2187,6 +2442,7 @@ function wireNumerologyForm() {
       form,
       resultId: "numerology-result",
       loadingLabel: i18n.generatingReport,
+      requiredCost: serviceCostFromDataset("costNumerology"),
       request: () => apiRequest("/api/numerology/generate", "POST", {
         full_name: fullName,
         birth_date: birthDate,
@@ -2706,6 +2962,7 @@ function wireTarotForm() {
       form,
       resultId: "tarot-result",
       loadingLabel: i18n.readingTarot,
+      requiredCost: serviceCostFromDataset("costTarot"),
       request: async () => {
       if (personaMode === "manual" && element("tarot-save-persona")?.checked && manualPersona.name && manualPersona.birth_date) {
         const persona = await createPersona(manualPersona);
@@ -3001,6 +3258,7 @@ function wireTarotCardsForm() {
       form,
       resultId: "tarot-cards-result",
       loadingLabel: i18n.readingTarotCards,
+      requiredCost: serviceCostFromDataset("costTarotCards"),
       request: () => apiRequest("/api/tarot-cards/reading", "POST", {
         question: element("tarot-cards-question")?.value.trim() || "",
         spread: spread.id,
@@ -3034,6 +3292,7 @@ function wireAstrologyForm() {
       form,
       resultId: "astrology-result",
       loadingLabel: i18n.buildingForecast,
+      requiredCost: serviceCostFromDataset("costAstrology"),
       request: () => apiRequest("/api/astrology/forecast", "POST", {
         name: element("astrology-name").value.trim(),
         birth_date: element("astrology-birth-date").value.trim(),
@@ -4055,6 +4314,7 @@ function wireCompatibilityForms() {
         form: namesDatesForm,
         resultId: "compat-result",
         loadingLabel: i18n.calculating,
+        requiredCost: serviceCostFromDataset("costSovmestimost"),
         request: () => apiRequest("/api/sovmestimost/by-names-dates", "POST", {
           name1: firstPersona.persona1_name || firstResolved.name || "",
           date1: firstPersona.persona1_birth_date || firstResolved.birth_date || "",
@@ -4267,6 +4527,8 @@ async function boot() {
   toggleHeaderAuthLinks();
   syncAuthRequiredSections(!isLoggedIn());
   wirePaymentForms();
+  wirePlusSubscriptionForm();
+  wireTopupPage();
   wireAuthPages();
   wireAuthRequiredLinks();
   wireLogoutButton();

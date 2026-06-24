@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import HTTPException
 
@@ -58,7 +58,7 @@ def ensure_subscription_state(user_id: int) -> None:
 
         if datetime.now(timezone.utc) >= end_dt:
             conn.execute(
-                "UPDATE users SET credits = 0, subscription_end = NULL, updated_at = ? WHERE id = ?",
+                "UPDATE users SET subscription_end = NULL, updated_at = ? WHERE id = ?",
                 (_now(), user_id),
             )
             _add_transaction(
@@ -80,9 +80,11 @@ def activate_subscription(user_id: int, sparks: int, days: int, reason: str, met
             raise HTTPException(status_code=404, detail="User not found")
 
         end_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+        current = int(conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()["credits"])
+        updated = current + sparks
         conn.execute(
             "UPDATE users SET credits = ?, subscription_end = ?, updated_at = ? WHERE id = ?",
-            (sparks, end_at, _now(), user_id),
+            (updated, end_at, _now(), user_id),
         )
         _add_transaction(
             conn,
@@ -92,7 +94,25 @@ def activate_subscription(user_id: int, sparks: int, days: int, reason: str, met
             reason,
             {**(metadata or {}), "subscription_days": days, "subscription_end": end_at},
         )
-        return sparks
+        return updated
+
+
+def get_subscription_info(user_id: int) -> dict[str, Any]:
+    ensure_subscription_state(user_id)
+    user = db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    subscription_end = user["subscription_end"]
+    is_plus = False
+    if subscription_end:
+        try:
+            is_plus = datetime.now(timezone.utc) < datetime.fromisoformat(subscription_end)
+        except ValueError:
+            is_plus = False
+    return {
+        "is_plus": is_plus,
+        "subscription_end": subscription_end,
+    }
 
 
 def credit(user_id: int, amount: int, reason: str, metadata: Optional[dict] = None, tx_type: str = "credit") -> int:

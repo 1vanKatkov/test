@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.topup }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=page-enter-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dark-gold-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -25,36 +25,101 @@
       <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
     </section>
 
-    <section class="card">
-      <h2>{{ t.yookassa_payment }}</h2>
-      <form id="payment-create-form" class="form-grid">
-        <label>{{ t.spark_package }}
-          <select id="payment-package" required></select>
-        </label>
-        <label>{{ t.receipt_email }}
-          <input id="payment-email" type="email" required placeholder="name@example.com" />
-        </label>
-        <label class="payment-offer-consent">
-          <input id="payment-offer-accepted" type="checkbox" required />
-          <span>
-            {{ t.public_offer_ack_prefix }}
-            <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
-          </span>
-        </label>
-        <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
-      </form>
-      <pre id="payment-result" class="result"></pre>
+    <section class="card topup-tabs-card">
+      <div class="topup-tabs" role="tablist" aria-label="{{ t.topup }}">
+        <button type="button" class="topup-tab is-active" data-topup-tab="sparks" role="tab" aria-selected="true">
+          {{ t.topup_tab_sparks }}
+        </button>
+        <button type="button" class="topup-tab" data-topup-tab="plus" role="tab" aria-selected="false">
+          {{ t.topup_tab_plus }}
+        </button>
+      </div>
+
+      <div id="topup-panel-sparks" class="topup-tab-panel is-active" role="tabpanel">
+        <h3>{{ t.yookassa_payment }}</h3>
+        <p id="payment-topup-notice" class="payment-topup-notice" hidden></p>
+        <form id="payment-create-form" class="form-grid">
+          <label>{{ t.spark_package }}
+            <select id="payment-package" required></select>
+          </label>
+          <label>{{ t.receipt_email }}
+            <input id="payment-email" type="email" required placeholder="name@example.com" />
+          </label>
+          <label class="payment-offer-consent">
+            <input id="payment-offer-accepted" type="checkbox" required />
+            <span>
+              {{ t.public_offer_ack_prefix }}
+              <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
+            </span>
+          </label>
+          <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
+        </form>
+        <pre id="payment-result" class="result"></pre>
+      </div>
+
+      <div id="topup-panel-plus" class="topup-tab-panel" role="tabpanel" hidden>
+        <div class="plus-subscription-head">
+          <div>
+            <p class="plus-subscription-kicker">{{ t.plus_subscription_intro }}</p>
+            <h3>{{ t.plus_subscription_title }}</h3>
+            <p class="plus-subscription-price">{{ t.plus_subscription_price }}</p>
+            <p class="plus-subscription-note">{{ t.plus_subscription_sparks_note }}</p>
+          </div>
+          <span id="plus-subscription-status" class="plus-badge plus-badge-large" hidden>{{ t.plus_badge or "Plus" }}</span>
+        </div>
+        <ul class="plus-subscription-benefits">
+          <li>{{ t.plus_subscription_benefit_1 }}</li>
+          <li>{{ t.plus_subscription_benefit_2 }}</li>
+          <li>{{ t.plus_subscription_benefit_3 }}</li>
+          <li>{{ t.plus_subscription_benefit_4 }}</li>
+          <li>{{ t.plus_subscription_benefit_5 }}</li>
+          <li>{{ t.plus_subscription_benefit_6 }}</li>
+        </ul>
+        <form id="plus-subscription-form" class="form-grid">
+          <label>{{ t.receipt_email }}
+            <input id="plus-subscription-email" type="email" required placeholder="name@example.com" />
+          </label>
+          <label class="payment-offer-consent">
+            <input id="plus-subscription-offer-accepted" type="checkbox" required />
+            <span>
+              {{ t.public_offer_ack_prefix }}
+              <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
+            </span>
+          </label>
+          <button type="submit" class="primary-btn plus-subscription-btn">{{ t.plus_subscription_cta }}</button>
+        </form>
+        <pre id="plus-subscription-result" class="result"></pre>
+      </div>
     </section>
 
     <section class="card">
       <h2>{{ "Payment history" if lang == "en" else "История платежей" }}</h2>
       <div id="payments-history" class="history-list"></div>
     </section>
-
   </main>
 
+  <div id="topup-choice-modal" class="modal-overlay" hidden>
+    <div class="modal-card topup-choice-modal" role="dialog" aria-modal="true" aria-labelledby="topup-choice-title">
+      <p class="plus-subscription-kicker">{{ t.plus_subscription_intro }}</p>
+      <h2 id="topup-choice-title">{{ t.plus_subscription_title }}</h2>
+      <p class="plus-subscription-price">{{ t.plus_subscription_price }}</p>
+      <p class="plus-subscription-note">{{ t.plus_subscription_sparks_note }}</p>
+      <ul class="plus-subscription-benefits">
+        <li>{{ t.plus_subscription_benefit_1 }}</li>
+        <li>{{ t.plus_subscription_benefit_2 }}</li>
+        <li>{{ t.plus_subscription_benefit_3 }}</li>
+        <li>{{ t.plus_subscription_benefit_4 }}</li>
+        <li>{{ t.plus_subscription_benefit_5 }}</li>
+        <li>{{ t.plus_subscription_benefit_6 }}</li>
+      </ul>
+      <div class="topup-choice-actions">
+        <button type="button" id="topup-choice-plus-btn" class="primary-btn plus-subscription-btn">{{ t.topup_choice_subscribe }}</button>
+        <button type="button" id="topup-choice-sparks-btn" class="secondary-btn">{{ t.topup_choice_buy_sparks }}</button>
+      </div>
+    </div>
+  </div>
+
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=page-enter-v1"></script>
+  <script defer src="/static/app.js?v=topup-tabs-v1"></script>
 </body>
 </html>
-

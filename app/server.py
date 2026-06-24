@@ -67,7 +67,7 @@ from app.web.schemas import (
     YooKassaCreatePaymentRequest,
 )
 from app.web.services import compatibility, divination, numerology, payments, sonnik, tarot_cards
-from app.web.services.balance import admin_debit, charge, credit, get_balance, record_transaction, refund
+from app.web.services.balance import admin_debit, charge, credit, get_balance, get_subscription_info, record_transaction, refund
 from config import settings
 
 
@@ -462,6 +462,37 @@ def _translations(lang: str) -> dict:
             "dashboard_slide_intro_card_3_title": "From overview to practice",
             "dashboard_slide_intro_card_3_text": "Move to services in one swipe and start exploring yourself right away.",
             "dashboard_slide_go_services": "Go to services",
+            "dashboard_template_subtitle": "Your personal guide in the world of self-knowledge",
+            "dashboard_template_cards_label": "Self-knowledge benefits",
+            "dashboard_template_card_personal_title": "Personal readings",
+            "dashboard_template_card_personal_text": "AI interpretations of dreams, cards, numbers, and your questions.",
+            "dashboard_template_card_relationship_title": "Understand relationships",
+            "dashboard_template_card_relationship_text": "Compatibility, dynamics, and harmony in a couple.",
+            "dashboard_template_card_potential_title": "Reveal your potential",
+            "dashboard_template_card_potential_text": "Numerology and natal maps show talents and direction.",
+            "dashboard_template_card_decisions_title": "Make better decisions",
+            "dashboard_template_card_decisions_text": "Practical guidance for important life situations.",
+            "dashboard_template_banner_kicker": "DEEP · CONFIDENTIAL · FOR YOU",
+            "dashboard_template_banner_title": "Your journey to yourself",
+            "dashboard_template_banner_text": "Explore. Understand. Harmonize your life.",
+            "dashboard_template_cta": "Start exploring",
+            "plus_badge": "Plus",
+            "plus_subscription_title": "Astrolhub Plus",
+            "plus_subscription_intro": "Astrolhub Plus subscription",
+            "plus_subscription_price": "149 ₽ per month",
+            "plus_subscription_sparks_note": "Includes 150 sparks on purchase",
+            "plus_subscription_benefit_1": "Up to 30 dream interpretations",
+            "plus_subscription_benefit_2": "Up to 30 compatibility analyses",
+            "plus_subscription_benefit_3": "Up to 15 numerology reports",
+            "plus_subscription_benefit_4": "Reading history",
+            "plus_subscription_benefit_5": "Priority generation",
+            "plus_subscription_benefit_6": "Early access to new features",
+            "plus_subscription_cta": "Subscribe to Plus",
+            "plus_subscription_active": "Plus subscription is active",
+            "topup_tab_sparks": "Buy sparks",
+            "topup_tab_plus": "Astrolhub Plus",
+            "topup_choice_subscribe": "Subscribe to Plus",
+            "topup_choice_buy_sparks": "Buy sparks",
             "dashboard_slide_services_title": "All functionality",
             "dashboard_slider_nav_label": "Dashboard slides",
             "dashboard_slider_dot_intro": "Project overview",
@@ -677,6 +708,37 @@ def _translations(lang: str) -> dict:
         "dashboard_slide_intro_card_3_title": "От обзора к практике",
         "dashboard_slide_intro_card_3_text": "Переходите к сервисам одним свайпом и сразу начинайте исследовать себя.",
         "dashboard_slide_go_services": "К сервису",
+        "dashboard_template_subtitle": "Ваш личный проводник в мире знаний о себе",
+        "dashboard_template_cards_label": "Преимущества самопознания",
+        "dashboard_template_card_personal_title": "Персональные разборы",
+        "dashboard_template_card_personal_text": "AI-интерпретации снов, карт, чисел и ваших вопросов.",
+        "dashboard_template_card_relationship_title": "Понимайте отношения",
+        "dashboard_template_card_relationship_text": "Совместимость, динамика и гармония в паре.",
+        "dashboard_template_card_potential_title": "Раскройте свой потенциал",
+        "dashboard_template_card_potential_text": "Нумерология и натальные карты покажут ваши таланты и путь.",
+        "dashboard_template_card_decisions_title": "Принимайте лучшие решения",
+        "dashboard_template_card_decisions_text": "Практические советы для ключевых ситуаций в жизни.",
+        "dashboard_template_banner_kicker": "ГЛУБОКО · КОНФИДЕНЦИАЛЬНО · ДЛЯ ВАС",
+        "dashboard_template_banner_title": "Ваше путешествие к себе",
+        "dashboard_template_banner_text": "Исследуйте. Понимайте. Гармонизируйте жизнь.",
+        "dashboard_template_cta": "Начать исследование",
+        "plus_badge": "Plus",
+        "plus_subscription_title": "Astrolhub Plus",
+        "plus_subscription_intro": "Подписка Astrolhub Plus",
+        "plus_subscription_price": "149 ₽ в месяц",
+        "plus_subscription_sparks_note": "При оплате начисляется 150 искр",
+        "plus_subscription_benefit_1": "до 30 разборов снов",
+        "plus_subscription_benefit_2": "до 30 разборов совместимости",
+        "plus_subscription_benefit_3": "до 15 нумерологических разборов",
+        "plus_subscription_benefit_4": "история разборов",
+        "plus_subscription_benefit_5": "приоритетная генерация",
+        "plus_subscription_benefit_6": "ранний доступ к новым функциям",
+        "plus_subscription_cta": "Оформить Plus",
+        "plus_subscription_active": "Подписка Plus активна",
+        "topup_tab_sparks": "Купить искры",
+        "topup_tab_plus": "Astrolhub Plus",
+        "topup_choice_subscribe": "Оформить подписку",
+        "topup_choice_buy_sparks": "Купить искры",
         "dashboard_slide_services_title": "Разборы",
         "dashboard_slider_nav_label": "Слайды кабинета",
         "dashboard_slider_dot_intro": "О проекте",
@@ -1862,7 +1924,8 @@ async def balance(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
     user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
-    return {"balance": get_balance(user_id)}
+    subscription = get_subscription_info(user_id)
+    return {"balance": get_balance(user_id), **subscription}
 
 
 @app.get("/api/personas")
@@ -2067,8 +2130,11 @@ def _record_admin_audit(admin_user_id: int, action: str, target_user_id: int | N
 
 
 @app.get("/api/payments/packages")
-async def payment_packages():
-    return {"success": True, "packages": payments.get_payment_packages()}
+async def payment_packages(for_sparks: int = Query(default=0, ge=0)):
+    payload = {"success": True, "packages": payments.get_payment_packages(include_subscriptions=False)}
+    if for_sparks > 0:
+        payload["recommended_package_id"] = payments.recommend_package_for_sparks(for_sparks)
+    return payload
 
 
 @app.post("/api/payments/yookassa/create")

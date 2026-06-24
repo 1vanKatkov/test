@@ -1,5 +1,8 @@
 <div class="user-chip">
-  <a class="auth-username-link" href="/client/profile?lang={{ lang }}"><span id="auth-username">{{ initial_auth_username }}</span></a>
+  <a class="auth-username-link" href="/client/profile?lang={{ lang }}">
+    <span id="auth-username">{{ initial_auth_username }}</span>
+    <span id="header-plus-badge" class="plus-badge" hidden>{{ t.plus_badge or "Plus" }}</span>
+  </a>
   <span id="header-auth-links" class="header-auth-links">
     <a class="header-auth-btn" href="/static/auth/login.html?lang={{ lang }}">{{ t.login }}</a>
     <a class="header-auth-btn header-auth-btn-primary" href="/static/auth/register.html?lang={{ lang }}">{{ t.register }}</a>

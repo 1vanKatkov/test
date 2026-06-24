@@ -13,10 +13,29 @@ from config import settings
 
 
 PACKAGE_CATALOG: dict[str, dict[str, Any]] = {
-    "quick_10": {"sparks": 10, "amount": 10, "label": "10 искр - 10₽", "is_subscription": False},
-    "topup_50": {"sparks": 50, "amount": 100, "label": "50 искр - 100₽", "is_subscription": False},
-    "topup_100": {"sparks": 100, "amount": 200, "label": "100 искр - 200₽", "is_subscription": False},
+    "sparks_5": {"sparks": 5, "amount": 39, "label": "5 искр - 39₽", "is_subscription": False},
+    "sparks_10": {"sparks": 10, "amount": 79, "label": "10 искр - 79₽", "is_subscription": False},
+    "sparks_50": {"sparks": 50, "amount": 199, "label": "50 искр - 199₽", "is_subscription": False},
+    "sparks_100": {"sparks": 100, "amount": 349, "label": "100 искр - 349₽", "is_subscription": False},
+    "sparks_250": {"sparks": 250, "amount": 699, "label": "250 искр - 699₽", "is_subscription": False},
+    "astrolhub_plus": {
+        "sparks": 150,
+        "amount": 149,
+        "label": "Astrolhub Plus — 149₽/мес",
+        "is_subscription": True,
+        "subscription_days": 30,
+    },
 }
+
+
+def recommend_package_for_sparks(sparks_needed: int) -> str | None:
+    if sparks_needed <= 0:
+        return None
+    ordered = sorted(PACKAGE_CATALOG.items(), key=lambda item: int(item[1]["sparks"]))
+    for package_id, package in ordered:
+        if int(package["sparks"]) >= sparks_needed:
+            return package_id
+    return ordered[-1][0] if ordered else None
 
 
 def _now() -> str:
@@ -79,9 +98,11 @@ def _extract_yookassa_error(exc: Exception) -> str:
     return str(exc)
 
 
-def get_payment_packages() -> list[dict[str, Any]]:
+def get_payment_packages(include_subscriptions: bool = True) -> list[dict[str, Any]]:
     result = []
     for package_id, package in PACKAGE_CATALOG.items():
+        if package.get("is_subscription") and not include_subscriptions:
+            continue
         result.append(
             {
                 "id": package_id,
@@ -223,9 +244,10 @@ def _apply_payment_status(payment_id: str, requester_user_id: int, payment_statu
                 if days <= 0:
                     raise HTTPException(status_code=500, detail="Subscription days are invalid")
                 end_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+                updated_balance = int(row["credits"]) + sparks
                 conn.execute(
                     "UPDATE users SET credits = ?, subscription_end = ?, updated_at = ? WHERE id = ?",
-                    (sparks, end_at, now, user_id),
+                    (updated_balance, end_at, now, user_id),
                 )
                 _add_transaction(
                     conn,

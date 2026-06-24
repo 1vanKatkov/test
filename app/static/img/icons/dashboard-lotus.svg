@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <defs>
+    <linearGradient id="petal" x1="21" y1="25" x2="75" y2="77">
+      <stop stop-color="#fff3bd"/>
+      <stop offset=".45" stop-color="#c56dff"/>
+      <stop offset="1" stop-color="#3f226f"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+  <path d="M48 18c11 15 12 30 0 48-12-18-11-33 0-48Z" fill="url(#petal)" stroke="#ffd98a" stroke-width="1.2"/>
+  <path d="M25 36c16 5 25 16 26 35-18-4-28-15-26-35Z" fill="url(#petal)" opacity=".82" stroke="#c98cff" stroke-width="1.1"/>
+  <path d="M71 36c-16 5-25 16-26 35 18-4 28-15 26-35Z" fill="url(#petal)" opacity=".82" stroke="#c98cff" stroke-width="1.1"/>
+  <path d="M17 55c17 0 29 7 38 23-20 2-33-5-38-23Z" fill="#3a1a62" stroke="#ffd98a" stroke-width="1.1" opacity=".86"/>
+  <path d="M79 55c-17 0-29 7-38 23 20 2 33-5 38-23Z" fill="#3a1a62" stroke="#ffd98a" stroke-width="1.1" opacity=".86"/>
+  <path d="M17 79h62" stroke="#ffd98a" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="48" cy="61" rx="35" ry="22" stroke="#8e62ff" opacity=".24" filter="url(#glow)"/>
+</svg>

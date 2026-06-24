@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <defs>
+    <linearGradient id="star" x1="48" y1="11" x2="48" y2="84">
+      <stop stop-color="#fff3bd"/>
+      <stop offset=".5" stop-color="#c07bff"/>
+      <stop offset="1" stop-color="#5bdcff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+  <circle cx="48" cy="48" r="31" fill="#211044" stroke="#8f69ff" stroke-width="1.5" opacity=".95"/>
+  <circle cx="48" cy="48" r="24" stroke="#ffd98a" stroke-width="1.2" opacity=".4"/>
+  <path d="M48 12 56 40 84 48 56 56 48 84 40 56 12 48 40 40 48 12Z" fill="url(#star)" opacity=".95"/>
+  <path d="M48 23 52 44 73 48 52 52 48 73 44 52 23 48 44 44 48 23Z" fill="#190b34"/>
+  <circle cx="48" cy="48" r="40" stroke="#7d5cff" opacity=".2" filter="url(#glow)"/>
+</svg>
