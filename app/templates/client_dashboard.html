@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=dark-gold-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dashboard-v2-v1" />
 </head>
 <body
-  class="app-shell mobile-client-shell"
+  class="app-shell mobile-client-shell client-dashboard-page"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
@@ -31,59 +31,58 @@
             </div>
             <div class="dashboard-template-user-card">
               <div class="dashboard-template-user-row">
+                <img class="dashboard-template-user-star" src="/static/img/icons/dashboard-spark-star.svg" alt="" aria-hidden="true" loading="lazy" />
                 <span class="dashboard-template-user-name">
                   <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
-                  <span id="dashboard-hero-plus-badge" class="plus-badge" hidden>{{ t.plus_badge or "Plus" }}</span>
+                  <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
+                    <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+                    <span id="dashboard-hero-sparks">-</span>
+                  </span>
                 </span>
-                <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
-                  <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-                  <span id="dashboard-hero-sparks">-</span>
-                </span>
+                <span id="dashboard-hero-plus-badge" class="plus-badge" hidden>{{ t.plus_badge or "Plus" }}</span>
               </div>
             </div>
             <p id="telegram-auth-status" class="result muted" hidden></p>
           </section>
-          <section class="dashboard-template-card-grid" aria-label="{{ t.dashboard_template_cards_label }}">
+          <header class="dashboard-template-section-head">
+            <h2 class="dashboard-template-section-title">{{ t.dashboard_template_section_title }}</h2>
+            <p class="dashboard-template-section-subtitle">{{ t.dashboard_template_section_subtitle }}</p>
+          </header>
+          <section class="dashboard-template-feature-list" aria-label="{{ t.dashboard_template_cards_label }}">
             <a class="dashboard-template-feature-card" href="/client/tarot?lang={{ lang }}">
-              <img src="/static/img/icons/dashboard-crystal-ball.svg" alt="" loading="lazy" />
-              <span>
+              <span class="dashboard-template-feature-icon" aria-hidden="true">
+                <img src="/static/img/icons/dashboard-spark-star.svg" alt="" loading="lazy" />
+              </span>
+              <span class="dashboard-template-feature-copy">
                 <strong>{{ t.dashboard_template_card_personal_title }}</strong>
                 <small>{{ t.dashboard_template_card_personal_text }}</small>
               </span>
-              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+              <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-personal.svg" alt="" loading="lazy" />
             </a>
             <a class="dashboard-template-feature-card" href="/client/compatibility?lang={{ lang }}">
-              <img src="/static/img/icons/dashboard-heart.svg" alt="" loading="lazy" />
-              <span>
-                <strong>{{ t.dashboard_template_card_relationship_title }}</strong>
-                <small>{{ t.dashboard_template_card_relationship_text }}</small>
+              <span class="dashboard-template-feature-icon" aria-hidden="true">
+                <img src="/static/img/icons/dashboard-moon-crescent.svg" alt="" loading="lazy" />
               </span>
-              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+              <span class="dashboard-template-feature-copy">
+                <strong>{{ t.dashboard_template_card_holistic_title }}</strong>
+                <small>{{ t.dashboard_template_card_holistic_text }}</small>
+              </span>
+              <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-holistic.svg" alt="" loading="lazy" />
             </a>
             <a class="dashboard-template-feature-card" href="/client/numerology?lang={{ lang }}">
-              <img src="/static/img/icons/dashboard-compass.svg" alt="" loading="lazy" />
-              <span>
-                <strong>{{ t.dashboard_template_card_potential_title }}</strong>
-                <small>{{ t.dashboard_template_card_potential_text }}</small>
+              <span class="dashboard-template-feature-icon" aria-hidden="true">
+                <img src="/static/img/icons/dashboard-rocket.svg" alt="" loading="lazy" />
               </span>
-              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
-            </a>
-            <a class="dashboard-template-feature-card" href="/client/tarot-cards?lang={{ lang }}">
-              <img src="/static/img/icons/dashboard-lotus.svg" alt="" loading="lazy" />
-              <span>
-                <strong>{{ t.dashboard_template_card_decisions_title }}</strong>
-                <small>{{ t.dashboard_template_card_decisions_text }}</small>
+              <span class="dashboard-template-feature-copy">
+                <strong>{{ t.dashboard_template_card_practical_title }}</strong>
+                <small>{{ t.dashboard_template_card_practical_text }}</small>
               </span>
-              <span class="dashboard-template-arrow" aria-hidden="true">›</span>
+              <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-practical.svg" alt="" loading="lazy" />
             </a>
-          </section>
-          <section class="dashboard-template-banner">
-            <span>{{ t.dashboard_template_banner_kicker }}</span>
-            <h2>{{ t.dashboard_template_banner_title }}</h2>
-            <p>{{ t.dashboard_template_banner_text }}</p>
           </section>
           <button id="dashboard-go-services" type="button" class="primary-btn dashboard-go-services-btn dashboard-template-cta">
-            {{ t.dashboard_template_cta or "Начать исследование" }} <span aria-hidden="true">✦</span>
+            {{ t.dashboard_template_cta or "Получить первый разбор" }}
+            <span class="dashboard-template-cta-icon" aria-hidden="true">✦</span>
           </button>
         </section>
         <section class="dashboard-slide dashboard-slide-services" aria-label="{{ t.dashboard_slider_dot_services }}" aria-hidden="true">
@@ -161,4 +160,3 @@
   <script defer src="/static/app.js?v=plus-subscription-v1"></script>
 </body>
 </html>
-

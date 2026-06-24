@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140" fill="none" role="img" aria-label="Zodiac wheel">
+  <defs>
+    <radialGradient id="wheelGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffd98a" stop-opacity=".22"/>
+      <stop offset=".65" stop-color="#b875ff" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#1a0b34" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wheelRing" x1="40" y1="20" x2="140" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd98a"/>
+      <stop offset="1" stop-color="#b875ff"/>
+    </linearGradient>
+    <filter id="wheelSoftGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="90" cy="70" r="58" fill="url(#wheelGlow)"/>
+
+  <g transform="translate(90 70)" filter="url(#wheelSoftGlow)">
+    <!-- Outer rings -->
+    <circle r="52" fill="none" stroke="url(#wheelRing)" stroke-width="1.6" stroke-opacity=".72"/>
+    <circle r="42" fill="none" stroke="#b875ff" stroke-width="1" stroke-opacity=".38"/>
+    <circle r="32" fill="none" stroke="#ffd98a" stroke-width=".8" stroke-opacity=".28" stroke-dasharray="3 5"/>
+
+    <!-- Cross axes -->
+    <g stroke="#b875ff" stroke-opacity=".32" stroke-width="1">
+      <path d="M0-52V52M-52 0H52"/>
+      <path d="M-37-37 37 37M37-37-37 37"/>
+    </g>
+
+    <!-- Zodiac symbol dots -->
+    <g fill="#ffd98a" opacity=".72">
+      <circle cy="-46" r="2.2"/>
+      <circle cx="33" cy="-33" r="1.8"/>
+      <circle cx="46" r="2"/>
+      <circle cx="33" cy="33" r="1.7"/>
+      <circle cy="46" r="2.1"/>
+      <circle cx="-33" cy="33" r="1.8"/>
+      <circle cx="-46" r="1.9"/>
+      <circle cx="-33" cy="-33" r="1.6"/>
+    </g>
+
+    <!-- Inner chart segments -->
+    <g fill="none" stroke="#ffd98a" stroke-opacity=".42" stroke-width="1.1">
+      <path d="M0-32a32 32 0 0 1 22 9"/>
+      <path d="M32 0a32 32 0 0 1-9 22"/>
+      <path d="M0 32a32 32 0 0 1-22-9"/>
+      <path d="M-32 0a32 32 0 0 1 9-22"/>
+    </g>
+
+    <!-- Center sun symbol -->
+    <circle r="8" fill="#1a0b34" stroke="#ffd98a" stroke-width="1.4" stroke-opacity=".65"/>
+    <circle r="3.5" fill="#ffd98a" opacity=".85"/>
+    <g stroke="#b875ff" stroke-width="1" stroke-linecap="round" opacity=".55">
+      <path d="M0-14V-10M0 10v4M-14 0h-4M14 0h4"/>
+      <path d="M-10-10l-3-3M10-10l3-3M10 10l3 3M-10 10l-3 3"/>
+    </g>
+
+    <!-- Mini zodiac glyphs -->
+    <g fill="none" stroke="#b875ff" stroke-width="1.1" stroke-linecap="round" opacity=".5">
+      <path d="M-2-40c4 0 4 5 0 5"/>
+      <path d="M38-2c0 4-5 4-5 0"/>
+      <path d="M2 38c-4 0-4-5 0-5"/>
+      <path d="M-38 2c0-4 5-4 5 0"/>
+    </g>
+  </g>
+</svg>

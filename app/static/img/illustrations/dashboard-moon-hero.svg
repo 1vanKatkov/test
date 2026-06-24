@@ -1,52 +1,123 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" fill="none" role="img" aria-label="Cosmic moon hero">
   <defs>
-    <radialGradient id="skyGlow" cx="72%" cy="30%" r="55%">
-      <stop offset="0" stop-color="#7b4cff" stop-opacity=".38"/>
-      <stop offset=".42" stop-color="#331b62" stop-opacity=".28"/>
-      <stop offset="1" stop-color="#070713" stop-opacity="0"/>
+    <radialGradient id="heroSpace" cx="78%" cy="38%" r="72%">
+      <stop offset="0" stop-color="#3d1a6e" stop-opacity=".55"/>
+      <stop offset=".35" stop-color="#1a0b34" stop-opacity=".42"/>
+      <stop offset=".68" stop-color="#120828" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#1a0b34" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-      <stop offset=".55" stop-color="#f7c675" stop-opacity=".85"/>
-      <stop offset=".78" stop-color="#8b4dff" stop-opacity=".24"/>
-      <stop offset="1" stop-color="#8b4dff" stop-opacity="0"/>
+    <radialGradient id="heroSeaGlow" cx="72%" cy="88%" r="48%">
+      <stop offset="0" stop-color="#2a1450" stop-opacity=".62"/>
+      <stop offset=".55" stop-color="#1a0b34" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#1a0b34" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="moonGold" x1="573" y1="61" x2="698" y2="294" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fff2ba"/>
-      <stop offset=".46" stop-color="#f3ba65"/>
-      <stop offset="1" stop-color="#7b3bff"/>
+    <radialGradient id="moonAura" cx="50%" cy="50%" r="50%">
+      <stop offset=".42" stop-color="#ffd98a" stop-opacity=".72"/>
+      <stop offset=".72" stop-color="#b875ff" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#b875ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="moonGold" x1="598" y1="72" x2="742" y2="318" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff4c8"/>
+      <stop offset=".38" stop-color="#ffd98a"/>
+      <stop offset=".78" stop-color="#e8a84a"/>
+      <stop offset="1" stop-color="#b875ff"/>
     </linearGradient>
-    <filter id="blurCloud" x="-30%" y="-60%" width="160%" height="220%">
-      <feGaussianBlur stdDeviation="18"/>
-    </filter>
-    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="7" result="b"/>
+    <linearGradient id="seaShimmer" x1="420" y1="360" x2="900" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a1450" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#1a0b34" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#1a0b34" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
       <feMerge>
         <feMergeNode in="b"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+    <filter id="blurCloud" x="-40%" y="-80%" width="180%" height="260%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="starGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="1.8"/>
+    </filter>
   </defs>
-  <rect width="900" height="520" fill="url(#skyGlow)"/>
-  <g opacity=".52">
-    <path d="M384 228c128-152 317-212 450-132" stroke="#c9a2ff" stroke-width="2" opacity=".4"/>
-    <path d="M439 339c143-90 322-103 455-28" stroke="#8f72ff" stroke-width="1.4" opacity=".34"/>
+
+  <!-- Deep space glow (fades to transparent at edges) -->
+  <ellipse cx="680" cy="210" rx="420" ry="320" fill="url(#heroSpace)"/>
+  <ellipse cx="640" cy="430" rx="380" ry="160" fill="url(#heroSeaGlow)"/>
+
+  <!-- Distant stars -->
+  <g fill="#ffd98a" opacity=".82" filter="url(#starGlow)">
+    <circle cx="318" cy="48" r="2.1"/>
+    <circle cx="402" cy="112" r="1.3"/>
+    <circle cx="488" cy="34" r="1.6"/>
+    <circle cx="556" cy="88" r="1.1"/>
+    <circle cx="812" cy="62" r="1.9"/>
+    <circle cx="854" cy="148" r="1.4"/>
+    <circle cx="372" cy="178" r="1.2"/>
+    <circle cx="438" cy="214" r=".9"/>
   </g>
+  <g fill="#b875ff" opacity=".55" filter="url(#starGlow)">
+    <circle cx="346" cy="132" r="1"/>
+    <circle cx="524" cy="156" r="1.2"/>
+    <circle cx="768" cy="96" r="1"/>
+    <circle cx="620" cy="52" r=".8"/>
+  </g>
+
+  <!-- Zodiac ring around moon -->
+  <g transform="translate(648 188)" opacity=".62" filter="url(#softGlow)">
+    <circle r="168" fill="none" stroke="#b875ff" stroke-opacity=".28" stroke-width="1.4"/>
+    <circle r="142" fill="none" stroke="#ffd98a" stroke-opacity=".16" stroke-width="1"/>
+    <circle r="118" fill="none" stroke="#b875ff" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="4 8"/>
+    <g stroke="#ffd98a" stroke-opacity=".34" stroke-width="1.1">
+      <path d="M0-168V-142M0 142v26M-168 0h26M142 0h26"/>
+      <path d="M119-119l-18 18M119 119l-18-18M-119-119l18 18M-119 119l18-18"/>
+    </g>
+    <!-- Zodiac tick marks -->
+    <g fill="#ffd98a" opacity=".48">
+      <circle cx="0" cy="-155" r="2.2"/>
+      <circle cx="110" cy="-110" r="1.8"/>
+      <circle cx="155" cy="0" r="2"/>
+      <circle cx="110" cy="110" r="1.7"/>
+      <circle cx="0" cy="155" r="2.1"/>
+      <circle cx="-110" cy="110" r="1.8"/>
+      <circle cx="-155" cy="0" r="1.9"/>
+      <circle cx="-110" cy="-110" r="1.6"/>
+      <circle cx="77" cy="-132" r="1.3"/>
+      <circle cx="-77" cy="132" r="1.2"/>
+      <circle cx="132" cy="77" r="1.3"/>
+      <circle cx="-132" cy="-77" r="1.2"/>
+    </g>
+    <!-- Stylized zodiac symbols -->
+    <g fill="none" stroke="#b875ff" stroke-opacity=".38" stroke-width="1.2" stroke-linecap="round">
+      <path d="M-4-148c8 0 8 10 0 10s-8 10 0 10"/>
+      <path d="M148-4c0 8-10 8-10 0s-10 8-10 0"/>
+      <path d="M4 148c-8 0-8-10 0-10s8-10 0-10"/>
+      <path d="M-148 4c0-8 10-8 10 0s10-8 10 0"/>
+    </g>
+  </g>
+
+  <!-- Moon glow + crescent -->
   <g filter="url(#softGlow)">
-    <circle cx="629" cy="180" r="128" fill="url(#moonGlow)" opacity=".9"/>
-    <path d="M705 62c-74 24-132 94-132 179 0 43 14 82 39 114-75-10-133-74-133-152 0-85 69-154 154-154 26 0 50 6 72 13Z" fill="url(#moonGold)"/>
-    <path d="M708 62c-56 31-95 94-95 164 0 37 11 75 31 105" stroke="#fff4bb" stroke-width="3" opacity=".52"/>
+    <circle cx="648" cy="188" r="132" fill="url(#moonAura)" opacity=".88"/>
+    <path d="M724 78c-82 28-146 108-146 198 0 48 17 92 46 127-88-12-156-88-156-178 0-98 80-178 178-178 30 0 58 7 82 18Z" fill="url(#moonGold)"/>
+    <path d="M726 78c-62 34-104 102-104 176 0 40 12 78 34 109" stroke="#fff6d4" stroke-width="2.8" stroke-linecap="round" opacity=".45"/>
   </g>
-  <g filter="url(#blurCloud)" opacity=".68">
-    <ellipse cx="471" cy="321" rx="145" ry="40" fill="#351b5e"/>
-    <ellipse cx="598" cy="313" rx="120" ry="46" fill="#2a174d"/>
-    <ellipse cx="749" cy="313" rx="152" ry="54" fill="#1e123f"/>
-    <ellipse cx="823" cy="221" rx="70" ry="106" fill="#4b1e73" opacity=".58"/>
+
+  <!-- Dark purple clouds / sea -->
+  <g filter="url(#blurCloud)" opacity=".74">
+    <ellipse cx="468" cy="332" rx="156" ry="42" fill="#2a1450"/>
+    <ellipse cx="598" cy="322" rx="128" ry="48" fill="#1f0d3a"/>
+    <ellipse cx="738" cy="318" rx="168" ry="56" fill="#1a0b34"/>
+    <ellipse cx="828" cy="248" rx="78" ry="112" fill="#351a5c" opacity=".52"/>
   </g>
-  <g fill="#fff5c9" opacity=".78">
-    <circle cx="374" cy="53" r="2.3"/>
-    <circle cx="462" cy="124" r="1.4"/>
-    <circle cx="804" cy="78" r="1.8"/>
-    <circle cx="764" cy="198" r="1.3"/>
-    <circle cx="532" cy="38" r="1.2"/>
+  <path d="M380 360c92-18 178-8 268 18 74 22 152 28 252 12" stroke="#b875ff" stroke-opacity=".18" stroke-width="2" fill="none"/>
+  <path d="M410 392c118-12 214 6 310 34 52 16 118 22 180 10" stroke="#ffd98a" stroke-opacity=".12" stroke-width="1.6" fill="none"/>
+  <ellipse cx="620" cy="410" rx="340" ry="90" fill="url(#seaShimmer)"/>
+
+  <!-- Spark accents -->
+  <g fill="#ffd98a" opacity=".72" filter="url(#starGlow)">
+    <path d="M548 142l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z"/>
+    <path d="M842 198l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/>
   </g>
 </svg>
