@@ -4530,20 +4530,25 @@ function wireDashboardCarousel() {
 function wireLangSwitch() {
   document.querySelectorAll(".lang-switch-item[data-lang]").forEach((node) => {
     node.addEventListener("click", async (event) => {
+      event.preventDefault();
       const targetLang = node.dataset.lang === "en" ? "en" : "ru";
       if (targetLang === lang) {
-        event.preventDefault();
         return;
       }
-      event.preventDefault();
-      if (isLoggedIn()) {
-        try {
-          await apiRequest("/api/profile/language", "PATCH", { language: targetLang });
-        } catch (_error) {
-          // Fall back to URL + cookie for guests and failed profile updates.
-        }
-      }
       const nextUrl = new URL(node.getAttribute("href") || window.location.href, window.location.origin);
+      try {
+        await fetch(resolveApiUrl("/api/profile/language"), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({ language: targetLang }),
+        });
+      } catch (_error) {
+        // Navigation below still applies ?lang= and server-side cookie.
+      }
       window.location.href = nextUrl.toString();
     });
   });

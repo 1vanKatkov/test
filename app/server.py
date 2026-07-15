@@ -2065,15 +2065,23 @@ async def profile(
 
 @app.patch("/api/profile/language")
 async def api_update_profile_language(
+    request: Request,
     payload: ProfileLanguageRequest,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
     page_lang = _normalize_lang(payload.language)
-    db.update_user_language(user_id, page_lang)
-    response = JSONResponse({"success": True, "language": page_lang})
+    user_id = None
+    if email_identity:
+        user_id = email_identity.internal_user_id
+    elif max_identity:
+        user_id = max_identity.internal_user_id
+    elif telegram_identity:
+        user_id = telegram_identity.internal_user_id
+    if user_id is not None:
+        db.update_user_language(user_id, page_lang)
+    response = JSONResponse({"success": True, "language": page_lang, "authenticated": user_id is not None})
     _set_lang_cookie(response, page_lang)
     return response
 
