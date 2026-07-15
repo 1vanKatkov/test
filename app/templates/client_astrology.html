@@ -16,7 +16,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -37,10 +37,10 @@
       <div class="auth-required-panel" hidden>
         <h3>{{ t.sign_in_required_title }}</h3>
         <p>{{ t.sign_in_required_text }}</p>
-        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/astrology%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+        <a class="primary-btn" href="/static/auth/login.html?next=/client/astrology">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?lang={{ lang }}&back=/client/astrology">{{ t.about_astrology or 'Об астрологии' }}</a>
+        <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?back=/client/astrology">{{ t.about_astrology or 'Об астрологии' }}</a>
         <form id="astrology-form" class="form-grid service-theme-form">
           <label>{{ t.astrology_name }} <input id="astrology-name" required /></label>
           <label>{{ t.birth_date }} <input id="astrology-birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>

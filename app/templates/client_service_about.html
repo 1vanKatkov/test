@@ -15,7 +15,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -26,7 +26,7 @@
       <div class="page-heading-with-back">
         <a
           class="page-back-arrow"
-          href="{{ about.back_url }}?lang={{ lang }}"
+          href="{{ about.back_url }}"
           aria-label="{{ about.back_label }}"
           title="{{ about.back_label }}"
         ></a>

@@ -17,7 +17,36 @@ const state = {
   personas: [],
 };
 let telegramSdkLoadPromise = null;
-const lang = document.body.dataset.lang === "en" ? "en" : "ru";
+
+function readLangCookie() {
+  const match = document.cookie.match(/(?:^|;\s*)astrolhub_lang=([^;]+)/);
+  const value = match ? decodeURIComponent(match[1]).trim().toLowerCase() : "";
+  return value === "en" ? "en" : value === "ru" ? "ru" : "";
+}
+
+function bootstrapLangFromUrl() {
+  const url = new URL(window.location.href);
+  const urlLang = url.searchParams.get("lang");
+  if (urlLang !== "en" && urlLang !== "ru") {
+    return;
+  }
+  document.cookie = `astrolhub_lang=${urlLang}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+  url.searchParams.delete("lang");
+  const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, "", cleanUrl);
+}
+
+bootstrapLangFromUrl();
+
+function resolveClientLang() {
+  const cookieLang = readLangCookie();
+  if (cookieLang) {
+    return cookieLang;
+  }
+  return document.body.dataset.lang === "en" ? "en" : "ru";
+}
+
+const lang = resolveClientLang();
 const currentReportId = Number(document.body.dataset.reportId || 0);
 const PROFILE_CACHE_KEY = "astrolhub.profileCache";
 const BALANCE_CACHE_KEY = "astrolhub.balanceCache";
@@ -246,8 +275,18 @@ function authStaticUrl(page, extraParams = {}) {
     register: "/static/auth/register.html",
     verify: "/static/auth/register-verify.html",
   };
-  const params = new URLSearchParams({ lang, ...extraParams });
-  return `${paths[page]}?${params.toString()}`;
+  const params = new URLSearchParams(extraParams);
+  const query = params.toString();
+  return query ? `${paths[page]}?${query}` : paths[page];
+}
+
+function stripLangFromUrl(url) {
+  if (!url) {
+    return url;
+  }
+  const target = new URL(url, window.location.origin);
+  target.searchParams.delete("lang");
+  return `${target.pathname}${target.search}`;
 }
 
 function currentRelativeUrl() {
@@ -261,20 +300,20 @@ function loginRedirectUrl() {
 function resolvePostLoginRedirect() {
   const nextRaw = new URLSearchParams(window.location.search).get("next") || "";
   if (!nextRaw) {
-    return `/client?lang=${lang}`;
+    return "/client";
   }
   try {
     const nextUrl = new URL(nextRaw, window.location.origin);
     if (nextUrl.origin !== window.location.origin) {
-      return `/client?lang=${lang}`;
+      return "/client";
     }
     if (nextUrl.pathname.startsWith("/api/")) {
-      return `/client?lang=${lang}`;
+      return "/client";
     }
-    nextUrl.searchParams.set("lang", lang);
+    nextUrl.searchParams.delete("lang");
     return `${nextUrl.pathname}${nextUrl.search}`;
   } catch {
-    return `/client?lang=${lang}`;
+    return "/client";
   }
 }
 
@@ -288,7 +327,7 @@ function loginRedirectUrlFor(nextHref) {
     if (nextUrl.origin !== window.location.origin || nextUrl.pathname.startsWith("/api/")) {
       return loginRedirectUrl();
     }
-    nextUrl.searchParams.set("lang", lang);
+    nextUrl.searchParams.delete("lang");
     return authStaticUrl("login", { next: `${nextUrl.pathname}${nextUrl.search}` });
   } catch {
     return loginRedirectUrl();
@@ -296,12 +335,7 @@ function loginRedirectUrlFor(nextHref) {
 }
 
 function withLangQuery(url) {
-  if (!url) {
-    return url;
-  }
-  const target = new URL(url, window.location.origin);
-  target.searchParams.set("lang", lang);
-  return `${target.pathname}${target.search}`;
+  return stripLangFromUrl(url);
 }
 
 function authStaticUrlWithCurrentNext(page, extraParams = {}) {
@@ -1399,7 +1433,7 @@ async function logout() {
   setAuthUsername(i18n.guest);
   syncAuthChrome({ provider: "guest", username: i18n.guest });
   setAdminTileVisible(false);
-  window.location.href = `/client?lang=${lang}`;
+  window.location.href = "/client";
 }
 
 function wireLogoutButton() {
@@ -1995,8 +2029,8 @@ function renderRequestHistory(items) {
     .map((item) => {
       const itemId = Number(item.id) || 0;
       const detailsUrl = item.module === "numerology" && item.report_url
-        ? `${escapeHtml(item.report_url)}?lang=${encodeURIComponent(lang)}`
-        : `/client/history/request/${itemId}?lang=${encodeURIComponent(lang)}`;
+        ? escapeHtml(item.report_url)
+        : `/client/history/request/${itemId}`;
       const display = formatHistoryDisplay(item);
       const createdAt = formatDateOnly(item.created_at);
       const serviceText = display.serviceType
@@ -2449,8 +2483,7 @@ function wireNumerologyForm() {
         language: lang,
       }, { redirectOnUnauthorized: true }),
       onSuccess: (result) => {
-        const separator = result.report_url.includes("?") ? "&" : "?";
-        const reportUrl = `${result.report_url}${separator}lang=${encodeURIComponent(lang)}`;
+        const reportUrl = result.report_url;
         setBalance(result.balance);
         window.location.assign(reportUrl);
       },
@@ -4535,7 +4568,6 @@ function wireLangSwitch() {
       if (targetLang === lang) {
         return;
       }
-      const nextUrl = new URL(node.getAttribute("href") || window.location.href, window.location.origin);
       try {
         await fetch(resolveApiUrl("/api/profile/language"), {
           method: "PATCH",
@@ -4547,9 +4579,9 @@ function wireLangSwitch() {
           body: JSON.stringify({ language: targetLang }),
         });
       } catch (_error) {
-        // Navigation below still applies ?lang= and server-side cookie.
+        // Cookie may still be set server-side on the next page load.
       }
-      window.location.href = nextUrl.toString();
+      window.location.href = stripLangFromUrl(window.location.href);
     });
   });
 }

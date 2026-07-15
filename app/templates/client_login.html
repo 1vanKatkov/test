@@ -14,7 +14,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -29,7 +29,7 @@
       </form>
       <p class="muted auth-switch-line">
         {{ t.no_account }}
-        <a href="/static/auth/register.html?lang={{ lang }}">{{ t.go_to_register }}</a>
+        <a href="/static/auth/register.html">{{ t.go_to_register }}</a>
       </p>
       <pre id="auth-result" class="result"></pre>
     </section>

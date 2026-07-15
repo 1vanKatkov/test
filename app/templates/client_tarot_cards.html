@@ -16,7 +16,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -37,10 +37,10 @@
       <div class="auth-required-panel" hidden>
         <h3>{{ t.sign_in_required_title }}</h3>
         <p>{{ t.sign_in_required_text }}</p>
-        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/tarot-cards%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+        <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot-cards">{{ t.sign_in_required_action }}</a>
       </div>
       <div class="auth-required-content">
-        <a class="service-about-inline-link" href="/client/about/tarot-cards?lang={{ lang }}&back=/client/tarot-cards">{{ t.about_tarot_cards or 'О картах Таро' }}</a>
+        <a class="service-about-inline-link" href="/client/about/tarot-cards?back=/client/tarot-cards">{{ t.about_tarot_cards or 'О картах Таро' }}</a>
         <div id="tarot-stage" class="tarot-stage" data-phase="loading">
           <div class="tarot-stage-table">
             <div>

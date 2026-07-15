@@ -154,6 +154,13 @@ def _set_lang_cookie(response: HTMLResponse | JSONResponse | RedirectResponse, l
     )
 
 
+def _url_without_lang(request: Request) -> str:
+    params = [(key, value) for key, value in request.query_params.multi_items() if key != "lang"]
+    query = urlencode(params)
+    path = request.url.path
+    return f"{path}?{query}" if query else path
+
+
 class ClientAuthContext(NamedTuple):
     email: EmailIdentity | None
     max: MaxIdentity | None
@@ -209,10 +216,18 @@ def _render_client_page(
     selected_card_topic: str = "",
     extra_context: dict | None = None,
 ) -> HTMLResponse:
+    raw_query = (lang_query or "").strip().lower()
+    if raw_query in {"ru", "en"}:
+        page_lang = raw_query
+        response = RedirectResponse(url=_url_without_lang(request), status_code=302)
+        _set_lang_cookie(response, page_lang)
+        _sync_profile_language_from_explicit_choice(auth, page_lang)
+        return response
+
     identity_lang = ""
     if auth and (auth.email or auth.max or auth.telegram):
         identity_lang = _resolve_language(auth.email, auth.max, auth.telegram)
-    page_lang, set_cookie = _resolve_page_lang(request, lang_query, identity_lang)
+    page_lang, set_cookie = _resolve_page_lang(request, "", identity_lang)
     context = _client_template_context(request, page_lang, selected_card_topic=selected_card_topic)
     if extra_context:
         context.update(extra_context)
@@ -1404,13 +1419,12 @@ def _is_recognized_request(request: Request, name: str = "", platform: str = "")
     return False
 
 
-def _client_url_with_query(name: str = "", platform: str = "", lang: str = "") -> str:
+def _client_url_with_query(name: str = "", platform: str = "") -> str:
     params = {}
     if name.strip():
         params["name"] = name.strip()
     if platform.strip():
         params["platform"] = platform.strip().lower()
-    params["lang"] = _normalize_lang(lang)
     if not params:
         return "/client"
     return f"/client?{urlencode(params)}"
@@ -1435,7 +1449,10 @@ async def root(
 ):
     page_lang, set_cookie = _resolve_page_lang(request, lang)
     if _is_recognized_request(request, name=name, platform=platform):
-        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform, lang=page_lang))
+        response = RedirectResponse(url=_client_url_with_query(name=name, platform=platform))
+        if set_cookie:
+            _set_lang_cookie(response, page_lang)
+        return response
 
     response = RedirectResponse(url="/client", status_code=302)
     if set_cookie:
@@ -1518,7 +1535,7 @@ async def client_register_verify(
     email: str = Query(default=""),
     auth: ClientAuthContext = Depends(optional_client_auth),
 ):
-    page_lang, _ = _resolve_page_lang(
+    page_lang, set_cookie = _resolve_page_lang(
         request,
         lang,
         _resolve_language(auth.email, auth.max, auth.telegram) if auth else "",
@@ -1527,9 +1544,15 @@ async def client_register_verify(
     try:
         normalized = normalize_email(email)
     except HTTPException:
-        return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
+        response = RedirectResponse(url="/client/register", status_code=302)
+        if set_cookie:
+            _set_lang_cookie(response, page_lang)
+        return response
     if settings.email_skip_verification or not has_pending_registration(normalized):
-        return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
+        response = RedirectResponse(url="/client/register", status_code=302)
+        if set_cookie:
+            _set_lang_cookie(response, page_lang)
+        return response
     return _render_client_page(
         request,
         "client_register_verify.html",
@@ -1704,8 +1727,11 @@ async def client_support(
 
 @app.get("/client/lunar", include_in_schema=False)
 async def client_lunar(request: Request, lang: str = Query(default="")):
-    page_lang, _ = _resolve_page_lang(request, lang)
-    return RedirectResponse(url=f"/client?lang={page_lang}", status_code=302)
+    page_lang, set_cookie = _resolve_page_lang(request, lang)
+    response = RedirectResponse(url="/client", status_code=302)
+    if set_cookie:
+        _set_lang_cookie(response, page_lang)
+    return response
 
 
 @app.get("/client/numerology/report/{report_id}", response_class=HTMLResponse, include_in_schema=False)
@@ -1733,14 +1759,14 @@ async def admin_dashboard(
     try:
         _require_admin_email_user(email_identity)
     except HTTPException as exc:
-        page_lang = _normalize_lang(lang)
         if exc.status_code == 401:
-            return RedirectResponse(url=f"/static/auth/login.html?lang={page_lang}&next=/admin%3Flang%3D{page_lang}", status_code=302)
+            return RedirectResponse(url="/static/auth/login.html?next=/admin", status_code=302)
         raise
+    page_lang, _ = _resolve_page_lang(request, lang)
     return templates.TemplateResponse(
         request=request,
         name="admin_dashboard.html",
-        context=_client_template_context(request, lang),
+        context=_client_template_context(request, page_lang),
     )
 
 
@@ -1761,9 +1787,12 @@ async def mini_app(
     platform: str = Query(default=""),
     lang: str = Query(default=""),
 ):
-    page_lang = _normalize_lang(lang)
+    page_lang, set_cookie = _resolve_page_lang(request, lang)
     if _is_recognized_request(request, name=name, platform=platform):
-        return RedirectResponse(url=_client_url_with_query(name=name, platform=platform, lang=page_lang))
+        response = RedirectResponse(url=_client_url_with_query(name=name, platform=platform))
+        if set_cookie:
+            _set_lang_cookie(response, page_lang)
+        return response
 
     safe_platform = platform.lower().strip() or "unknown"
     safe_name = name.strip() or "Unknown user"

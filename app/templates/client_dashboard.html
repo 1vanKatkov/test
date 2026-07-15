@@ -15,7 +15,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -87,11 +87,11 @@
         </section>
         <section class="dashboard-slide dashboard-slide-services" aria-label="{{ t.dashboard_slider_dot_services }}" aria-hidden="true">
           <section id="admin-panel-entry" class="card" hidden>
-            <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin?lang={{ lang }}">{{ t.admin_panel }}</a>
+            <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin">{{ t.admin_panel }}</a>
           </section>
           <h2 class="dashboard-services-title">{{ t.dashboard_slide_services_title }}</h2>
           <section class="feature-list">
-            <a class="feature-icon-tile feature-list-card" href="/client/sonnik?lang={{ lang }}">
+            <a class="feature-icon-tile feature-list-card" href="/client/sonnik">
               <img class="tile-icon-img" src="/static/img/icons/dreambook-neon.svg" alt="" loading="lazy" />
               <span class="feature-list-copy">
                 <span class="tile-title">{{ t.sonnik }}</span>
@@ -99,7 +99,7 @@
               </span>
               <span class="feature-list-arrow" aria-hidden="true">›</span>
             </a>
-            <a class="feature-icon-tile feature-list-card" href="/client/numerology?lang={{ lang }}">
+            <a class="feature-icon-tile feature-list-card" href="/client/numerology">
               <img class="tile-icon-img" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
               <span class="feature-list-copy">
                 <span class="tile-title">{{ t.numerology }}</span>
@@ -107,7 +107,7 @@
               </span>
               <span class="feature-list-arrow" aria-hidden="true">›</span>
             </a>
-            <a class="feature-icon-tile feature-list-card" href="/client/compatibility?lang={{ lang }}">
+            <a class="feature-icon-tile feature-list-card" href="/client/compatibility">
               <img class="tile-icon-img" src="/static/img/icons/compatibility-neon.svg" alt="" loading="lazy" />
               <span class="feature-list-copy">
                 <span class="tile-title">{{ t.compatibility }}</span>
@@ -115,7 +115,7 @@
               </span>
               <span class="feature-list-arrow" aria-hidden="true">›</span>
             </a>
-            <a class="feature-icon-tile feature-list-card" href="/client/tarot?lang={{ lang }}">
+            <a class="feature-icon-tile feature-list-card" href="/client/tarot">
               <img class="tile-icon-img" src="/static/img/card-readings/full-portrait.svg" alt="" loading="lazy" />
               <span class="feature-list-copy">
                 <span class="tile-title">{{ t.tarot }}</span>
@@ -123,7 +123,7 @@
               </span>
               <span class="feature-list-arrow" aria-hidden="true">›</span>
             </a>
-            <a class="feature-icon-tile feature-list-card" href="/client/tarot-cards?lang={{ lang }}">
+            <a class="feature-icon-tile feature-list-card" href="/client/tarot-cards">
               <img class="tile-icon-img" src="/static/img/card-readings/hidden-scenarios.svg" alt="" loading="lazy" />
               <span class="feature-list-copy">
                 <span class="tile-title">{{ t.tarot_cards }}</span>

@@ -16,7 +16,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -35,7 +35,7 @@
       <div class="page-heading-with-back">
         <a
           class="page-back-arrow"
-          href="/client/tarot?lang={{ lang }}"
+          href="/client/tarot"
           aria-label="{{ t.back_to_natal_maps }}"
           title="{{ t.back_to_natal_maps }}"
         ></a>
@@ -52,19 +52,19 @@
         <h3>{{ t.sign_in_required_title }}</h3>
         <p>{{ t.sign_in_required_text }}</p>
         {% if selected_card_reading_topic %}
-        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/tarot/{{ selected_card_reading_topic.key }}%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+        <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot/{{ selected_card_reading_topic.key }}">{{ t.sign_in_required_action }}</a>
         {% else %}
-        <a class="primary-btn" href="/static/auth/login.html?lang={{ lang }}&next=/client/tarot%3Flang%3D{{ lang }}">{{ t.sign_in_required_action }}</a>
+        <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot">{{ t.sign_in_required_action }}</a>
         {% endif %}
       </div>
       <div class="auth-required-content">
-        <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?lang={{ lang }}&back=/client/tarot">{{ t.about_astrology or 'Об астрологии' }}</a>
+        <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?back=/client/tarot">{{ t.about_astrology or 'Об астрологии' }}</a>
         {% if not selected_card_reading_topic %}
         <div class="card-reading-grid" aria-label="{{ t.tarot }}">
           {% for topic in card_reading_topics %}
           <a
             class="card-reading-topic {% if topic.wide %}card-reading-topic-wide is-selected{% endif %}"
-            href="/client/tarot/{{ topic.key }}?lang={{ lang }}"
+            href="/client/tarot/{{ topic.key }}"
             data-card-topic="{{ topic.key }}"
             data-topic-title="{{ topic.title }}"
             data-topic-description="{{ topic.description }}"

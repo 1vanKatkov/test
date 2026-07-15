@@ -15,7 +15,7 @@
 >
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/client?lang={{ lang }}">{{ brand_name }}</a>
+      <a class="brand" href="/client">{{ brand_name }}</a>
       {% include "partials/client_user_chip.html" %}
     </div>
   </header>
@@ -33,7 +33,7 @@
         </span>
       </div>
       <div class="profile-hero-actions">
-        <a class="secondary-btn profile-support-btn" href="/client/support?lang={{ lang }}">{{ t.support }}</a>
+        <a class="secondary-btn profile-support-btn" href="/client/support">{{ t.support }}</a>
         <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
       </div>
     </section>
