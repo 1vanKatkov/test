@@ -4386,9 +4386,10 @@ function wireDashboardCarousel() {
   );
   let touchStartX = 0;
   let touchStartY = 0;
+  let touchStartScrollTop = 0;
   let isAnimating = false;
   let wheelLockUntil = 0;
-  const transitionMs = prefersReducedMotion() ? 0 : 820;
+  const transitionMs = prefersReducedMotion() ? 0 : 560;
   const transitionSafetyMs = transitionMs + 80;
   const goServicesButton = element("dashboard-go-services");
 
@@ -4422,6 +4423,11 @@ function wireDashboardCarousel() {
     return activeSlide.scrollTop > 1;
   };
 
+  const syncTrackPosition = (index) => {
+    const offset = Math.max(0, track.clientHeight) * index;
+    track.style.transform = `translateY(-${offset}px)`;
+  };
+
   const applySlide = (index, options = {}) => {
     const force = Boolean(options.force);
     const next = Math.max(0, Math.min(slides.length - 1, index));
@@ -4435,11 +4441,14 @@ function wireDashboardCarousel() {
     isAnimating = !force;
     currentSlide = next;
     carousel.dataset.slide = String(next);
-    track.style.transform = `translateY(-${next * 100}%)`;
+    syncTrackPosition(next);
     slides.forEach((slide, slideIndex) => {
       const active = slideIndex === next;
       slide.classList.toggle("is-active", active);
       slide.setAttribute("aria-hidden", active ? "false" : "true");
+      if (active && previous !== next) {
+        slide.scrollTop = 0;
+      }
     });
     dots.forEach((dot, dotIndex) => {
       const active = dotIndex === next;
@@ -4501,6 +4510,7 @@ function wireDashboardCarousel() {
     }
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
+    touchStartScrollTop = slides[currentSlide]?.scrollTop || 0;
   }, { passive: true });
 
   carousel.addEventListener("touchend", (event) => {
@@ -4510,7 +4520,14 @@ function wireDashboardCarousel() {
     }
     const deltaX = touch.clientX - touchStartX;
     const deltaY = touch.clientY - touchStartY;
-    if (Math.abs(deltaY) < 48 || Math.abs(deltaY) <= Math.abs(deltaX)) {
+    if (Math.abs(deltaY) < 56 || Math.abs(deltaY) <= Math.abs(deltaX)) {
+      return;
+    }
+    const activeSlide = slides[currentSlide];
+    if (activeSlide && Math.abs((activeSlide.scrollTop || 0) - touchStartScrollTop) > 8) {
+      return;
+    }
+    if (canScrollInsideActiveSlide(deltaY < 0 ? 1 : -1)) {
       return;
     }
     applySlide(currentSlide + (deltaY < 0 ? 1 : -1));
@@ -4532,7 +4549,7 @@ function wireDashboardCarousel() {
       if (currentSlide < slides.length - 1) {
         event.preventDefault();
         if (applySlide(currentSlide + 1)) {
-          wheelLockUntil = Date.now() + Math.max(360, transitionMs - 80);
+          wheelLockUntil = Date.now() + Math.max(280, transitionMs - 40);
         }
       }
       return;
@@ -4540,7 +4557,7 @@ function wireDashboardCarousel() {
     if (currentSlide > 0) {
       event.preventDefault();
       if (applySlide(currentSlide - 1)) {
-        wheelLockUntil = Date.now() + Math.max(360, transitionMs - 80);
+        wheelLockUntil = Date.now() + Math.max(280, transitionMs - 40);
       }
     }
   }, { passive: false });
@@ -4555,6 +4572,10 @@ function wireDashboardCarousel() {
       event.preventDefault();
       applySlide(currentSlide - 1);
     }
+  });
+
+  window.addEventListener("resize", () => {
+    syncTrackPosition(currentSlide);
   });
 
   applySlide(currentSlide, { force: true });
