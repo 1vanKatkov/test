@@ -232,8 +232,8 @@ class Database:
             ).fetchone()
             if row:
                 conn.execute(
-                    "UPDATE users SET username = ?, language = ?, updated_at = ? WHERE id = ?",
-                    (username, language, now, row["id"]),
+                    "UPDATE users SET username = ?, updated_at = ? WHERE id = ?",
+                    (username, now, row["id"]),
                 )
                 return conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
 

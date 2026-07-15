@@ -168,6 +168,28 @@ async def optional_client_auth(
     return ClientAuthContext(email_identity, max_identity, telegram_identity)
 
 
+def _cookie_lang(request: Request) -> str:
+    cookie_lang = (request.cookies.get(LANG_COOKIE_NAME) or "").strip().lower()
+    if cookie_lang in {"ru", "en"}:
+        return cookie_lang
+    return ""
+
+
+def _effective_auth_lang(request: Request, payload_lang: str = "") -> str:
+    cookie_lang = _cookie_lang(request)
+    if cookie_lang:
+        return cookie_lang
+    return _normalize_lang(payload_lang)
+
+
+def _sync_guest_lang_after_auth(request: Request, user_id: int, current_lang: str) -> str:
+    cookie_lang = _cookie_lang(request)
+    if cookie_lang:
+        db.update_user_language(user_id, cookie_lang)
+        return cookie_lang
+    return _normalize_lang(current_lang)
+
+
 def _sync_profile_language_from_explicit_choice(
     auth: ClientAuthContext | None,
     page_lang: str,
@@ -393,7 +415,14 @@ def _clear_auth_cookies(response: JSONResponse) -> None:
         response.delete_cookie(key=key, path="/", secure=secure, samesite=samesite)
 
 
-def _email_auth_response(identity: EmailIdentity, is_new_user: bool = False) -> JSONResponse:
+def _email_auth_response(
+    identity: EmailIdentity,
+    is_new_user: bool = False,
+    request: Request | None = None,
+) -> JSONResponse:
+    language = identity.language
+    if request is not None:
+        language = _sync_guest_lang_after_auth(request, identity.internal_user_id, language)
     token = issue_email_auth_token(identity)
     response_data = {
         "success": True,
@@ -403,12 +432,14 @@ def _email_auth_response(identity: EmailIdentity, is_new_user: bool = False) -> 
             "provider": "email",
             "provider_user_id": identity.user_id,
             "username": identity.username,
-            "language": identity.language,
+            "language": language,
         },
         "balance": get_balance(identity.internal_user_id),
     }
     response = JSONResponse(content=response_data)
     _set_email_auth_cookie(response, token)
+    if request is not None and language in {"ru", "en"}:
+        _set_lang_cookie(response, language)
     return response
 
 
@@ -1395,36 +1426,19 @@ def _extract_numerology_report_id(output_text: str) -> int | None:
         return None
 
 
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/", include_in_schema=False)
 async def root(
     request: Request,
     name: str = Query(default=""),
     platform: str = Query(default=""),
     lang: str = Query(default=""),
 ):
-    page_lang, _set_cookie = _resolve_page_lang(request, lang)
+    page_lang, set_cookie = _resolve_page_lang(request, lang)
     if _is_recognized_request(request, name=name, platform=platform):
         return RedirectResponse(url=_client_url_with_query(name=name, platform=platform, lang=page_lang))
 
-    initial_name = name.strip()
-    initial_platform = platform.strip().lower()
-    recognized_from_query = bool(initial_name or initial_platform)
-    response = templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "telegram_bot_url": _landing_telegram_bot_url(page_lang),
-            "brand_name": "Astrolhub",
-            "initial_name": initial_name,
-            "initial_platform": initial_platform,
-            "recognized_from_query": recognized_from_query,
-            "dev_auth_bypass": settings.dev_auth_bypass,
-            "dev_auth_mock_username": settings.dev_auth_mock_username,
-            "lang": page_lang,
-            "t": _translations(page_lang),
-        },
-    )
-    if _set_cookie:
+    response = RedirectResponse(url="/client", status_code=302)
+    if set_cookie:
         _set_lang_cookie(response, page_lang)
     return response
 
@@ -1765,17 +1779,23 @@ async def mini_app(
 
 
 @app.post("/api/auth/max/verify")
-async def verify_auth(identity: MaxIdentity = Depends(require_max_auth)):
-    return {
-        "success": True,
-        "profile": {
-            "provider": "max",
-            "provider_user_id": identity.user_id,
-            "username": identity.username,
-            "language": identity.language,
-        },
-        "balance": get_balance(identity.internal_user_id),
-    }
+async def verify_auth(request: Request, identity: MaxIdentity = Depends(require_max_auth)):
+    language = _sync_guest_lang_after_auth(request, identity.internal_user_id, identity.language)
+    response = JSONResponse(
+        content={
+            "success": True,
+            "profile": {
+                "provider": "max",
+                "provider_user_id": identity.user_id,
+                "username": identity.username,
+                "language": language,
+            },
+            "balance": get_balance(identity.internal_user_id),
+        }
+    )
+    if language in {"ru", "en"}:
+        _set_lang_cookie(response, language)
+    return response
 
 
 @app.get("/api/auth/telegram/health")
@@ -1802,8 +1822,9 @@ async def telegram_bot_fingerprint():
 
 
 @app.post("/api/auth/telegram/verify")
-async def verify_telegram_auth(payload: TelegramVerifyRequest):
+async def verify_telegram_auth(request: Request, payload: TelegramVerifyRequest):
     identity, is_new_user = resolve_telegram_identity(payload.init_data)
+    language = _sync_guest_lang_after_auth(request, identity.internal_user_id, identity.language)
     token = issue_telegram_auth_token(identity)
     if is_new_user:
         record_transaction(
@@ -1820,12 +1841,14 @@ async def verify_telegram_auth(payload: TelegramVerifyRequest):
             "provider": "telegram",
             "provider_user_id": identity.user_id,
             "username": identity.username,
-            "language": identity.language,
+            "language": language,
         },
         "balance": get_balance(identity.internal_user_id),
     }
     response = JSONResponse(content=response_data)
     _set_telegram_auth_cookie(response, token)
+    if language in {"ru", "en"}:
+        _set_lang_cookie(response, language)
     return response
 
 
@@ -1850,13 +1873,14 @@ async def mint_telegram_username_link(
 
 
 @app.post("/api/auth/telegram/verify-link")
-async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest):
+async def verify_telegram_username_link_post(request: Request, payload: TelegramLinkVerifyRequest):
     """
     Exchange a signed tglink=… token (see issue_telegram_username_login_url) for a session.
     The user must already exist with provider=telegram and matching username in the database
     (typically after a prior Mini App login that stored their @username).
     """
     identity = resolve_telegram_username_link_to_identity(payload.link_token)
+    language = _sync_guest_lang_after_auth(request, identity.internal_user_id, identity.language)
     session_token = issue_telegram_auth_token(identity)
     response_data = {
         "success": True,
@@ -1865,12 +1889,14 @@ async def verify_telegram_username_link_post(payload: TelegramLinkVerifyRequest)
             "provider": "telegram",
             "provider_user_id": identity.user_id,
             "username": identity.username,
-            "language": identity.language,
+            "language": language,
         },
         "balance": get_balance(identity.internal_user_id),
     }
     response = JSONResponse(content=response_data)
     _set_telegram_auth_cookie(response, session_token)
+    if language in {"ru", "en"}:
+        _set_lang_cookie(response, language)
     return response
 
 
@@ -1903,8 +1929,8 @@ async def api_email_health():
 
 @app.post("/api/auth/email/register")
 @app.post("/api/auth/email/register/start")
-async def api_email_register_start(payload: EmailRegisterStartRequest):
-    lang = _normalize_lang(payload.language)
+async def api_email_register_start(request: Request, payload: EmailRegisterStartRequest):
+    lang = _effective_auth_lang(request, payload.language)
     if settings.email_skip_verification:
         identity, is_new_user = await run_in_threadpool(
             complete_email_registration,
@@ -1921,7 +1947,7 @@ async def api_email_register_start(payload: EmailRegisterStartRequest):
                 "email_welcome_bonus",
                 {"provider": "email"},
             )
-        return _email_auth_response(identity, is_new_user=is_new_user)
+        return _email_auth_response(identity, is_new_user=is_new_user, request=request)
     return await run_in_threadpool(
         start_email_registration,
         payload.email,
@@ -1932,18 +1958,19 @@ async def api_email_register_start(payload: EmailRegisterStartRequest):
 
 
 @app.post("/api/auth/email/register/resend")
-async def api_email_register_resend(payload: EmailResendRequest):
-    lang = _normalize_lang(payload.language)
+async def api_email_register_resend(request: Request, payload: EmailResendRequest):
+    lang = _effective_auth_lang(request, payload.language)
     return await run_in_threadpool(resend_registration_code, payload.email, lang)
 
 
 @app.post("/api/auth/email/register/verify")
-async def api_email_register_verify(payload: EmailRegisterVerifyRequest):
+async def api_email_register_verify(request: Request, payload: EmailRegisterVerifyRequest):
+    lang = _effective_auth_lang(request, payload.language)
     identity, is_new_user = await run_in_threadpool(
         verify_email_registration,
         payload.email,
         payload.code,
-        _normalize_lang(payload.language),
+        lang,
     )
     if is_new_user:
         record_transaction(
@@ -1953,13 +1980,13 @@ async def api_email_register_verify(payload: EmailRegisterVerifyRequest):
             "email_welcome_bonus",
             {"provider": "email"},
         )
-    return _email_auth_response(identity, is_new_user=is_new_user)
+    return _email_auth_response(identity, is_new_user=is_new_user, request=request)
 
 
 @app.post("/api/auth/email/login")
-async def api_email_login(payload: EmailLoginRequest):
+async def api_email_login(request: Request, payload: EmailLoginRequest):
     identity = await run_in_threadpool(login_email_user, payload.email, payload.password)
-    return _email_auth_response(identity)
+    return _email_auth_response(identity, request=request)
 
 
 @app.post("/api/auth/logout")

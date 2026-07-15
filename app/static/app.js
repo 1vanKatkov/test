@@ -4532,6 +4532,7 @@ function wireLangSwitch() {
     node.addEventListener("click", async (event) => {
       const targetLang = node.dataset.lang === "en" ? "en" : "ru";
       if (targetLang === lang) {
+        event.preventDefault();
         return;
       }
       event.preventDefault();
@@ -4539,7 +4540,7 @@ function wireLangSwitch() {
         try {
           await apiRequest("/api/profile/language", "PATCH", { language: targetLang });
         } catch (_error) {
-          // Navigation below still applies explicit ?lang= and server cookie.
+          // Fall back to URL + cookie for guests and failed profile updates.
         }
       }
       const nextUrl = new URL(node.getAttribute("href") || window.location.href, window.location.origin);
