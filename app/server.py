@@ -5,6 +5,7 @@ import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlencode
+from typing import NamedTuple
 from datetime import date, timedelta
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -51,6 +52,7 @@ from app.web.schemas import (
     EmailRegisterVerifyRequest,
     NumerologyRequest,
     PersonaCreateRequest,
+    ProfileLanguageRequest,
     PersonaUpdateRequest,
     SonnikRequest,
     SupportAddMessageRequest,
@@ -99,6 +101,104 @@ def _normalize_lang(lang: str = "") -> str:
     if raw in {"ru", "en"}:
         return raw
     return settings.app_default_lang
+
+
+LANG_COOKIE_NAME = "astrolhub_lang"
+LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+
+def _parse_accept_language(header: str = "") -> str:
+    if not header:
+        return ""
+    for part in header.split(","):
+        token = part.split(";")[0].strip().lower()
+        if token.startswith("en"):
+            return "en"
+        if token.startswith("ru"):
+            return "ru"
+    return ""
+
+
+def _resolve_page_lang(
+    request: Request,
+    lang_query: str = "",
+    identity_lang: str = "",
+) -> tuple[str, bool]:
+    raw_query = (lang_query or "").strip().lower()
+    if raw_query in {"ru", "en"}:
+        return raw_query, True
+
+    cookie_lang = (request.cookies.get(LANG_COOKIE_NAME) or "").strip().lower()
+    if cookie_lang in {"ru", "en"}:
+        return cookie_lang, False
+
+    normalized_identity = _normalize_lang(identity_lang) if identity_lang else ""
+    if identity_lang and normalized_identity in {"ru", "en"}:
+        return normalized_identity, False
+
+    accept_lang = _parse_accept_language(request.headers.get("accept-language", ""))
+    if accept_lang in {"ru", "en"}:
+        return accept_lang, False
+
+    return settings.app_default_lang, False
+
+
+def _set_lang_cookie(response: HTMLResponse | JSONResponse | RedirectResponse, lang: str) -> None:
+    response.set_cookie(
+        LANG_COOKIE_NAME,
+        _normalize_lang(lang),
+        max_age=LANG_COOKIE_MAX_AGE,
+        httponly=False,
+        samesite="lax",
+        path="/",
+    )
+
+
+class ClientAuthContext(NamedTuple):
+    email: EmailIdentity | None
+    max: MaxIdentity | None
+    telegram: TelegramIdentity | None
+
+
+async def optional_client_auth(
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+) -> ClientAuthContext:
+    return ClientAuthContext(email_identity, max_identity, telegram_identity)
+
+
+def _sync_profile_language_from_explicit_choice(
+    auth: ClientAuthContext | None,
+    page_lang: str,
+) -> None:
+    if not auth:
+        return
+    user_id, _provider = _require_authenticated_user(auth.max, auth.telegram, auth.email)
+    db.update_user_language(user_id, page_lang)
+
+
+def _render_client_page(
+    request: Request,
+    template_name: str,
+    lang_query: str = "",
+    *,
+    auth: ClientAuthContext | None = None,
+    selected_card_topic: str = "",
+    extra_context: dict | None = None,
+) -> HTMLResponse:
+    identity_lang = ""
+    if auth and (auth.email or auth.max or auth.telegram):
+        identity_lang = _resolve_language(auth.email, auth.max, auth.telegram)
+    page_lang, set_cookie = _resolve_page_lang(request, lang_query, identity_lang)
+    context = _client_template_context(request, page_lang, selected_card_topic=selected_card_topic)
+    if extra_context:
+        context.update(extra_context)
+    response = templates.TemplateResponse(request=request, name=template_name, context=context)
+    if set_cookie:
+        _set_lang_cookie(response, page_lang)
+        _sync_profile_language_from_explicit_choice(auth, page_lang)
+    return response
 
 
 def _validate_tarot_spread(spread: str) -> str:
@@ -463,6 +563,7 @@ def _translations(lang: str) -> dict:
             "dashboard_slide_intro_card_3_text": "Move to services in one swipe and start exploring yourself right away.",
             "dashboard_slide_go_services": "Go to services",
             "notifications": "Notifications",
+            "language_switch_label": "Language",
             "dashboard_template_subtitle": "Your guide in the world of self-discovery",
             "dashboard_template_section_title": "Understand yourself deeper with Astrolhub",
             "dashboard_template_section_subtitle": "Dreams, relationships, personal potential and life scenarios — in one space.",
@@ -707,6 +808,7 @@ def _translations(lang: str) -> dict:
         "dashboard_slide_intro_card_3_text": "Переходите к сервисам одним свайпом и сразу начинайте исследовать себя.",
         "dashboard_slide_go_services": "К сервису",
         "notifications": "Уведомления",
+        "language_switch_label": "Язык",
         "dashboard_template_subtitle": "Ваш проводник в мире самопознания",
         "dashboard_template_section_title": "Поймите себя глубже с Astrolhub",
         "dashboard_template_section_subtitle": "Сны, отношения, личный потенциал и жизненные сценарии — в одном пространстве.",
@@ -1300,14 +1402,14 @@ async def root(
     platform: str = Query(default=""),
     lang: str = Query(default=""),
 ):
-    page_lang = _normalize_lang(lang)
+    page_lang, _set_cookie = _resolve_page_lang(request, lang)
     if _is_recognized_request(request, name=name, platform=platform):
         return RedirectResponse(url=_client_url_with_query(name=name, platform=platform, lang=page_lang))
 
     initial_name = name.strip()
     initial_platform = platform.strip().lower()
     recognized_from_query = bool(initial_name or initial_platform)
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
@@ -1322,6 +1424,9 @@ async def root(
             "t": _translations(page_lang),
         },
     )
+    if _set_cookie:
+        _set_lang_cookie(response, page_lang)
+    return response
 
 
 @app.get("/app", response_class=HTMLResponse, include_in_schema=False)
@@ -1366,34 +1471,30 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
 
 
 @app.get("/client", response_class=HTMLResponse, include_in_schema=False)
-async def client_dashboard(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_dashboard.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_dashboard(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_dashboard.html", lang, auth=auth)
 
 
-def _render_client_register(request: Request, lang: str):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_register.html",
-        context=_client_template_context(request, lang),
-    )
+def _render_client_register(request: Request, lang_query: str, auth: ClientAuthContext | None = None):
+    return _render_client_page(request, "client_register.html", lang_query, auth=auth)
 
 
-def _render_client_login(request: Request, lang: str):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_login.html",
-        context=_client_template_context(request, lang),
-    )
+def _render_client_login(request: Request, lang_query: str, auth: ClientAuthContext | None = None):
+    return _render_client_page(request, "client_login.html", lang_query, auth=auth)
 
 
 @app.get("/client/register", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/client/sign-up", response_class=HTMLResponse, include_in_schema=False)
-async def client_register(request: Request, lang: str = Query(default="")):
-    return _render_client_register(request, lang)
+async def client_register(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_register(request, lang, auth=auth)
 
 
 @app.get("/client/register/verify", response_class=HTMLResponse, include_in_schema=False)
@@ -1401,8 +1502,13 @@ async def client_register_verify(
     request: Request,
     lang: str = Query(default=""),
     email: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
 ):
-    page_lang = _normalize_lang(lang)
+    page_lang, _ = _resolve_page_lang(
+        request,
+        lang,
+        _resolve_language(auth.email, auth.max, auth.telegram) if auth else "",
+    )
     normalized = ""
     try:
         normalized = normalize_email(email)
@@ -1410,83 +1516,93 @@ async def client_register_verify(
         return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
     if settings.email_skip_verification or not has_pending_registration(normalized):
         return RedirectResponse(url=f"/client/register?lang={page_lang}", status_code=302)
-    context = _client_template_context(request, page_lang)
-    context["register_email"] = normalized
-    return templates.TemplateResponse(
-        request=request,
-        name="client_register_verify.html",
-        context=context,
+    return _render_client_page(
+        request,
+        "client_register_verify.html",
+        lang,
+        auth=auth,
+        extra_context={"register_email": normalized},
     )
 
 
 @app.get("/client/login", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/client/sign-in", response_class=HTMLResponse, include_in_schema=False)
-async def client_login(request: Request, lang: str = Query(default="")):
-    return _render_client_login(request, lang)
+async def client_login(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_login(request, lang, auth=auth)
 
 
 @app.get("/client/sonnik", response_class=HTMLResponse, include_in_schema=False)
-async def client_sonnik(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_sonnik.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_sonnik(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_sonnik.html", lang, auth=auth)
 
 
 @app.get("/client/numerology", response_class=HTMLResponse, include_in_schema=False)
-async def client_numerology(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_numerology.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_numerology(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_numerology.html", lang, auth=auth)
 
 
 @app.get("/client/compatibility", response_class=HTMLResponse, include_in_schema=False)
-async def client_compatibility(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_compatibility.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_compatibility(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_compatibility.html", lang, auth=auth)
 
 
 @app.get("/client/tarot", response_class=HTMLResponse, include_in_schema=False)
-async def client_tarot(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_tarot.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_tarot(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_tarot.html", lang, auth=auth)
 
 
 @app.get("/client/tarot/{topic}", response_class=HTMLResponse, include_in_schema=False)
-async def client_tarot_topic(request: Request, topic: str, lang: str = Query(default="")):
-    page_lang = _normalize_lang(lang)
-    return templates.TemplateResponse(
-        request=request,
-        name="client_tarot.html",
-        context=_client_template_context(request, page_lang, selected_card_topic=topic),
+async def client_tarot_topic(
+    request: Request,
+    topic: str,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(
+        request,
+        "client_tarot.html",
+        lang,
+        auth=auth,
+        selected_card_topic=topic,
     )
 
 
 @app.get("/client/tarot-cards", response_class=HTMLResponse, include_in_schema=False)
-async def client_tarot_cards(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_tarot_cards.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_tarot_cards(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_tarot_cards.html", lang, auth=auth)
 
 
 @app.get("/client/astrology", response_class=HTMLResponse, include_in_schema=False)
-async def client_astrology(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_astrology.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_astrology(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_astrology.html", lang, auth=auth)
 
 
 @app.get("/client/about/{service_slug}", response_class=HTMLResponse, include_in_schema=False)
@@ -1495,27 +1611,32 @@ async def client_service_about(
     service_slug: str,
     lang: str = Query(default=""),
     back: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
 ):
-    page_lang = _normalize_lang(lang)
+    page_lang, _ = _resolve_page_lang(
+        request,
+        lang,
+        _resolve_language(auth.email, auth.max, auth.telegram) if auth else "",
+    )
     about = _service_about_page(service_slug, page_lang)
     about_context = {**about}
     about_context["back_url"] = _resolve_about_back_url(back, str(about.get("back_url") or "/client"))
-    context = _client_template_context(request, page_lang)
-    context["about"] = about_context
-    return templates.TemplateResponse(
-        request=request,
-        name="client_service_about.html",
-        context=context,
+    return _render_client_page(
+        request,
+        "client_service_about.html",
+        lang,
+        auth=auth,
+        extra_context={"about": about_context},
     )
 
 
 @app.get("/client/history", response_class=HTMLResponse, include_in_schema=False)
-async def client_history(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_history.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_history(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_history.html", lang, auth=auth)
 
 
 @app.get("/client/history/request/{request_id}", response_class=HTMLResponse, include_in_schema=False)
@@ -1523,23 +1644,24 @@ async def client_history_request_detail(
     request: Request,
     request_id: int,
     lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
 ):
-    context = _client_template_context(request, lang)
-    context["history_request_id"] = request_id
-    return templates.TemplateResponse(
-        request=request,
-        name="client_history_request.html",
-        context=context,
+    return _render_client_page(
+        request,
+        "client_history_request.html",
+        lang,
+        auth=auth,
+        extra_context={"history_request_id": request_id},
     )
 
 
 @app.get("/client/topup", response_class=HTMLResponse, include_in_schema=False)
-async def client_topup(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_topup.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_topup(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_topup.html", lang, auth=auth)
 
 
 @app.get("/client/profile", response_class=HTMLResponse, include_in_schema=False)
@@ -1547,31 +1669,29 @@ async def client_profile(
     request: Request,
     lang: str = Query(default=""),
     auth: str = Query(default=""),
+    identities: ClientAuthContext = Depends(optional_client_auth),
 ):
     auth_mode = (auth or "").strip().lower()
     if auth_mode == "login":
-        return _render_client_login(request, lang)
+        return _render_client_login(request, lang, auth=identities)
     if auth_mode in {"register", "signup"}:
-        return _render_client_register(request, lang)
-    return templates.TemplateResponse(
-        request=request,
-        name="client_profile.html",
-        context=_client_template_context(request, lang),
-    )
+        return _render_client_register(request, lang, auth=identities)
+    return _render_client_page(request, "client_profile.html", lang, auth=identities)
 
 
 @app.get("/client/support", response_class=HTMLResponse, include_in_schema=False)
-async def client_support(request: Request, lang: str = Query(default="")):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_support.html",
-        context=_client_template_context(request, lang),
-    )
+async def client_support(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    return _render_client_page(request, "client_support.html", lang, auth=auth)
 
 
 @app.get("/client/lunar", include_in_schema=False)
-async def client_lunar(lang: str = Query(default="")):
-    return RedirectResponse(url=f"/client?lang={lang}", status_code=302)
+async def client_lunar(request: Request, lang: str = Query(default="")):
+    page_lang, _ = _resolve_page_lang(request, lang)
+    return RedirectResponse(url=f"/client?lang={page_lang}", status_code=302)
 
 
 @app.get("/client/numerology/report/{report_id}", response_class=HTMLResponse, include_in_schema=False)
@@ -1579,11 +1699,14 @@ async def client_numerology_report(
     report_id: int,
     request: Request,
     lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
 ):
-    return templates.TemplateResponse(
-        request=request,
-        name="client_numerology_report.html",
-        context={**_client_template_context(request, lang), "report_id": report_id},
+    return _render_client_page(
+        request,
+        "client_numerology_report.html",
+        lang,
+        auth=auth,
+        extra_context={"report_id": report_id},
     )
 
 
@@ -1911,6 +2034,21 @@ async def profile(
         "username": "Guest",
         "language": "ru",
     }
+
+
+@app.patch("/api/profile/language")
+async def api_update_profile_language(
+    payload: ProfileLanguageRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    page_lang = _normalize_lang(payload.language)
+    db.update_user_language(user_id, page_lang)
+    response = JSONResponse({"success": True, "language": page_lang})
+    _set_lang_cookie(response, page_lang)
+    return response
 
 
 @app.get("/api/balance")

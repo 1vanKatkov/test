@@ -4527,6 +4527,27 @@ function wireDashboardCarousel() {
   applySlide(currentSlide, { force: true });
 }
 
+function wireLangSwitch() {
+  document.querySelectorAll(".lang-switch-item[data-lang]").forEach((node) => {
+    node.addEventListener("click", async (event) => {
+      const targetLang = node.dataset.lang === "en" ? "en" : "ru";
+      if (targetLang === lang) {
+        return;
+      }
+      event.preventDefault();
+      if (isLoggedIn()) {
+        try {
+          await apiRequest("/api/profile/language", "PATCH", { language: targetLang });
+        } catch (_error) {
+          // Navigation below still applies explicit ?lang= and server cookie.
+        }
+      }
+      const nextUrl = new URL(node.getAttribute("href") || window.location.href, window.location.origin);
+      window.location.href = nextUrl.toString();
+    });
+  });
+}
+
 async function boot() {
   initPageEntranceAnimation();
   await initAuthStaticPage();
@@ -4552,6 +4573,7 @@ async function boot() {
   wireTarotCardsForm();
   wireAstrologyForm();
   wireCompatibilityForms();
+  wireLangSwitch();
   wireDashboardCarousel();
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();

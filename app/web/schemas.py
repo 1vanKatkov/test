@@ -64,6 +64,10 @@ class TarotCardDrawRequest(BaseModel):
     language: str = Field(default="", max_length=8)
 
 
+class ProfileLanguageRequest(BaseModel):
+    language: str = Field(min_length=2, max_length=8)
+
+
 class PersonaCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     birth_date: str = Field(min_length=8, max_length=10)

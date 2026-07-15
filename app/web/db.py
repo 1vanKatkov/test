@@ -262,6 +262,14 @@ class Database:
         finally:
             conn.close()
 
+    def update_user_language(self, user_id: int, language: str) -> None:
+        now = self._now()
+        with self.transaction() as conn:
+            conn.execute(
+                "UPDATE users SET language = ?, updated_at = ? WHERE id = ?",
+                (language, now, user_id),
+            )
+
     def upsert_email_verification(
         self,
         email: str,
