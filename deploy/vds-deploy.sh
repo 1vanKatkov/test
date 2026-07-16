@@ -17,11 +17,17 @@ fi
 
 if [[ -x .venv/bin/python ]]; then
   PYTHON=".venv/bin/python"
+  PIP=".venv/bin/pip"
 elif command -v python3 >/dev/null 2>&1; then
   PYTHON="python3"
+  PIP="pip3"
 else
   PYTHON="python"
+  PIP="pip"
 fi
+
+echo "==> Install Python dependencies"
+"$PIP" install -r requirements.txt
 
 echo "==> Restart systemd service: $SERVICE_NAME"
 sudo systemctl restart "$SERVICE_NAME"
