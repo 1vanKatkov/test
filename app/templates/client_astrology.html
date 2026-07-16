@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.astrology }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=service-about-v3" />
+  <link rel="stylesheet" href="/static/style.css?v=persona-ai-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell astrology-layout-page"
@@ -41,11 +41,10 @@
       </div>
       <div class="auth-required-content">
         <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?back=/client/astrology">{{ t.about_astrology or 'Об астрологии' }}</a>
-        <form id="astrology-form" class="form-grid service-theme-form">
-          <label>{{ t.astrology_name }} <input id="astrology-name" required /></label>
-          <label>{{ t.birth_date }} <input id="astrology-birth-date" placeholder="15.04.1985" inputmode="numeric" required /></label>
-          <label>{{ t.astrology_birth_time }} <input id="astrology-birth-time" placeholder="14:30" inputmode="numeric" required /></label>
-          <label>{{ t.astrology_birth_place }} <input id="astrology-birth-place" required /></label>
+        <form id="astrology-form" class="form-grid service-theme-form" novalidate>
+          {% with prefix='astrology-persona', default_mode='manual', use_choices=false %}
+          {% include "partials/persona_picker.html" %}
+          {% endwith %}
           <label>{{ t.astrology_focus }}
             <textarea id="astrology-focus" rows="4"></textarea>
           </label>
@@ -57,6 +56,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=pricing-v1"></script>
+  <script defer src="/static/app.js?v=persona-ai-v1"></script>
 </body>
 </html>

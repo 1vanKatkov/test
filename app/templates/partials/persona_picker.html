@@ -1,0 +1,30 @@
+<section class="persona-picker-card">
+  <h3>{{ t.personas }}</h3>
+  <div class="persona-mode-tabs">
+    <label><input type="radio" name="{{ prefix }}-mode" value="saved"{% if default_mode != 'manual' %} checked{% endif %} /> <span>{{ t.persona_use_saved }}</span></label>
+    <label><input type="radio" name="{{ prefix }}-mode" value="manual"{% if default_mode == 'manual' %} checked{% endif %} /> <span>{{ t.persona_manual }}</span></label>
+  </div>
+  <div id="{{ prefix }}-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel"{% if default_mode == 'manual' %} hidden{% endif %}>
+    {% if use_choices %}
+    <div id="{{ prefix }}-choices" class="persona-choice-list" role="listbox" aria-label="{{ t.persona_select_placeholder }}"></div>
+    {% else %}
+    <label>{{ t.persona_select_placeholder }}
+      <select id="{{ prefix }}-select">
+        <option value="">{{ t.persona_select_placeholder }}</option>
+      </select>
+    </label>
+    <div id="{{ prefix }}-preview" class="muted"></div>
+    {% endif %}
+  </div>
+  <div id="{{ prefix }}-manual-persona-panel" class="form-grid persona-subpanel persona-manual-panel"{% if default_mode != 'manual' %} hidden{% endif %}>
+    <label>{{ t.persona_name }} <input id="{{ prefix }}-name" /></label>
+    <label>{{ t.birth_date }} <input id="{{ prefix }}-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
+    <label>{{ t.astrology_birth_time }} <input id="{{ prefix }}-birth-time" placeholder="14:30" inputmode="numeric" data-was-required="true" /></label>
+    <label>{{ t.astrology_birth_place }} <input id="{{ prefix }}-birth-place" data-was-required="true" /></label>
+    <label>{{ t.persona_note }} <textarea id="{{ prefix }}-note" rows="3"></textarea></label>
+    <label class="payment-offer-consent">
+      <input id="{{ prefix }}-save-persona" type="checkbox" />
+      <span>{{ t.persona_save_offer }}</span>
+    </label>
+  </div>
+</section>

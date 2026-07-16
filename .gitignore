@@ -1,5 +1,7 @@
 .env
 data/
+!app/web/data/
+!app/web/data/**
 .venv/
 __pycache__/
 *.pyc

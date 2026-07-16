@@ -207,6 +207,156 @@ class Database:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_email_verification_email_purpose ON email_verification_codes(email, purpose)"
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tarot_cards (
+                    id TEXT PRIMARY KEY,
+                    number INTEGER,
+                    arcana TEXT NOT NULL,
+                    suit TEXT NOT NULL DEFAULT '',
+                    rank TEXT NOT NULL DEFAULT '',
+                    symbol TEXT NOT NULL DEFAULT '',
+                    name_ru TEXT NOT NULL,
+                    name_en TEXT NOT NULL,
+                    keywords_ru TEXT NOT NULL,
+                    keywords_en TEXT NOT NULL,
+                    light_ru TEXT NOT NULL,
+                    light_en TEXT NOT NULL,
+                    shadow_ru TEXT NOT NULL,
+                    shadow_en TEXT NOT NULL,
+                    love_ru TEXT NOT NULL,
+                    love_en TEXT NOT NULL,
+                    finances_ru TEXT NOT NULL,
+                    finances_en TEXT NOT NULL,
+                    career_ru TEXT NOT NULL,
+                    career_en TEXT NOT NULL,
+                    growth_ru TEXT NOT NULL,
+                    growth_en TEXT NOT NULL,
+                    symbolism_ru TEXT NOT NULL,
+                    symbolism_en TEXT NOT NULL,
+                    advice_ru TEXT NOT NULL,
+                    advice_en TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_tarot_cards_arcana ON tarot_cards(arcana, number)")
+            self._seed_tarot_cards(conn)
+
+    def _seed_tarot_cards(self, conn: sqlite3.Connection) -> None:
+        from app.web.data.rider_waite_deck import RIDER_WAITE_CARDS
+
+        now = self._now()
+        for card in RIDER_WAITE_CARDS:
+            conn.execute(
+                """
+                INSERT INTO tarot_cards (
+                    id, number, arcana, suit, rank, symbol,
+                    name_ru, name_en, keywords_ru, keywords_en,
+                    light_ru, light_en, shadow_ru, shadow_en,
+                    love_ru, love_en, finances_ru, finances_en,
+                    career_ru, career_en, growth_ru, growth_en,
+                    symbolism_ru, symbolism_en, advice_ru, advice_en,
+                    updated_at
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?
+                )
+                ON CONFLICT(id) DO UPDATE SET
+                    number=excluded.number,
+                    arcana=excluded.arcana,
+                    suit=excluded.suit,
+                    rank=excluded.rank,
+                    symbol=excluded.symbol,
+                    name_ru=excluded.name_ru,
+                    name_en=excluded.name_en,
+                    keywords_ru=excluded.keywords_ru,
+                    keywords_en=excluded.keywords_en,
+                    light_ru=excluded.light_ru,
+                    light_en=excluded.light_en,
+                    shadow_ru=excluded.shadow_ru,
+                    shadow_en=excluded.shadow_en,
+                    love_ru=excluded.love_ru,
+                    love_en=excluded.love_en,
+                    finances_ru=excluded.finances_ru,
+                    finances_en=excluded.finances_en,
+                    career_ru=excluded.career_ru,
+                    career_en=excluded.career_en,
+                    growth_ru=excluded.growth_ru,
+                    growth_en=excluded.growth_en,
+                    symbolism_ru=excluded.symbolism_ru,
+                    symbolism_en=excluded.symbolism_en,
+                    advice_ru=excluded.advice_ru,
+                    advice_en=excluded.advice_en,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    card["id"],
+                    card.get("number"),
+                    card["arcana"],
+                    card.get("suit") or "",
+                    card.get("rank") or "",
+                    card.get("symbol") or "",
+                    card["name_ru"],
+                    card["name_en"],
+                    card["keywords_ru"],
+                    card["keywords_en"],
+                    card["light_ru"],
+                    card["light_en"],
+                    card["shadow_ru"],
+                    card["shadow_en"],
+                    card["love_ru"],
+                    card["love_en"],
+                    card["finances_ru"],
+                    card["finances_en"],
+                    card["career_ru"],
+                    card["career_en"],
+                    card["growth_ru"],
+                    card["growth_en"],
+                    card["symbolism_ru"],
+                    card["symbolism_en"],
+                    card["advice_ru"],
+                    card["advice_en"],
+                    now,
+                ),
+            )
+
+    def list_tarot_cards(self) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT *
+                FROM tarot_cards
+                ORDER BY
+                    CASE WHEN arcana = 'major' THEN 0 ELSE 1 END,
+                    number ASC,
+                    id ASC
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_tarot_cards_by_ids(self, card_ids: list[str]) -> list[sqlite3.Row]:
+        ids = [str(card_id).strip() for card_id in card_ids if str(card_id).strip()]
+        if not ids:
+            return []
+        placeholders = ", ".join("?" for _ in ids)
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                f"SELECT * FROM tarot_cards WHERE id IN ({placeholders})",
+                ids,
+            ).fetchall()
+        finally:
+            conn.close()
+        by_id = {row["id"]: row for row in rows}
+        return [by_id[card_id] for card_id in ids if card_id in by_id]
 
     def _ensure_column(self, conn: sqlite3.Connection, table_name: str, column_name: str, column_def: str) -> None:
         columns = conn.execute(f"PRAGMA table_info({table_name})").fetchall()

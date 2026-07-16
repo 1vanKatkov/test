@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from app.web.services.openrouter import chat_completion
+from app.web.services.persona_prompt import format_persona_context_block
 from config import settings
 
 MESSAGES_PATH = Path(settings.sovmestimost_messages_path)
@@ -164,7 +165,15 @@ def by_names(name1: str, name2: str, language: str = "ru") -> str:
     return chat_completion(_resolve_model(language), prompt)
 
 
-def by_names_dates(name1: str, date1: str, name2: str, date2: str, language: str = "ru") -> str:
+def by_names_dates(
+    name1: str,
+    date1: str,
+    name2: str,
+    date2: str,
+    language: str = "ru",
+    persona1: dict | None = None,
+    persona2: dict | None = None,
+) -> str:
     first_date = parse_date(date1)
     second_date = parse_date(date2)
     expr1 = calculate_expression_number(name1)
@@ -177,10 +186,34 @@ def by_names_dates(name1: str, date1: str, name2: str, date2: str, language: str
         f"Name2: {name2}\nBirth date2: {second_date.strftime('%d.%m.%Y')}\nExpression number2: {expr2}\nLife path number2: {path2}\n"
         f"Expression compatibility: {compatibility['expr_compatibility']}\nLife path compatibility: {compatibility['path_compatibility']}"
     )
+    persona_blocks = "\n\n".join(
+        block
+        for block in (
+            format_persona_context_block(
+                persona1,
+                language,
+                include_chart=True,
+                label="Persona 1" if (language or "").strip().lower() == "en" else "Персона 1",
+            )
+            if persona1
+            else "",
+            format_persona_context_block(
+                persona2,
+                language,
+                include_chart=True,
+                label="Persona 2" if (language or "").strip().lower() == "en" else "Персона 2",
+            )
+            if persona2
+            else "",
+        )
+        if block
+    )
     prompt_template = _load_prompt(language, "prompt_names_dates_ai")
     prompt = prompt_template.format(
         user_input=f"{name1}, {first_date.strftime('%d.%m.%Y')} and {name2}, {second_date.strftime('%d.%m.%Y')}",
         compatibility_data=compatibility_data,
     )
+    if persona_blocks:
+        prompt = f"{prompt}\n\n{persona_blocks}\n\nUse persona and natal-chart details for deeper personalization when relevant."
     return chat_completion(_resolve_model(language), prompt)
 

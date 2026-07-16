@@ -3,12 +3,24 @@ from pydantic import BaseModel, Field
 
 class SonnikRequest(BaseModel):
     dream_text: str = Field(min_length=3, max_length=4000)
+    persona_id: int = Field(default=0, ge=0)
+    persona_name: str = Field(default="", max_length=100)
+    persona_birth_date: str = Field(default="", max_length=10)
+    persona_birth_time: str = Field(default="", max_length=5)
+    persona_birth_place: str = Field(default="", max_length=120)
+    persona_note: str = Field(default="", max_length=1000)
     language: str = Field(default="", max_length=8)
 
 
 class NumerologyRequest(BaseModel):
-    full_name: str = Field(min_length=2, max_length=200)
-    birth_date: str = Field(min_length=10, max_length=10)
+    full_name: str = Field(default="", max_length=200)
+    birth_date: str = Field(default="", max_length=10)
+    persona_id: int = Field(default=0, ge=0)
+    persona_name: str = Field(default="", max_length=100)
+    persona_birth_date: str = Field(default="", max_length=10)
+    persona_birth_time: str = Field(default="", max_length=5)
+    persona_birth_place: str = Field(default="", max_length=120)
+    persona_note: str = Field(default="", max_length=1000)
     language: str = Field(default="", max_length=8)
 
 
@@ -53,14 +65,24 @@ class TarotRequest(BaseModel):
 
 class TarotCardReadingRequest(BaseModel):
     question: str = Field(default="", max_length=1000)
-    spread: str = Field(default="three_cards", max_length=32)
-    selected_card_ids: list[str] = Field(default_factory=list, max_length=3)
-    draw_token: str = Field(default="", max_length=2000)
+    topic: str = Field(default="question", max_length=64)
+    spread: str = Field(default="", max_length=32)
+    selected_card_ids: list[str] = Field(default_factory=list, max_length=12)
+    draw_token: str = Field(default="", max_length=4000)
+    partner_name: str = Field(default="", max_length=100)
+    subtopic: str = Field(default="", max_length=64)
+    persona_id: int = Field(default=0, ge=0)
+    persona_name: str = Field(default="", max_length=100)
+    persona_birth_date: str = Field(default="", max_length=10)
+    persona_birth_time: str = Field(default="", max_length=5)
+    persona_birth_place: str = Field(default="", max_length=120)
+    persona_note: str = Field(default="", max_length=1000)
     language: str = Field(default="", max_length=8)
 
 
 class TarotCardDrawRequest(BaseModel):
-    spread: str = Field(default="three_cards", max_length=32)
+    topic: str = Field(default="question", max_length=64)
+    spread: str = Field(default="", max_length=32)
     language: str = Field(default="", max_length=8)
 
 
@@ -85,11 +107,17 @@ class PersonaUpdateRequest(BaseModel):
 
 
 class AstrologyForecastRequest(BaseModel):
-    name: str = Field(min_length=2, max_length=100)
-    birth_date: str = Field(min_length=8, max_length=10)
-    birth_time: str = Field(min_length=5, max_length=5)
-    birth_place: str = Field(min_length=1, max_length=120)
+    name: str = Field(default="", max_length=100)
+    birth_date: str = Field(default="", max_length=10)
+    birth_time: str = Field(default="", max_length=5)
+    birth_place: str = Field(default="", max_length=120)
     focus: str = Field(default="", max_length=1000)
+    persona_id: int = Field(default=0, ge=0)
+    persona_name: str = Field(default="", max_length=100)
+    persona_birth_date: str = Field(default="", max_length=10)
+    persona_birth_time: str = Field(default="", max_length=5)
+    persona_birth_place: str = Field(default="", max_length=120)
+    persona_note: str = Field(default="", max_length=1000)
     language: str = Field(default="", max_length=8)
 
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=lang-mobile-slider-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=dashboard-faq-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell client-dashboard-page"
@@ -133,6 +133,49 @@
             </a>
           </section>
         </section>
+        <section class="dashboard-slide dashboard-slide-faq" aria-label="{{ t.dashboard_slider_dot_faq }}" aria-hidden="true">
+          <header class="dashboard-faq-head">
+            <h2 class="dashboard-faq-title">{{ t.dashboard_slide_faq_title }}</h2>
+            <p class="dashboard-faq-subtitle">{{ t.dashboard_slide_faq_subtitle }}</p>
+          </header>
+          <section class="dashboard-faq-list" aria-label="{{ t.dashboard_slide_faq_title }}">
+            <article class="dashboard-faq-card">
+              <span class="dashboard-faq-index" aria-hidden="true">1</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q1 }}</h3>
+                <p>{{ t.dashboard_faq_a1 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card">
+              <span class="dashboard-faq-index" aria-hidden="true">2</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q2 }}</h3>
+                <p>{{ t.dashboard_faq_a2 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card">
+              <span class="dashboard-faq-index" aria-hidden="true">3</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q3 }}</h3>
+                <p>{{ t.dashboard_faq_a3 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card">
+              <span class="dashboard-faq-index" aria-hidden="true">4</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q4 }}</h3>
+                <p>{{ t.dashboard_faq_a4 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card">
+              <span class="dashboard-faq-index" aria-hidden="true">5</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q5 }}</h3>
+                <p>{{ t.dashboard_faq_a5 }}</p>
+              </div>
+            </article>
+          </section>
+        </section>
       </div>
       <div class="dashboard-carousel-dots" role="tablist" aria-label="{{ t.dashboard_slider_nav_label }}">
         <button
@@ -151,12 +194,20 @@
           aria-selected="false"
           aria-label="{{ t.dashboard_slider_dot_services }}"
         ></button>
+        <button
+          type="button"
+          class="dashboard-carousel-dot"
+          data-slide-index="2"
+          role="tab"
+          aria-selected="false"
+          aria-label="{{ t.dashboard_slider_dot_faq }}"
+        ></button>
       </div>
     </section>
 
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=lang-mobile-slider-v1"></script>
+  <script defer src="/static/app.js?v=dashboard-faq-v1"></script>
 </body>
 </html>

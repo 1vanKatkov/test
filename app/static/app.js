@@ -121,10 +121,13 @@ const i18n = lang === "en"
     personaRequired: "Choose a saved persona or enter name, birth date, birth time, and birth place.",
     chooseTarotCards: "The deck is drawing three cards for your spread...",
     tarotCardsSelected: "Your spread",
-    tarotCardsNeedExact: "Choose exactly the required number of cards for this spread.",
-    tarotCardsDrawing: "Drawing your cards...",
-    tarotCardsDrawn: "The cards are on the table. Ask your question.",
-    tarotCardsDrawFailed: "Could not draw cards. Refresh the page and try again.",
+    tarotCardsNeedExact: "Choose a topic and complete the required fields.",
+    tarotCardsDrawing: "Selecting cards for your situation...",
+    tarotCardsDrawn: "Your cards are ready.",
+    tarotCardsDrawFailed: "Could not draw cards. Try again.",
+    tarotQuestionRequired: "Please enter your question.",
+    tarotSubtopicRequired: "Choose what interests you.",
+    tarotSaved: "Spread saved",
     insufficientSparksRedirect: "Not enough sparks. Redirecting to top up...",
     plusSubscriptionActive: "Plus subscription is active",
   }
@@ -196,10 +199,13 @@ const i18n = lang === "en"
     personaRequired: "Выберите сохранённую персону или введите имя, дату, время и место рождения.",
     chooseTarotCards: "Колода вытягивает три карты для вашего расклада...",
     tarotCardsSelected: "Ваш расклад",
-    tarotCardsNeedExact: "Выберите ровно нужное количество карт для этого расклада.",
-    tarotCardsDrawing: "Вытягиваем карты...",
-    tarotCardsDrawn: "Карты на столе. Задайте вопрос.",
-    tarotCardsDrawFailed: "Не удалось вытянуть карты. Обновите страницу и попробуйте снова.",
+    tarotCardsNeedExact: "Выберите тему и заполните нужные поля.",
+    tarotCardsDrawing: "Подбираем карты для вашей ситуации…",
+    tarotCardsDrawn: "Карты готовы.",
+    tarotCardsDrawFailed: "Не удалось вытянуть карты. Попробуйте ещё раз.",
+    tarotQuestionRequired: "Введите свой вопрос.",
+    tarotSubtopicRequired: "Выберите, что вас интересует.",
+    tarotSaved: "Расклад сохранён",
     insufficientSparksRedirect: "Недостаточно искр. Перенаправляем на пополнение...",
     plusSubscriptionActive: "Подписка Plus активна",
   };
@@ -2435,8 +2441,17 @@ function wireSonnikForm() {
   if (!form) {
     return;
   }
+  wirePersonaPicker("sonnik-persona");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    let personaPayload = emptyPersonaApiPayload();
+    try {
+      personaPayload = await resolvePersonaForPrefix("sonnik-persona", { optional: true });
+    } catch (error) {
+      setResult("sonnik-result", error.message);
+      return;
+    }
+    const { resolvedPersona: _resolvedPersona, ...personaFields } = personaPayload;
     await runReportFlow({
       form,
       resultId: "sonnik-result",
@@ -2445,6 +2460,7 @@ function wireSonnikForm() {
       request: () => apiRequest("/api/sonnik/interpret", "POST", {
         dream_text: element("dream-text").value.trim(),
         language: lang,
+        ...personaFields,
       }, { redirectOnUnauthorized: true }),
       onSuccess: (result, { revealResult }) => {
         revealResult(result.interpretation);
@@ -2464,23 +2480,23 @@ function wireNumerologyForm() {
     event.preventDefault();
     let personaPayload;
     try {
-      personaPayload = await resolvePersonaForPrefix("numerology-persona");
+      personaPayload = await resolvePersonaForPrefix("numerology-persona", { requireBirthDetails: false });
     } catch (error) {
       setResult("numerology-result", error.message);
       return;
     }
+    const { resolvedPersona: _resolvedPersona, ...personaFields } = personaPayload;
     const resolvedPersona = personaPayload.resolvedPersona || {};
-    const fullName = personaPayload.persona_name || resolvedPersona.name || "";
-    const birthDate = personaPayload.persona_birth_date || resolvedPersona.birth_date || "";
     await runReportFlow({
       form,
       resultId: "numerology-result",
       loadingLabel: i18n.generatingReport,
       requiredCost: serviceCostFromDataset("costNumerology"),
       request: () => apiRequest("/api/numerology/generate", "POST", {
-        full_name: fullName,
-        birth_date: birthDate,
+        full_name: personaFields.persona_name || resolvedPersona.name || "",
+        birth_date: personaFields.persona_birth_date || resolvedPersona.birth_date || "",
         language: lang,
+        ...personaFields,
       }, { redirectOnUnauthorized: true }),
       onSuccess: (result) => {
         const reportUrl = result.report_url;
@@ -2683,20 +2699,53 @@ function wirePersonaPicker(prefix) {
   togglePersonaPanels(prefix);
 }
 
+function emptyPersonaApiPayload(options = {}) {
+  return {
+    [`${options.idKey || "persona_id"}`]: 0,
+    [`${options.nameKey || "persona_name"}`]: "",
+    [`${options.birthDateKey || "persona_birth_date"}`]: "",
+    [`${options.birthTimeKey || "persona_birth_time"}`]: "",
+    [`${options.birthPlaceKey || "persona_birth_place"}`]: "",
+    [`${options.noteKey || "persona_note"}`]: "",
+    resolvedPersona: null,
+  };
+}
+
 async function resolvePersonaForPrefix(prefix, options = {}) {
   const mode = personaModeValue(prefix);
   const manualPersona = personaPayloadFromPrefix(prefix);
   let personaId = mode === "saved"
     ? Number(element(`${prefix}-select`)?.value || element(`${prefix}-choices`)?.dataset.selectedPersonaId || 0)
     : 0;
+  const hasManualData = Boolean(
+    manualPersona.name || manualPersona.birth_date || manualPersona.birth_time || manualPersona.birth_place || manualPersona.note,
+  );
+  if (options.optional) {
+    if (mode === "saved" && !personaId) {
+      return emptyPersonaApiPayload(options);
+    }
+    if (mode === "manual" && !hasManualData) {
+      return emptyPersonaApiPayload(options);
+    }
+  }
   if (mode === "saved" && !personaId) {
     throw new Error(i18n.personaRequired);
   }
-  if (mode === "manual" && (!manualPersona.name || !manualPersona.birth_date || !manualPersona.birth_time || !manualPersona.birth_place)) {
-    throw new Error(i18n.personaRequired);
+  const requireBirthDetails = options.requireBirthDetails !== false;
+  if (mode === "manual") {
+    const missingCore = !manualPersona.name || !manualPersona.birth_date;
+    const missingDetails = requireBirthDetails && (!manualPersona.birth_time || !manualPersona.birth_place);
+    if (missingCore || missingDetails) {
+      throw new Error(i18n.personaRequired);
+    }
   }
   if (!options.skipSave && mode === "manual" && element(`${prefix}-save-persona`)?.checked && manualPersona.name && manualPersona.birth_date) {
-    const persona = await createPersona(manualPersona);
+    const personaToSave = {
+      ...manualPersona,
+      birth_time: manualPersona.birth_time || "12:00",
+      birth_place: manualPersona.birth_place || "—",
+    };
+    const persona = await createPersona(personaToSave);
     personaId = Number(persona?.id || 0);
     await loadPersonas();
     const select = element(`${prefix}-select`);
@@ -2762,11 +2811,20 @@ function updateTarotPersonaPreview() {
   preview.textContent = persona ? personaPreview(persona) : i18n.personaEmpty;
 }
 
+const PERSONA_SELECT_PREFIXES = [
+  "numerology-persona",
+  "compat-persona1",
+  "compat-persona2",
+  "sonnik-persona",
+  "astrology-persona",
+  "tarot-cards-persona",
+];
+
 async function loadPersonas() {
   if (!isLoggedIn()) {
     state.personas = [];
     renderTarotPersonaSelect();
-    ["numerology-persona", "compat-persona1", "compat-persona2"].forEach(renderPersonaSelect);
+    PERSONA_SELECT_PREFIXES.forEach(renderPersonaSelect);
     renderProfilePersonas();
     return [];
   }
@@ -2777,7 +2835,7 @@ async function loadPersonas() {
     state.personas = [];
   }
   renderTarotPersonaSelect();
-  ["numerology-persona", "compat-persona1", "compat-persona2"].forEach(renderPersonaSelect);
+  PERSONA_SELECT_PREFIXES.forEach(renderPersonaSelect);
   renderProfilePersonas();
   return state.personas;
 }
@@ -3046,27 +3104,48 @@ function wireTarotForm() {
 }
 
 let tarotCardsDeck = [];
-let tarotCardsSpreads = [];
+let tarotCardsTopics = [];
+let selectedTarotTopic = null;
+let selectedTarotSubtopic = "";
 let selectedTarotCardIds = [];
 let drawnTarotCards = [];
 let tarotDrawToken = "";
-const TAROT_REQUIRED_CARDS = 3;
-
-function selectedTarotSpread() {
-  return tarotCardsSpreads.find((spread) => spread.id === "three_cards") || { id: "three_cards", size: TAROT_REQUIRED_CARDS, title: lang === "en" ? "Three cards" : "Три карты" };
-}
-
-function tarotCardById(cardId) {
-  return tarotCardsDeck.find((card) => card.id === cardId);
-}
+let tarotLastReportUrl = "";
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+function tarotFlowStep(stepId) {
+  return element(`tarot-step-${stepId}`);
+}
+
+function showTarotStep(stepId) {
+  ["topics", "details", "shuffle", "result"].forEach((id) => {
+    const step = tarotFlowStep(id);
+    if (!step) {
+      return;
+    }
+    const active = id === stepId;
+    step.hidden = !active;
+    step.classList.toggle("is-active", active);
+  });
+}
+
+function tarotCardImageUrl(card) {
+  if (card?.image_url) {
+    return card.image_url;
+  }
+  if (card?.id) {
+    return `/static/img/tarot/cards/${card.id}.png`;
+  }
+  return "";
+}
+
 function renderTarotCardButton(card, isSelected = false, index = 0, extraClass = "") {
   const name = escapeHtml(card.name);
   const symbol = escapeHtml(card.symbol || "✦");
+  const imageUrl = escapeHtml(tarotCardImageUrl(card));
   const arcana = card.arcana === "major" ? (lang === "en" ? "Major Arcana" : "Старший аркан") : (lang === "en" ? "Minor Arcana" : "Младший аркан");
   return `<button
     type="button"
@@ -3074,38 +3153,23 @@ function renderTarotCardButton(card, isSelected = false, index = 0, extraClass =
     data-card-id="${escapeHtml(card.id)}"
     style="--card-index:${index}"
     aria-pressed="${isSelected ? "true" : "false"}"
+    aria-label="${name}"
   >
     <span class="tarot-card-inner">
       <span class="tarot-card-face tarot-card-back">
         <span class="tarot-card-back-symbol">✦</span>
       </span>
-      <span class="tarot-card-face tarot-card-front">
-        <span class="tarot-card-corner">${symbol}</span>
-        <span class="tarot-card-symbol">${symbol}</span>
-        <span class="tarot-card-name">${name}</span>
-        <span class="tarot-card-arcana">${escapeHtml(arcana)}</span>
+      <span class="tarot-card-face tarot-card-front ${imageUrl ? "has-art" : ""}">
+        ${imageUrl ? `<img class="tarot-card-art" src="${imageUrl}" alt="${name}" loading="lazy" decoding="async" onerror="this.closest('.tarot-card-front')?.classList.remove('has-art'); this.remove();" />` : ""}
+        <span class="tarot-card-fallback">
+          <span class="tarot-card-corner">${symbol}</span>
+          <span class="tarot-card-symbol">${symbol}</span>
+          <span class="tarot-card-name">${name}</span>
+          <span class="tarot-card-arcana">${escapeHtml(arcana)}</span>
+        </span>
       </span>
     </span>
   </button>`;
-}
-
-function renderTarotCardBack(card, index = 0, extraClass = "") {
-  const cardId = escapeHtml(card?.id || `drawn-${index}`);
-  return `<div
-    class="tarot-card ${extraClass}"
-    data-card-id="${cardId}"
-    style="--card-index:${index}"
-    role="button"
-    tabindex="0"
-    aria-label="${lang === "en" ? "Closed tarot card" : "Закрытая карта Таро"}"
-  >
-    <span class="tarot-card-inner">
-      <span class="tarot-card-face tarot-card-back">
-        <span class="tarot-card-back-symbol">✦</span>
-      </span>
-      <span class="tarot-card-face tarot-card-front"></span>
-    </span>
-  </div>`;
 }
 
 function renderTarotCardsDeck() {
@@ -3118,11 +3182,122 @@ function renderTarotCardsDeck() {
   </div>`;
 }
 
-function setTarotStagePhase(phase) {
-  const stage = element("tarot-stage");
-  if (stage) {
-    stage.dataset.phase = phase;
+function setTarotDrawStatus(message) {
+  const status = element("tarot-draw-status");
+  if (status) {
+    status.textContent = message;
   }
+}
+
+function renderTarotTopicGrid() {
+  const grid = element("tarot-topic-grid");
+  if (!grid) {
+    return;
+  }
+  grid.innerHTML = tarotCardsTopics.map((topic) => `
+    <button type="button" class="tarot-topic-card" data-topic-id="${escapeHtml(topic.id)}" role="listitem">
+      <span class="tarot-topic-icon" aria-hidden="true">${escapeHtml(topic.icon || "✦")}</span>
+      <strong>${escapeHtml(topic.title)}</strong>
+      <small>${topic.size} ${lang === "en" ? "cards" : "карт"}</small>
+    </button>
+  `).join("");
+}
+
+function renderTarotSubtopics(topic) {
+  const grid = element("tarot-subtopic-grid");
+  if (!grid) {
+    return;
+  }
+  const items = topic.subtopics || [];
+  grid.innerHTML = items.map((item) => `
+    <button type="button" class="tarot-subtopic-chip ${selectedTarotSubtopic === item.id ? "is-active" : ""}" data-subtopic-id="${escapeHtml(item.id)}">
+      ${escapeHtml(item.title)}
+    </button>
+  `).join("");
+}
+
+function renderTarotQuestionExamples(topic) {
+  const box = element("tarot-question-examples");
+  if (!box) {
+    return;
+  }
+  const examples = topic.question_examples || [];
+  if (!examples.length) {
+    box.innerHTML = "";
+    return;
+  }
+  const label = lang === "en" ? "Examples" : "Примеры";
+  box.innerHTML = `<p class="muted">${escapeHtml(label)}</p>
+    <div class="tarot-example-list">
+      ${examples.map((example) => `<button type="button" class="tarot-example-chip">${escapeHtml(example)}</button>`).join("")}
+    </div>`;
+}
+
+function openTarotTopic(topicId) {
+  selectedTarotTopic = tarotCardsTopics.find((topic) => topic.id === topicId) || null;
+  selectedTarotSubtopic = "";
+  tarotDrawToken = "";
+  selectedTarotCardIds = [];
+  drawnTarotCards = [];
+  if (!selectedTarotTopic) {
+    return;
+  }
+  if (selectedTarotTopic.day_mode || (!selectedTarotTopic.needs_question && !(selectedTarotTopic.subtopics || []).length && !selectedTarotTopic.needs_partner_name)) {
+    startTarotReadingFlow();
+    return;
+  }
+  const title = element("tarot-details-title");
+  if (title) {
+    title.textContent = selectedTarotTopic.title;
+  }
+  const partnerPanel = element("tarot-partner-panel");
+  const subtopicPanel = element("tarot-subtopic-panel");
+  const questionPanel = element("tarot-question-panel");
+  if (partnerPanel) {
+    partnerPanel.hidden = !selectedTarotTopic.needs_partner_name;
+  }
+  if (subtopicPanel) {
+    const hasSubtopics = (selectedTarotTopic.subtopics || []).length > 0;
+    subtopicPanel.hidden = !hasSubtopics;
+    if (hasSubtopics) {
+      renderTarotSubtopics(selectedTarotTopic);
+    }
+  }
+  if (questionPanel) {
+    questionPanel.hidden = !selectedTarotTopic.needs_question;
+    if (selectedTarotTopic.needs_question) {
+      renderTarotQuestionExamples(selectedTarotTopic);
+    }
+  }
+  showTarotStep("details");
+}
+
+function prepareTarotSpreadSlots(size) {
+  const row = element("tarot-spread-row");
+  if (!row) {
+    return;
+  }
+  row.innerHTML = Array.from({ length: size }, (_item, index) => (
+    `<div class="tarot-spread-slot" data-slot="${index}" role="listitem"></div>`
+  )).join("");
+}
+
+async function placeTarotCardOnTable(card, index) {
+  const slot = document.querySelector(`.tarot-spread-slot[data-slot="${index}"]`);
+  if (!slot) {
+    return;
+  }
+  slot.innerHTML = renderTarotCardButton(card, false, index, "is-dealing-to-table");
+  slot.classList.add("is-filled");
+  const cardNode = slot.querySelector(".tarot-card");
+  if (prefersReducedMotion()) {
+    cardNode?.classList.add("is-flipped", "is-selected", "is-arrived");
+    return;
+  }
+  await wait(120 + index * 120);
+  cardNode?.classList.add("is-arrived");
+  await wait(280);
+  cardNode?.classList.add("is-flipped", "is-selected");
 }
 
 function renderTarotCardsResult(result) {
@@ -3133,58 +3308,24 @@ function renderTarotCardsResult(result) {
   const cards = result.cards || [];
   container.innerHTML = `<div class="tarot-result-cards">
     ${cards.map((card, index) => `<article class="tarot-result-card" style="--reveal-index:${index}">
-      ${renderTarotCardButton(card, false, index)}
+      ${renderTarotCardButton(card, true, index)}
       <strong>${escapeHtml(card.position || "")}</strong>
       <span>${escapeHtml(card.name || "")}</span>
+      ${card.keywords ? `<small class="muted">${escapeHtml(card.keywords)}</small>` : ""}
     </article>`).join("")}
   </div>
   <div class="tarot-interpretation">${renderMarkdownText(result.interpretation || "")}</div>`;
   container.hidden = false;
-  container.querySelectorAll(".tarot-result-card .tarot-card").forEach((card, index) => {
-    window.setTimeout(() => {
-      card.classList.add("is-flipped", "is-selected");
-      card.setAttribute("aria-pressed", "true");
-    }, prefersReducedMotion() ? 0 : 260 + index * 260);
-  });
 }
 
-function setTarotDrawStatus(message) {
-  const status = element("tarot-draw-status");
-  if (status) {
-    status.textContent = message;
-  }
-}
-
-function revealTarotCardsForm() {
-  const form = element("tarot-cards-form");
-  if (!form) {
-    return;
-  }
-  form.hidden = false;
-  form.classList.remove("is-collapsed");
-  form.classList.add("is-revealed");
-  form.removeAttribute("inert");
-  form.querySelector("textarea")?.focus({ preventScroll: true });
-}
-
-function hideTarotCardsForm() {
-  const form = element("tarot-cards-form");
-  if (!form) {
-    return;
-  }
-  form.classList.add("is-collapsed");
-  form.classList.remove("is-revealed");
-  form.setAttribute("inert", "");
-}
-
-async function requestTarotDraw() {
-  const spread = selectedTarotSpread();
+async function requestTarotDraw(topicId) {
   const result = await apiRequest("/api/tarot-cards/draw", "POST", {
-    spread: spread.id,
+    topic: topicId,
     language: lang,
   });
   const cards = result.cards || [];
-  if (cards.length !== TAROT_REQUIRED_CARDS) {
+  const expected = Number(selectedTarotTopic?.size || cards.length);
+  if (!cards.length || cards.length !== expected) {
     throw new Error(i18n.tarotCardsDrawFailed);
   }
   drawnTarotCards = cards;
@@ -3195,133 +3336,173 @@ async function requestTarotDraw() {
   }
 }
 
-async function placeTarotCardOnTable(card, index) {
-  const slot = document.querySelector(`.tarot-spread-slot[data-slot="${index}"]`);
-  if (!slot) {
+async function startTarotReadingFlow() {
+  if (!selectedTarotTopic) {
+    setResult("tarot-cards-form-result", i18n.tarotCardsNeedExact);
     return;
   }
-  slot.innerHTML = renderTarotCardBack(card, index, "is-dealing-to-table");
-  slot.classList.add("is-filled");
-  const cardNode = slot.querySelector(".tarot-card");
-  if (prefersReducedMotion()) {
-    cardNode?.classList.remove("is-dealing-to-table");
+  if (selectedTarotTopic.needs_question) {
+    const question = element("tarot-cards-question")?.value.trim() || "";
+    if (!question) {
+      setResult("tarot-cards-form-result", i18n.tarotQuestionRequired);
+      showTarotStep("details");
+      return;
+    }
+  }
+  if ((selectedTarotTopic.subtopics || []).length && !selectedTarotSubtopic) {
+    setResult("tarot-cards-form-result", i18n.tarotSubtopicRequired);
+    showTarotStep("details");
     return;
   }
-  await wait(180 + index * 180);
-  cardNode?.classList.add("is-arrived");
-  await wait(460);
-}
 
-async function startTarotAutoDraw() {
-  const deck = element("tarot-card-deck");
-  const slots = document.querySelectorAll(".tarot-spread-slot");
-  if (!deck || !slots.length) {
-    return;
-  }
-  hideTarotCardsForm();
-  setTarotStagePhase("dealing");
+  setResult("tarot-cards-form-result", "");
+  showTarotStep("shuffle");
+  renderTarotCardsDeck();
+  prepareTarotSpreadSlots(selectedTarotTopic.size);
   setTarotDrawStatus(i18n.tarotCardsDrawing);
-  tarotDrawToken = "";
-  selectedTarotCardIds = [];
-  drawnTarotCards = [];
-  slots.forEach((slot) => {
-    slot.innerHTML = "";
-    slot.classList.remove("is-filled");
-  });
+  const deck = element("tarot-card-deck");
+  deck?.classList.add("is-shuffling", "is-dealing");
+
+  const shuffleStarted = Date.now();
   try {
-    await requestTarotDraw();
-    deck.classList.add("is-dealing");
+    const requiredCost = serviceCostFromDataset("costTarotCards");
+    if (Number.isFinite(requiredCost) && state.balance != null && Number(state.balance) < requiredCost) {
+      throw new Error(i18n.insufficientSparksRedirect || i18n.requestError);
+    }
+    await requestTarotDraw(selectedTarotTopic.id);
+    const elapsed = Date.now() - shuffleStarted;
+    const minShuffleMs = prefersReducedMotion() ? 0 : 3200;
+    if (elapsed < minShuffleMs) {
+      await wait(minShuffleMs - elapsed);
+    }
     for (let index = 0; index < drawnTarotCards.length; index += 1) {
       await placeTarotCardOnTable(drawnTarotCards[index], index);
     }
-    deck.classList.remove("is-dealing");
-    setTarotStagePhase("ready");
-    setTarotDrawStatus(i18n.tarotCardsDrawn);
-    revealTarotCardsForm();
+    deck?.classList.remove("is-shuffling");
+    setTarotDrawStatus(i18n.readingTarotCards);
+
+    const subtopicTitle = (selectedTarotTopic.subtopics || []).find((item) => item.id === selectedTarotSubtopic)?.title || selectedTarotSubtopic;
+    const result = await apiRequest("/api/tarot-cards/reading", "POST", {
+      topic: selectedTarotTopic.id,
+      question: element("tarot-cards-question")?.value.trim() || "",
+      partner_name: element("tarot-partner-name")?.value.trim() || "",
+      subtopic: subtopicTitle,
+      selected_card_ids: selectedTarotCardIds,
+      draw_token: tarotDrawToken,
+      language: lang,
+    }, { redirectOnUnauthorized: true });
+
+    setBalance(result.balance);
+    tarotLastReportUrl = result.report_url || "";
+    const saveLink = element("tarot-save-spread");
+    if (saveLink && tarotLastReportUrl) {
+      saveLink.href = tarotLastReportUrl;
+      saveLink.hidden = false;
+    }
+    showTarotStep("result");
+    renderTarotCardsResult(result);
+    element("tarot-step-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   } catch (error) {
-    setTarotStagePhase("error");
-    setTarotDrawStatus(error.message || i18n.tarotCardsDrawFailed);
+    deck?.classList.remove("is-shuffling", "is-dealing");
+    showTarotStep(selectedTarotTopic.needs_question || selectedTarotTopic.needs_partner_name || (selectedTarotTopic.subtopics || []).length ? "details" : "topics");
+    const message = error?.message || i18n.tarotCardsDrawFailed;
+    setResult("tarot-cards-form-result", message);
+    if (String(message).toLowerCase().includes("spark") || String(message).includes("искр")) {
+      window.setTimeout(() => {
+        window.location.assign("/client/topup");
+      }, 900);
+    }
   }
+}
+
+function resetTarotFlow(topicId = "") {
+  selectedTarotSubtopic = "";
+  selectedTarotCardIds = [];
+  drawnTarotCards = [];
+  tarotDrawToken = "";
+  tarotLastReportUrl = "";
+  const question = element("tarot-cards-question");
+  const partner = element("tarot-partner-name");
+  if (question) {
+    question.value = "";
+  }
+  if (partner) {
+    partner.value = "";
+  }
+  setResult("tarot-cards-form-result", "");
+  if (topicId) {
+    openTarotTopic(topicId);
+    return;
+  }
+  selectedTarotTopic = null;
+  showTarotStep("topics");
 }
 
 async function loadTarotCardsDeck() {
-  if (!element("tarot-card-deck")) {
+  if (!element("tarot-topic-grid") && !document.body.dataset.reportModule) {
     return;
   }
-  const result = await apiRequest(`/api/tarot-cards/deck?lang=${encodeURIComponent(lang)}`, "GET");
-  tarotCardsDeck = result.deck || [];
-  tarotCardsSpreads = result.spreads || [];
-  renderTarotCardsDeck();
-  await startTarotAutoDraw();
+  if (element("tarot-topic-grid")) {
+    const result = await apiRequest(`/api/tarot-cards/deck?lang=${encodeURIComponent(lang)}`, "GET");
+    tarotCardsDeck = result.deck || [];
+    tarotCardsTopics = result.topics || [];
+    renderTarotTopicGrid();
+    showTarotStep("topics");
+  }
+}
+
+async function loadTarotCardsReport() {
+  const reportId = Number(document.body.dataset.reportId || 0);
+  if (!reportId || document.body.dataset.reportModule !== "tarot_cards") {
+    return;
+  }
+  const container = element("tarot-cards-result");
+  if (!container) {
+    return;
+  }
+  showSparkLoading("tarot-cards-result", i18n.loading);
+  try {
+    const result = await apiRequest(`/api/tarot-cards/report/${reportId}`, "GET", undefined, { redirectOnUnauthorized: true });
+    renderTarotCardsResult(result);
+  } catch (error) {
+    setResult("tarot-cards-result", error.message || i18n.requestError);
+  }
 }
 
 function wireTarotCardsForm() {
-  const form = element("tarot-cards-form");
-  const deck = element("tarot-card-deck");
-  const spreadRow = element("tarot-spread-row");
-  if (!form || !deck) {
+  const topicGrid = element("tarot-topic-grid");
+  if (!topicGrid && !document.body.dataset.reportModule) {
     return;
   }
-  const shakeLockedTableCard = (target) => {
-    const card = target?.closest(".tarot-card");
-    if (!card) {
+  topicGrid?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-topic-id]");
+    if (!button) {
       return;
     }
-    if (prefersReducedMotion()) {
-      return;
-    }
-    const inner = card.querySelector(".tarot-card-inner") || card;
-    inner.classList.remove("is-locked-shake");
-    void inner.offsetWidth;
-    inner.classList.add("is-locked-shake");
-    window.setTimeout(() => inner.classList.remove("is-locked-shake"), 520);
-  };
-  spreadRow?.addEventListener("pointerdown", (event) => {
-    const target = event.target instanceof HTMLElement ? event.target : null;
-    shakeLockedTableCard(target);
+    openTarotTopic(button.dataset.topicId);
   });
-  spreadRow?.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-    event.preventDefault();
-    const target = event.target instanceof HTMLElement ? event.target : null;
-    shakeLockedTableCard(target);
+  element("tarot-back-topics")?.addEventListener("click", () => resetTarotFlow());
+  element("tarot-start-reading")?.addEventListener("click", () => startTarotReadingFlow());
+  element("tarot-ask-another")?.addEventListener("click", () => resetTarotFlow());
+  element("tarot-get-month")?.addEventListener("click", () => {
+    resetTarotFlow("month_full");
   });
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const spread = selectedTarotSpread();
-    if (selectedTarotCardIds.length !== TAROT_REQUIRED_CARDS || !tarotDrawToken) {
-      setResult("tarot-cards-form-result", i18n.tarotCardsNeedExact);
+  element("tarot-subtopic-grid")?.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-subtopic-id]");
+    if (!chip || !selectedTarotTopic) {
       return;
     }
-    setResult("tarot-cards-form-result", "");
-    setResult("tarot-cards-result", "");
-    deck.classList.add("is-reading");
-    await runReportFlow({
-      form,
-      resultId: "tarot-cards-result",
-      loadingLabel: i18n.readingTarotCards,
-      requiredCost: serviceCostFromDataset("costTarotCards"),
-      request: () => apiRequest("/api/tarot-cards/reading", "POST", {
-        question: element("tarot-cards-question")?.value.trim() || "",
-        spread: spread.id,
-        selected_card_ids: selectedTarotCardIds,
-        draw_token: tarotDrawToken,
-        language: lang,
-      }, { redirectOnUnauthorized: true }),
-      onSuccess: (result) => {
-        setResult("tarot-cards-form-result", "");
-        renderTarotCardsResult(result);
-        element("tarot-cards-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
-        setBalance(result.balance);
-      },
-      onError: (error) => {
-        setResult("tarot-cards-form-result", error.message);
-        setResult("tarot-cards-result", "");
-      },
-    });
-    deck.classList.remove("is-reading");
+    selectedTarotSubtopic = chip.dataset.subtopicId || "";
+    renderTarotSubtopics(selectedTarotTopic);
+  });
+  element("tarot-question-examples")?.addEventListener("click", (event) => {
+    const chip = event.target.closest(".tarot-example-chip");
+    const textarea = element("tarot-cards-question");
+    if (!chip || !textarea) {
+      return;
+    }
+    textarea.value = chip.textContent || "";
+    textarea.focus();
   });
 }
 
@@ -3330,20 +3511,31 @@ function wireAstrologyForm() {
   if (!form) {
     return;
   }
+  wirePersonaPicker("astrology-persona");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    let personaPayload;
+    try {
+      personaPayload = await resolvePersonaForPrefix("astrology-persona");
+    } catch (error) {
+      setResult("astrology-result", error.message);
+      return;
+    }
+    const { resolvedPersona, ...personaFields } = personaPayload;
+    const persona = resolvedPersona || {};
     await runReportFlow({
       form,
       resultId: "astrology-result",
       loadingLabel: i18n.buildingForecast,
       requiredCost: serviceCostFromDataset("costAstrology"),
       request: () => apiRequest("/api/astrology/forecast", "POST", {
-        name: element("astrology-name").value.trim(),
-        birth_date: element("astrology-birth-date").value.trim(),
-        birth_time: element("astrology-birth-time").value.trim(),
-        birth_place: element("astrology-birth-place").value.trim(),
-        focus: element("astrology-focus").value.trim(),
+        name: personaFields.persona_name || persona.name || "",
+        birth_date: personaFields.persona_birth_date || persona.birth_date || "",
+        birth_time: personaFields.persona_birth_time || persona.birth_time || "",
+        birth_place: personaFields.persona_birth_place || persona.birth_place || "",
+        focus: element("astrology-focus")?.value.trim() || "",
         language: lang,
+        ...personaFields,
       }, { redirectOnUnauthorized: true }),
       onSuccess: (result, { revealResult }) => {
         revealResult(result.result);
@@ -4669,6 +4861,7 @@ async function boot() {
   syncAuthChrome(profile);
   await loadPersonas();
   await loadTarotCardsDeck().catch(() => {});
+  await loadTarotCardsReport().catch(() => {});
   await Promise.all([loadPaymentPackages(), refreshBalance().catch(() => {})]);
   await loadPaymentsHistory();
   await loadRequestHistory();
