@@ -2626,24 +2626,39 @@ function updatePersonaPreview(prefix) {
   preview.textContent = persona ? personaPreview(persona) : "";
 }
 
+function setPersonaPanelActive(panel, active) {
+  if (!panel) {
+    return;
+  }
+  panel.hidden = !active;
+  panel.querySelectorAll("input, select, textarea, button").forEach((control) => {
+    control.disabled = !active;
+    if (
+      control instanceof HTMLInputElement
+      || control instanceof HTMLTextAreaElement
+      || control instanceof HTMLSelectElement
+    ) {
+      if (!active) {
+        if (control.required) {
+          control.dataset.wasRequired = "true";
+        }
+        control.required = false;
+      } else if (control.dataset.wasRequired === "true") {
+        control.required = true;
+      }
+    }
+  });
+}
+
 function togglePersonaPanels(prefix) {
   const mode = personaModeValue(prefix);
   const savedPanel = element(`${prefix}-saved-persona-panel`);
   const manualPanel = element(`${prefix}-manual-persona-panel`);
-  const setPanelActive = (panel, active) => {
-    if (!panel) {
-      return;
-    }
-    panel.hidden = !active;
-    panel.querySelectorAll("input, select, textarea, button").forEach((control) => {
-      control.disabled = !active;
-    });
-  };
   document.querySelectorAll(`input[name='${prefix}-mode']`).forEach((radio) => {
     radio.closest("label")?.classList.toggle("is-active", radio.checked);
   });
-  setPanelActive(savedPanel, mode === "saved");
-  setPanelActive(manualPanel, mode === "manual");
+  setPersonaPanelActive(savedPanel, mode === "saved");
+  setPersonaPanelActive(manualPanel, mode === "manual");
 }
 
 function wirePersonaPicker(prefix) {
@@ -2946,19 +2961,11 @@ function wireTarotForm() {
   };
   const togglePersonaMode = () => {
     const mode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
-    const savedPanel = element("tarot-saved-persona-panel");
-    const manualPanel = element("tarot-manual-persona-panel");
-    const setPanelActive = (panel, active) => {
-      if (!panel) {
-        return;
-      }
-      panel.hidden = !active;
-      panel.querySelectorAll("input, select, textarea, button").forEach((control) => {
-        control.disabled = !active;
-      });
-    };
-    setPanelActive(savedPanel, mode === "saved");
-    setPanelActive(manualPanel, mode === "manual");
+    document.querySelectorAll("input[name='tarot-persona-mode']").forEach((radio) => {
+      radio.closest("label")?.classList.toggle("is-active", radio.checked);
+    });
+    setPersonaPanelActive(element("tarot-saved-persona-panel"), mode === "saved");
+    setPersonaPanelActive(element("tarot-manual-persona-panel"), mode === "manual");
   };
   document.querySelectorAll("input[name='tarot-persona-mode']").forEach((radio) => {
     radio.addEventListener("change", togglePersonaMode);
@@ -2980,15 +2987,19 @@ function wireTarotForm() {
     event.preventDefault();
     setResult("tarot-result", "");
     setTarotFormStatus("");
+    togglePersonaMode();
     const personaMode = document.querySelector("input[name='tarot-persona-mode']:checked")?.value || "saved";
     const manualPersona = personaPayloadFromPrefix("tarot-persona");
     let personaId = personaMode === "saved" ? Number(element("tarot-persona-select")?.value || 0) : 0;
     if (personaMode === "saved" && !personaId) {
       setTarotFormStatus(i18n.personaRequired);
+      element("tarot-form-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
+      element("tarot-persona-select")?.focus();
       return;
     }
     if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date || !manualPersona.birth_time || !manualPersona.birth_place)) {
       setTarotFormStatus(i18n.personaRequired);
+      element("tarot-form-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
       return;
     }
     await runReportFlow({
