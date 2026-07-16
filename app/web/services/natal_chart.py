@@ -8,10 +8,18 @@ from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from skyfield.api import Loader, wgs84
-from skyfield.framelib import ecliptic_frame
-
 from config import BASE_DIR
+
+
+def _require_skyfield():
+    try:
+        from skyfield.api import Loader, wgs84
+        from skyfield.framelib import ecliptic_frame
+    except ImportError as exc:
+        raise RuntimeError(
+            "Natal chart dependencies are missing. Install: pip install skyfield geopy timezonefinder"
+        ) from exc
+    return Loader, wgs84, ecliptic_frame
 
 
 ZODIAC_SIGNS = (
@@ -146,6 +154,7 @@ def _format_point(point: ChartPoint, language: str) -> str:
 
 @lru_cache(maxsize=1)
 def _skyfield_loader():
+    Loader, _wgs84, _ecliptic_frame = _require_skyfield()
     EPHEMERIS_DIR.mkdir(parents=True, exist_ok=True)
     return Loader(str(EPHEMERIS_DIR))
 
@@ -159,6 +168,16 @@ def _ephemeris():
 @lru_cache(maxsize=1)
 def _timescale():
     return _skyfield_loader().timescale()
+
+
+def _wgs84():
+    _Loader, wgs84, _ecliptic_frame = _require_skyfield()
+    return wgs84
+
+
+def _ecliptic_frame():
+    _Loader, _wgs84_mod, ecliptic_frame = _require_skyfield()
+    return ecliptic_frame
 
 
 @lru_cache(maxsize=256)
@@ -253,7 +272,8 @@ def compute_natal_chart(
     )
     eph = _ephemeris()
     earth = eph["earth"]
-    observer = earth + wgs84.latlon(geo.latitude, geo.longitude)
+    observer = earth + _wgs84().latlon(geo.latitude, geo.longitude)
+    ecliptic_frame = _ecliptic_frame()
 
     points: list[ChartPoint] = []
     for key, name_en, name_ru in PLANETS:
