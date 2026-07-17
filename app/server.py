@@ -208,8 +208,14 @@ def _sync_profile_language_from_explicit_choice(
 ) -> None:
     if not auth:
         return
-    user_id, _provider = _require_authenticated_user(auth.max, auth.telegram, auth.email)
-    db.update_user_language(user_id, page_lang)
+    if auth.email:
+        db.update_user_language(auth.email.internal_user_id, page_lang)
+        return
+    if auth.telegram:
+        db.update_user_language(auth.telegram.internal_user_id, page_lang)
+        return
+    if auth.max:
+        db.update_user_language(auth.max.internal_user_id, page_lang)
 
 
 def _render_client_page(

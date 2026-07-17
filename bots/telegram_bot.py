@@ -67,9 +67,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     start_text = context.bot_data["start_text"]
 
     user = update.effective_user
-    link_url = _web_login_url_for_user(user.username if user else None, webapp_url)
-    target_url = link_url if link_url else webapp_url
-    # Ссылка на кнопку генерируется по @username; если username отсутствует, используем обычный webapp URL.
+    # Mini App auth uses Telegram.WebApp.initData; do not attach tglink here —
+    # username links are for browser login and fail for first-time users.
+    target_url = webapp_url
+    _ = user  # reserved for future personalization
     button_text = start_text
 
     keyboard = InlineKeyboardMarkup(
