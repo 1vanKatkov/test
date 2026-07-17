@@ -154,6 +154,16 @@ class TelegramVerifyRequest(BaseModel):
     init_data: str = Field(min_length=20, max_length=8000)
 
 
+class TelegramWidgetAuthRequest(BaseModel):
+    id: int
+    first_name: str = Field(default="", max_length=256)
+    last_name: str = Field(default="", max_length=256)
+    username: str = Field(default="", max_length=128)
+    photo_url: str = Field(default="", max_length=1024)
+    auth_date: int
+    hash: str = Field(min_length=32, max_length=128)
+
+
 class TelegramLinkVerifyRequest(BaseModel):
     link_token: str = Field(min_length=20, max_length=12000)
 

@@ -43,6 +43,7 @@ class Settings:
     telegram_button_text: str = os.getenv("TELEGRAM_BUTTON_TEXT", "Open mini app")
     telegram_bot_url_ru: str = os.getenv("TELEGRAM_BOT_URL_RU", "https://t.me/your_telegram_bot_ru").strip()
     telegram_bot_url_en: str = os.getenv("TELEGRAM_BOT_URL_EN", "https://t.me/your_telegram_bot_en").strip()
+    telegram_bot_username: str = os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
     telegram_webapp_url_ru: str = os.getenv("TELEGRAM_WEBAPP_URL_RU", "").strip()
     telegram_webapp_url_en: str = os.getenv("TELEGRAM_WEBAPP_URL_EN", "").strip()
     telegram_bot_token_en: str = os.getenv("TELEGRAM_BOT_TOKEN_EN", "")

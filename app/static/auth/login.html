@@ -43,6 +43,11 @@
         <label><span data-auth-label="password">Пароль</span> <input id="login-password" type="password" autocomplete="current-password" required minlength="8" /></label>
         <button type="submit" class="primary-btn" data-auth-label="loginSubmit">Войти</button>
       </form>
+      <div class="auth-telegram-block" id="telegram-login-block" hidden>
+        <p class="muted auth-divider" data-auth-label="orDivider">или</p>
+        <p class="muted auth-telegram-hint" data-auth-label="loginWithTelegram">Войти через Telegram</p>
+        <div id="telegram-login-widget" class="telegram-login-widget"></div>
+      </div>
       <p class="muted auth-switch-line">
         <span data-auth-label="noAccount">Нет аккаунта?</span>
         <a class="auth-register-link" href="/static/auth/register.html" data-auth-label="goRegister">Зарегистрироваться</a>

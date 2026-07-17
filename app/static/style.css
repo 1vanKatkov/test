@@ -4771,6 +4771,31 @@ button.page-back-arrow {
   font-weight: 600;
 }
 
+.auth-telegram-block {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.auth-divider {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+.auth-telegram-hint {
+  margin: 0;
+  text-align: center;
+}
+
+.telegram-login-widget {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+
 .compact-actions {
   margin-top: 10px;
   display: flex;

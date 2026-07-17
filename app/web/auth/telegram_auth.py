@@ -163,12 +163,87 @@ def _extract_user(data: dict[str, str]) -> dict[str, Any]:
     return user_data
 
 
-def telegram_auth_health() -> dict[str, bool | int]:
+def telegram_auth_health() -> dict[str, bool | int | str]:
     tokens = _bot_tokens()
     return {
         "configured": len(tokens) > 0,
         "bot_tokens_count": len(tokens),
+        "bot_username": resolve_telegram_bot_username(),
+        "login_widget_ready": bool(tokens and resolve_telegram_bot_username()),
     }
+
+
+def resolve_telegram_bot_username() -> str:
+    configured = (settings.telegram_bot_username or "").strip().lstrip("@")
+    if configured and configured.lower() not in {"your_telegram_bot_ru", "your_telegram_bot_en", "your_bot_username"}:
+        return configured
+    for url in (settings.telegram_bot_url_ru, settings.telegram_bot_url_en):
+        value = (url or "").strip()
+        if "t.me/" not in value:
+            continue
+        username = value.split("t.me/", 1)[1].split("?", 1)[0].strip("/").lstrip("@")
+        if username and username.lower() not in {"your_telegram_bot_ru", "your_telegram_bot_en", "your_bot_username"}:
+            return username
+    return ""
+
+
+def _verify_login_widget_signature(data: dict[str, str]) -> None:
+    bot_tokens = _bot_tokens()
+    if not bot_tokens:
+        raise HTTPException(status_code=500, detail="TELEGRAM_BOT_TOKEN is not configured")
+
+    data_check_string = _build_data_check_string(data)
+    received_hash = data["hash"]
+    for bot_token in bot_tokens:
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        expected_hash = hmac.new(
+            secret_key,
+            data_check_string.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        if hmac.compare_digest(expected_hash, received_hash):
+            return
+    raise HTTPException(status_code=401, detail="Telegram login widget signature is invalid")
+
+
+def resolve_telegram_login_widget_identity(payload: dict[str, Any]) -> tuple[TelegramIdentity, bool]:
+    raw: dict[str, Any] = {}
+    for key, value in (payload or {}).items():
+        if value is None:
+            continue
+        if key in {"first_name", "last_name", "username", "photo_url"} and not str(value).strip():
+            continue
+        raw[str(key)] = value
+    if "hash" not in raw:
+        raise HTTPException(status_code=401, detail="Telegram login hash is missing")
+    if "id" not in raw:
+        raise HTTPException(status_code=401, detail="Telegram user id is missing")
+
+    data = {key: str(value) for key, value in raw.items()}
+    _verify_login_widget_signature(data)
+    _verify_auth_date(data)
+
+    provider_user_id = str(data["id"])
+    username = data.get("username") or data.get("first_name") or f"telegram_{provider_user_id}"
+    language = "ru"
+
+    existing = db.get_user_by_provider(provider="telegram", provider_user_id=provider_user_id)
+    user = db.get_or_create_user(
+        provider="telegram",
+        provider_user_id=provider_user_id,
+        username=username,
+        language=language,
+    )
+    return (
+        TelegramIdentity(
+            user_id=provider_user_id,
+            username=user["username"],
+            language=user["language"],
+            internal_user_id=user["id"],
+            init_data="",
+        ),
+        existing is None,
+    )
 
 
 def resolve_telegram_identity(init_data: str) -> tuple[TelegramIdentity, bool]:

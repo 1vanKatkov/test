@@ -35,7 +35,9 @@ from app.web.auth.telegram_auth import (
     issue_telegram_auth_token,
     issue_telegram_username_login_url,
     optional_telegram_auth,
+    resolve_telegram_bot_username,
     resolve_telegram_identity,
+    resolve_telegram_login_widget_identity,
     resolve_telegram_username_link_to_identity,
     verify_telegram_bot_bearer,
 )
@@ -66,6 +68,7 @@ from app.web.schemas import (
     TelegramLinkVerifyRequest,
     TelegramMintUsernameLinkRequest,
     TelegramVerifyRequest,
+    TelegramWidgetAuthRequest,
     YooKassaCreatePaymentRequest,
 )
 from app.web.services import compatibility, divination, numerology, payments, sonnik, tarot_cards
@@ -590,6 +593,8 @@ def _translations(lang: str) -> dict:
             "email_auth": "Email auth",
             "register": "Register",
             "login": "Login",
+            "login_with_telegram": "Log in with Telegram",
+            "or_divider": "or",
             "email": "Email",
             "password": "Password",
             "repeat_password": "Repeat password",
@@ -861,6 +866,8 @@ def _translations(lang: str) -> dict:
         "email_auth": "Авторизация по email",
         "register": "Регистрация",
         "login": "Вход",
+        "login_with_telegram": "Войти через Telegram",
+        "or_divider": "или",
         "email": "Email",
         "password": "Пароль",
         "repeat_password": "Повтор пароля",
@@ -1558,7 +1565,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "bottom-nav-nowrap-v1",
+        "assets_version": "tg-login-widget-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -1947,6 +1954,46 @@ async def telegram_bot_fingerprint():
 @app.post("/api/auth/telegram/verify")
 async def verify_telegram_auth(request: Request, payload: TelegramVerifyRequest):
     identity, is_new_user = resolve_telegram_identity(payload.init_data)
+    language = _sync_guest_lang_after_auth(request, identity.internal_user_id, identity.language)
+    token = issue_telegram_auth_token(identity)
+    if is_new_user:
+        record_transaction(
+            identity.internal_user_id,
+            settings.starting_credits,
+            "signup_bonus",
+            "telegram_welcome_bonus",
+            {"provider": "telegram"},
+        )
+    response_data = {
+        "success": True,
+        "token": token,
+        "profile": {
+            "provider": "telegram",
+            "provider_user_id": identity.user_id,
+            "username": identity.username,
+            "language": language,
+        },
+        "balance": get_balance(identity.internal_user_id),
+    }
+    response = JSONResponse(content=response_data)
+    _set_telegram_auth_cookie(response, token)
+    if language in {"ru", "en"}:
+        _set_lang_cookie(response, language)
+    return response
+
+
+@app.get("/api/auth/telegram/login-config")
+async def telegram_login_config():
+    username = resolve_telegram_bot_username()
+    return {
+        "configured": bool(settings.telegram_bot_token and username),
+        "bot_username": username,
+    }
+
+
+@app.post("/api/auth/telegram/widget")
+async def verify_telegram_login_widget(request: Request, payload: TelegramWidgetAuthRequest):
+    identity, is_new_user = resolve_telegram_login_widget_identity(payload.model_dump(exclude_none=True))
     language = _sync_guest_lang_after_auth(request, identity.internal_user_id, identity.language)
     token = issue_telegram_auth_token(identity)
     if is_new_user:

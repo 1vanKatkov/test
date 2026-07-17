@@ -250,6 +250,8 @@ const authPageCopy = {
     confirmRegistration: "Confirm registration",
     verifyTitle: "Confirm registration",
     verificationCode: "Verification code",
+    orDivider: "or",
+    loginWithTelegram: "Log in with Telegram",
     noAccount: "No account yet?",
     haveAccount: "Already have an account?",
     goRegister: "Register",
@@ -271,6 +273,8 @@ const authPageCopy = {
     confirmRegistration: "Подтвердить",
     verifyTitle: "Подтверждение регистрации",
     verificationCode: "Код из письма",
+    orDivider: "или",
+    loginWithTelegram: "Войти через Telegram",
     noAccount: "Нет аккаунта?",
     haveAccount: "Уже есть аккаунт?",
     goRegister: "Зарегистрироваться",
@@ -1696,11 +1700,71 @@ function wireRegisterVerifyPage() {
   }
 }
 
+function applyTelegramAuthResult(result) {
+  if (result.token) {
+    persistEmailAuthToken("");
+    persistTelegramAuthToken(result.token);
+  }
+  if (result.profile) {
+    saveTimedCache(PROFILE_CACHE_KEY, result.profile);
+    applyProfileUi(result.profile);
+  }
+  if (typeof result.balance === "number") {
+    saveTimedCache(BALANCE_CACHE_KEY, result.balance);
+    setBalance(result.balance);
+  }
+  toggleEmailAuthEntry();
+  updateAdminTileVisibility().catch(() => {});
+}
+
+async function mountTelegramLoginWidget() {
+  const block = element("telegram-login-block");
+  const host = element("telegram-login-widget");
+  if (!block || !host || host.dataset.mounted === "1") {
+    return;
+  }
+  try {
+    const response = await fetch(resolveApiUrl("/api/auth/telegram/login-config"), { credentials: "same-origin" });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    if (!data.configured || !data.bot_username) {
+      return;
+    }
+    block.hidden = false;
+    host.dataset.mounted = "1";
+    window.onTelegramAuth = async (user) => {
+      setResult("auth-result", i18n.loading);
+      try {
+        const result = await apiRequest("/api/auth/telegram/widget", "POST", user);
+        applyTelegramAuthResult(result);
+        window.location.href = resolvePostLoginRedirect();
+      } catch (error) {
+        setResult("auth-result", error.message || i18n.telegramAuthFailed);
+      }
+    };
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.setAttribute("data-telegram-login", data.bot_username);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "12");
+    script.setAttribute("data-request-access", "write");
+    script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    host.innerHTML = "";
+    host.appendChild(script);
+  } catch {
+    // Widget is optional when Telegram is not configured.
+  }
+}
+
 function wireLoginPage() {
   const loginForm = element("email-login-form");
   if (!loginForm) {
     return;
   }
+  mountTelegramLoginWidget();
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     setResult("auth-result", i18n.loading);
