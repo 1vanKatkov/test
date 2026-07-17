@@ -1566,7 +1566,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "tg-login-btn-v1",
+        "assets_version": "tg-login-domain-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -1987,10 +1987,21 @@ async def verify_telegram_auth(request: Request, payload: TelegramVerifyRequest)
 async def telegram_login_config():
     username = resolve_telegram_bot_username()
     bot_id = resolve_telegram_bot_id()
+    origin = settings.app_base_url.rstrip("/")
+    domain = ""
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(origin)
+        domain = (parsed.hostname or "").strip().lower()
+    except Exception:
+        domain = ""
     return {
-        "configured": bool(settings.telegram_bot_token and username and bot_id),
+        "configured": bool(settings.telegram_bot_token and username and bot_id and domain),
         "bot_username": username,
         "bot_id": bot_id,
+        "origin": origin,
+        "domain": domain,
     }
 
 

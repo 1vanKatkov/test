@@ -1725,6 +1725,8 @@ async function mountTelegramLoginWidget() {
   btn.dataset.wired = "1";
   let botId = "";
   let botUsername = "astrolhub_bot";
+  let origin = window.location.origin;
+  let domain = "";
   try {
     const response = await fetch(resolveApiUrl("/api/auth/telegram/login-config"), { credentials: "same-origin" });
     if (response.ok) {
@@ -1735,9 +1737,24 @@ async function mountTelegramLoginWidget() {
       if (data.bot_username) {
         botUsername = String(data.bot_username);
       }
+      if (data.origin) {
+        origin = String(data.origin).replace(/\/$/, "");
+      }
+      if (data.domain) {
+        domain = String(data.domain);
+      }
     }
   } catch {
     // Fall back to opening the bot if config is unavailable.
+  }
+
+  const hint = element("telegram-login-hint");
+  if (hint && domain) {
+    hint.hidden = false;
+    hint.textContent =
+      lang === "en"
+        ? `If Telegram says "Bot domain invalid", open @BotFather → /setdomain → ${domain}`
+        : `Если Telegram пишет "Bot domain invalid": @BotFather → /setdomain → ${domain}`;
   }
 
   btn.addEventListener("click", () => {
@@ -1746,7 +1763,11 @@ async function mountTelegramLoginWidget() {
       window.location.href = `https://t.me/${botUsername}`;
       return;
     }
-    const origin = window.location.origin;
+    if (domain && window.location.hostname !== domain) {
+      // Keep OAuth origin aligned with BotFather domain.
+      window.location.href = `${origin}/static/auth/login.html${window.location.search || ""}`;
+      return;
+    }
     const nextPath = resolvePostLoginRedirect();
     const returnTo = `${origin}/api/auth/telegram/widget-callback?next=${encodeURIComponent(nextPath)}`;
     const authUrl = new URL("https://oauth.telegram.org/auth");
