@@ -217,22 +217,10 @@ function openTarotCardModal(index) {
     position.textContent = label;
     position.hidden = !label;
   }
+  // AI interpretation stays under the spread; modal only enlarges the card.
   if (text) {
-    const section = (tarotResultView.sections[index] || "").trim();
-    const keywords = (card.keywords || "").trim();
-    const chunks = [];
-    if (section) {
-      chunks.push(section);
-    } else if (keywords) {
-      chunks.push(keywords);
-    } else if (!tarotResultView.sections.some(Boolean) && tarotResultView.interpretation) {
-      chunks.push(tarotResultView.interpretation);
-    }
-    const isLast = index === tarotResultView.cards.length - 1;
-    if (isLast && tarotResultView.outro) {
-      chunks.push(tarotResultView.outro);
-    }
-    text.innerHTML = chunks.length ? renderMarkdownText(chunks.join("\n\n")) : "";
+    text.innerHTML = "";
+    text.hidden = true;
   }
   modal.hidden = false;
   document.body.classList.add("tarot-card-modal-open");
