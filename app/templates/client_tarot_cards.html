@@ -34,6 +34,18 @@
       </section>
 
       <section id="tarot-step-details" class="tarot-flow-step" data-step="details" hidden>
+        <div id="tarot-confirm-panel" class="tarot-confirm-panel" hidden>
+          <div class="tarot-confirm-card">
+            <span class="tarot-confirm-icon" aria-hidden="true">
+              <img id="tarot-confirm-icon-img" class="tarot-confirm-icon-img" src="" alt="" width="56" height="56" hidden />
+            </span>
+            <p class="tarot-confirm-kicker">{{ t.tarot_confirm_ready or 'Готово к разбору' }}</p>
+            <strong id="tarot-confirm-title" class="tarot-confirm-title"></strong>
+            <p id="tarot-confirm-meta" class="tarot-confirm-meta muted"></p>
+            <p class="tarot-confirm-hint muted">{{ t.tarot_confirm_hint or 'Нажмите кнопку ниже, чтобы вытянуть карты.' }}</p>
+          </div>
+        </div>
+
         <div id="tarot-partner-panel" class="form-grid tarot-detail-panel" hidden>
           <label>{{ t.tarot_partner_name }}
             <input id="tarot-partner-name" maxlength="100" autocomplete="off" />

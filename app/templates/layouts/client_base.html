@@ -36,7 +36,9 @@
   {% include "partials/client_bottom_nav.html" %}
   {% endblock %}
 
-  <script defer src="/static/app.js?v={{ assets_version }}"></script>
+  {% block scripts %}
+  {% include "partials/client_scripts.html" %}
+  {% endblock %}
   {% block scripts_extra %}{% endblock %}
 </body>
 </html>

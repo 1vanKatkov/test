@@ -43,6 +43,7 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=divination-v1"></script>
+  {% set assets_version = assets_version|default('sparks-modal-v1') %}
+  {% include "partials/client_scripts.html" %}
 </body>
 </html>

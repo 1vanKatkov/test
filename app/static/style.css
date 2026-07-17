@@ -1898,6 +1898,142 @@ button:disabled {
   display: block;
 }
 
+.tarot-confirm-panel {
+  display: grid;
+}
+
+.tarot-confirm-card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 22px 18px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 95, 0.28);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 214, 126, 0.16), transparent 42%),
+    linear-gradient(165deg, rgba(24, 16, 58, 0.96), rgba(10, 12, 30, 0.98));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.tarot-confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 229, 154, 0.28);
+  background: rgba(12, 10, 36, 0.92);
+}
+
+.tarot-confirm-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tarot-confirm-kicker {
+  margin: 6px 0 0;
+  color: #ffe5a0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tarot-confirm-title {
+  color: #fff;
+  font-size: clamp(22px, 5vw, 28px);
+  line-height: 1.2;
+}
+
+.tarot-confirm-meta,
+.tarot-confirm-hint {
+  margin: 0;
+}
+
+.insufficient-sparks-overlay {
+  z-index: 90;
+  background: rgba(4, 3, 14, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.insufficient-sparks-modal {
+  position: relative;
+  overflow: hidden;
+  width: min(420px, 100%);
+  padding: 28px 22px 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 203, 125, 0.28);
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 214, 126, 0.22), transparent 42%),
+    linear-gradient(165deg, rgba(28, 18, 62, 0.98), rgba(10, 10, 28, 0.98));
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  animation: tarotCardModalIn 0.28s ease both;
+}
+
+.insufficient-sparks-glow {
+  position: absolute;
+  inset: auto 20% -40px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(217, 155, 77, 0.22);
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.insufficient-sparks-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 214, 126, 0.42);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.28), transparent 42%),
+    linear-gradient(180deg, #ffe3a3 0%, #d99b4d 100%);
+  color: #2e1a1b;
+  font-size: 28px;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(223, 151, 72, 0.28);
+}
+
+.insufficient-sparks-modal h2 {
+  position: relative;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(22px, 5vw, 28px);
+  line-height: 1.2;
+}
+
+.insufficient-sparks-text {
+  position: relative;
+  margin: 0;
+  color: #f4f1ff;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.insufficient-sparks-hint {
+  position: relative;
+  margin: 0;
+  font-size: 14px;
+}
+
+.insufficient-sparks-actions {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+body.insufficient-sparks-modal-open {
+  overflow: hidden;
+}
+
 .tarot-subtopic-grid,
 .tarot-example-list {
   display: flex;
@@ -2210,14 +2346,22 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 12px 14px;
 }
 
 .tarot-result-card {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   width: var(--tarot-reading-card-width);
   flex: 0 0 var(--tarot-reading-card-width);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
   text-align: center;
   opacity: 0;
   transform: translateY(18px) scale(0.96);
@@ -2225,7 +2369,18 @@ button:disabled {
   animation-delay: calc(var(--reveal-index, 0) * 260ms);
 }
 
-.tarot-result-card .tarot-card {
+.tarot-result-card:hover .tarot-card-face,
+.tarot-result-card:focus-visible .tarot-card-face {
+  border-color: rgba(255, 229, 154, 0.88);
+  box-shadow: 0 0 0 2px rgba(255, 229, 154, 0.16), 0 16px 34px rgba(126, 66, 255, 0.36);
+}
+
+.tarot-result-card:focus-visible {
+  outline: none;
+}
+
+.tarot-result-card .tarot-card,
+.tarot-result-card-face {
   width: var(--tarot-reading-card-width);
   max-width: 100%;
   pointer-events: none;
@@ -2235,16 +2390,118 @@ button:disabled {
   transition-delay: calc(260ms + var(--reveal-index, 0) * 260ms);
 }
 
-.tarot-result-card strong,
-.tarot-result-card span {
+.tarot-result-card-name {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.6em;
+  margin: 0;
+  color: #f4f1ff;
   font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
 }
 
-.tarot-interpretation {
+.tarot-card-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
   display: grid;
-  gap: 10px;
-  animation: tarotTextReveal 0.5s ease both;
-  animation-delay: 880ms;
+  place-items: stretch;
+}
+
+.tarot-card-modal[hidden] {
+  display: none !important;
+}
+
+.tarot-card-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 3, 14, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.tarot-card-modal-dialog {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  width: min(100%, 520px);
+  max-height: min(92dvh, 900px);
+  margin: auto;
+  padding: 16px 16px 22px;
+  overflow: auto;
+  border: 1px solid rgba(199, 156, 255, 0.34);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(178, 95, 255, 0.18), transparent 36%),
+    linear-gradient(165deg, rgba(22, 16, 52, 0.98), rgba(8, 10, 28, 0.98));
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.48);
+  animation: tarotCardModalIn 0.28s ease both;
+}
+
+.tarot-card-modal-toolbar {
+  display: flex;
+  align-items: center;
+}
+
+.tarot-card-modal-visual {
+  display: grid;
+  place-items: center;
+}
+
+.tarot-card-modal-face,
+.tarot-card-modal-visual .tarot-card {
+  width: min(210px, 58vw);
+  max-width: 100%;
+  animation: tarotCardModalZoom 0.34s cubic-bezier(0.18, 0.78, 0.18, 1) both;
+}
+
+.tarot-card-modal-title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(22px, 5vw, 28px);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.tarot-card-modal-position {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.tarot-card-modal-text {
+  margin: 0;
+}
+
+body.tarot-card-modal-open {
+  overflow: hidden;
+}
+
+@keyframes tarotCardModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tarotCardModalZoom {
+  from {
+    opacity: 0.4;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes tarotDeckPulse {
