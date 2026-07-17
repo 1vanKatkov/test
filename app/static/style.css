@@ -2412,6 +2412,20 @@ body.insufficient-sparks-modal-open {
   text-align: center;
 }
 
+.tarot-interpretation {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 14px 14px 16px;
+  border: 1px solid rgba(151, 119, 255, 0.28);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(178, 95, 255, 0.12), transparent 42%),
+    linear-gradient(145deg, rgba(18, 16, 48, 0.96), rgba(10, 12, 30, 0.98));
+  animation: tarotTextReveal 0.5s ease both;
+  animation-delay: 880ms;
+}
+
 .tarot-card-modal {
   position: fixed;
   inset: 0;

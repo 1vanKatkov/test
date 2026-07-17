@@ -254,6 +254,9 @@ function renderTarotCardsResult(result) {
     outro: parsed.outro,
   };
   ensureTarotCardModal();
+  const interpretationHtml = interpretation
+    ? `<div class="tarot-interpretation rich-result">${renderMarkdownText(interpretation)}</div>`
+    : "";
   container.innerHTML = `<div class="tarot-result-cards" role="list">
     ${cards.map((card, index) => `<button
       type="button"
@@ -266,7 +269,8 @@ function renderTarotCardsResult(result) {
       ${renderTarotCardButton(card, true, index, "tarot-result-card-face", { asButton: false })}
       <span class="tarot-result-card-name">${escapeHtml(card.name || "")}</span>
     </button>`).join("")}
-  </div>`;
+  </div>
+  ${interpretationHtml}`;
   if (!container.dataset.tarotResultWired) {
     container.dataset.tarotResultWired = "1";
     container.addEventListener("click", (event) => {
