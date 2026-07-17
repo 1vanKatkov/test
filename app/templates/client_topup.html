@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.topup }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=dark-gold-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -19,13 +19,19 @@
     </div>
   </header>
 
-  <main class="mobile-client">
-    <section class="card compact-card">
-      <h2>{{ t.topup }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+  <main class="mobile-client card-readings-page service-theme-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
+      <div>
+        <h2>{{ t.topup }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </section>
 
-    <section class="card topup-tabs-card">
+    <section class="card service-theme-shell topup-tabs-card">
       <div class="topup-tabs" role="tablist" aria-label="{{ t.topup }}">
         <button type="button" class="topup-tab is-active" data-topup-tab="sparks" role="tab" aria-selected="true">
           {{ t.topup_tab_sparks }}
@@ -38,7 +44,7 @@
       <div id="topup-panel-sparks" class="topup-tab-panel is-active" role="tabpanel">
         <h3>{{ t.yookassa_payment }}</h3>
         <p id="payment-topup-notice" class="payment-topup-notice" hidden></p>
-        <form id="payment-create-form" class="form-grid">
+        <form id="payment-create-form" class="form-grid service-theme-form">
           <label>{{ t.spark_package }}
             <select id="payment-package" required></select>
           </label>
@@ -54,7 +60,7 @@
           </label>
           <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
         </form>
-        <pre id="payment-result" class="result"></pre>
+        <div id="payment-result" class="result" aria-live="polite" hidden></div>
       </div>
 
       <div id="topup-panel-plus" class="topup-tab-panel" role="tabpanel" hidden>
@@ -75,7 +81,7 @@
           <li>{{ t.plus_subscription_benefit_5 }}</li>
           <li>{{ t.plus_subscription_benefit_6 }}</li>
         </ul>
-        <form id="plus-subscription-form" class="form-grid">
+        <form id="plus-subscription-form" class="form-grid service-theme-form">
           <label>{{ t.receipt_email }}
             <input id="plus-subscription-email" type="email" required placeholder="name@example.com" />
           </label>
@@ -88,13 +94,15 @@
           </label>
           <button type="submit" class="primary-btn plus-subscription-btn">{{ t.plus_subscription_cta }}</button>
         </form>
-        <pre id="plus-subscription-result" class="result"></pre>
+        <div id="plus-subscription-result" class="result" aria-live="polite" hidden></div>
       </div>
     </section>
 
-    <section class="card">
-      <h2>{{ "Payment history" if lang == "en" else "История платежей" }}</h2>
-      <div id="payments-history" class="history-list"></div>
+    <section class="card service-theme-shell">
+      <div class="auth-required-content">
+        <h3>{{ "Payment history" if lang == "en" else "История платежей" }}</h3>
+        <div id="payments-history" class="history-list"></div>
+      </div>
     </section>
   </main>
 
@@ -120,6 +128,6 @@
   </div>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=topup-tabs-v1"></script>
+  <script defer src="/static/app.js?v=ui-unify-v1"></script>
 </body>
 </html>

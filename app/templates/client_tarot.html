@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.tarot }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=lang-mobile-slider-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell astrology-layout-page"
@@ -21,16 +21,8 @@
     </div>
   </header>
 
-  <main class="mobile-client card-readings-page">
-    <section class="card-readings-hero">
-      <div class="card-readings-moon" aria-hidden="true"></div>
-      <div class="card-readings-hero-top">
-        <span id="auth-provider" class="muted">{{ initial_auth_provider }}</span>
-        <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-          <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-          <span id="page-sparks">-</span>
-        </span>
-      </div>
+  <main class="mobile-client card-readings-page service-theme-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
       {% if selected_card_reading_topic %}
       <div class="page-heading-with-back">
         <a
@@ -39,15 +31,24 @@
           aria-label="{{ t.back_to_natal_maps }}"
           title="{{ t.back_to_natal_maps }}"
         ></a>
-        <h1>{{ t.tarot }}</h1>
+        <div>
+          <h2>{{ t.tarot }}</h2>
+          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+        </div>
       </div>
       {% else %}
-      <h1>{{ t.tarot }}</h1>
+      <div>
+        <h2>{{ t.tarot }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
       {% endif %}
-      <p>{{ t.feature_tarot_desc }}</p>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </section>
 
-    <section class="auth-gated-card card-readings-shell">
+    <section class="card auth-gated-card service-theme-shell">
       <div class="auth-required-panel" hidden>
         <h3>{{ t.sign_in_required_title }}</h3>
         <p>{{ t.sign_in_required_text }}</p>
@@ -81,7 +82,7 @@
           {% endfor %}
         </div>
         {% else %}
-        <form id="tarot-form" class="form-grid natal-topic-form" novalidate>
+        <form id="tarot-form" class="form-grid natal-topic-form service-theme-form" novalidate>
           <input id="tarot-topic" type="hidden" value="{{ selected_card_reading_topic.key }}" />
           <div class="selected-card-reading">
             <span class="muted">{{ t.natal_maps }}</span>
@@ -128,6 +129,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=natal-persona-fix-v1"></script>
+  <script defer src="/static/app.js?v=ui-unify-v1"></script>
 </body>
 </html>

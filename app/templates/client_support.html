@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.support }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -19,35 +19,40 @@
     </div>
   </header>
 
-  <main class="mobile-client">
-    <section class="card compact-card">
-      <h2>{{ t.support }}</h2>
-      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+  <main class="mobile-client card-readings-page service-theme-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
+      <div>
+        <h2>{{ t.support }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </section>
 
-    <section class="card">
-      <h2>{{ t.open_ticket }}</h2>
-      <form id="support-ticket-form" class="form-grid">
-        <label>{{ t.subject }} <input id="support-subject" required /></label>
-        <label>{{ t.message }} <textarea id="support-message" rows="5" required></textarea></label>
-        <button type="submit" class="primary-btn">{{ t.send }}</button>
-      </form>
-      <pre id="support-result" class="result"></pre>
-    </section>
+    <section class="card auth-gated-card service-theme-shell">
+      <div class="auth-required-content">
+        <h3>{{ t.open_ticket }}</h3>
+        <form id="support-ticket-form" class="form-grid service-theme-form">
+          <label>{{ t.subject }} <input id="support-subject" required /></label>
+          <label>{{ t.message }} <textarea id="support-message" rows="5" required></textarea></label>
+          <button type="submit" class="primary-btn">{{ t.send }}</button>
+        </form>
+        <div id="support-result" class="result rich-result" aria-live="polite" hidden></div>
 
-    <section class="card">
-      <h2>{{ t.my_tickets }}</h2>
-      <div id="support-tickets" class="history-list"></div>
-      <div id="support-messages" class="history-list"></div>
-      <form id="support-reply-form" class="form-grid">
-        <label>{{ t.message }} <textarea id="support-reply-message" rows="4"></textarea></label>
-        <button type="submit" class="secondary-btn">{{ t.send }}</button>
-      </form>
+        <h3>{{ t.my_tickets }}</h3>
+        <div id="support-tickets" class="history-list"></div>
+        <div id="support-messages" class="history-list"></div>
+        <form id="support-reply-form" class="form-grid service-theme-form">
+          <label>{{ t.message }} <textarea id="support-reply-message" rows="4"></textarea></label>
+          <button type="submit" class="secondary-btn">{{ t.send }}</button>
+        </form>
+      </div>
     </section>
-
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=divination-v1"></script>
+  <script defer src="/static/app.js?v=ui-unify-v1"></script>
 </body>
 </html>

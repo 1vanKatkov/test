@@ -3380,6 +3380,11 @@ body.modal-open {
   margin: 0;
 }
 
+.client-page-hero .page-heading-with-back {
+  flex: 1;
+  min-width: 0;
+}
+
 .page-back-arrow {
   width: 44px;
   height: 44px;
@@ -3393,6 +3398,15 @@ body.modal-open {
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+button.page-back-arrow {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .page-back-arrow::before {
@@ -4060,6 +4074,10 @@ body.modal-open {
 .topup-tabs-card {
   display: grid;
   gap: 16px;
+}
+
+.service-theme-page .topup-tabs-card.service-theme-shell {
+  padding: 0;
 }
 
 .topup-tabs {

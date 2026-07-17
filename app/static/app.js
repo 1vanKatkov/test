@@ -710,6 +710,7 @@ function setPlusStatus(isPlus) {
   const plusResult = element("plus-subscription-result");
   if (plusResult && isPlus) {
     plusResult.textContent = i18n.plusSubscriptionActive;
+    plusResult.hidden = false;
   }
 }
 
@@ -3120,6 +3121,27 @@ function tarotFlowStep(stepId) {
   return element(`tarot-step-${stepId}`);
 }
 
+let tarotPageDefaultTitle = "";
+
+function syncTarotFlowChrome(stepId) {
+  const backBtn = element("tarot-back-topics");
+  const titleEl = element("tarot-page-title");
+  if (titleEl && !tarotPageDefaultTitle) {
+    tarotPageDefaultTitle = titleEl.textContent.trim();
+  }
+  // Back arrow only on the details step — never during shuffle/result spreads.
+  if (backBtn) {
+    backBtn.hidden = stepId !== "details";
+  }
+  if (titleEl) {
+    if (selectedTarotTopic && stepId !== "topics") {
+      titleEl.textContent = selectedTarotTopic.title;
+    } else {
+      titleEl.textContent = tarotPageDefaultTitle || titleEl.textContent;
+    }
+  }
+}
+
 function showTarotStep(stepId) {
   ["topics", "details", "shuffle", "result"].forEach((id) => {
     const step = tarotFlowStep(id);
@@ -3130,6 +3152,7 @@ function showTarotStep(stepId) {
     step.hidden = !active;
     step.classList.toggle("is-active", active);
   });
+  syncTarotFlowChrome(stepId);
 }
 
 function tarotCardImageUrl(card) {
@@ -3247,10 +3270,6 @@ function openTarotTopic(topicId) {
   if (selectedTarotTopic.day_mode || (!selectedTarotTopic.needs_question && !(selectedTarotTopic.subtopics || []).length && !selectedTarotTopic.needs_partner_name)) {
     startTarotReadingFlow();
     return;
-  }
-  const title = element("tarot-details-title");
-  if (title) {
-    title.textContent = selectedTarotTopic.title;
   }
   const partnerPanel = element("tarot-partner-panel");
   const subtopicPanel = element("tarot-subtopic-panel");

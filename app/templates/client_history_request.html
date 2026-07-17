@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.request_history }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=history-detail-v3" />
+  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -16,28 +16,38 @@
   <header class="app-topbar client-topbar">
     <div class="topbar-inner">
       <a class="brand" href="/client">{{ brand_name }}</a>
+      {% include "partials/client_user_chip.html" %}
     </div>
   </header>
 
-  <main class="mobile-client">
-    <section class="card compact-card">
+  <main class="mobile-client card-readings-page service-theme-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
       <div class="page-heading-with-back">
-        <a class="page-back-arrow" href="/client/history" aria-label="{{ t.back }}"></a>
-        <h2>{{ t.request_history }}</h2>
+        <a class="page-back-arrow" href="/client/history" aria-label="{{ t.back }}" title="{{ t.back }}"></a>
+        <div>
+          <h2>{{ t.request_history }}</h2>
+          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+        </div>
       </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </section>
 
-    <section class="card history-row history-detail-card">
-      <div id="history-detail-meta" class="history-detail-meta"></div>
-      <div id="history-detail-request-text" class="history-detail-request-text"></div>
-      <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite" hidden></div>
-      <div id="history-detail-body" class="history-answer-body"></div>
-      <div id="history-detail-actions" class="history-actions"></div>
-      <div id="history-detail-result" class="result rich-result" hidden></div>
+    <section class="card service-theme-shell">
+      <div class="history-row history-detail-card">
+        <div id="history-detail-meta" class="history-detail-meta"></div>
+        <div id="history-detail-request-text" class="history-detail-request-text"></div>
+        <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite" hidden></div>
+        <div id="history-detail-body" class="history-answer-body"></div>
+        <div id="history-detail-actions" class="history-actions"></div>
+        <div id="history-detail-result" class="result rich-result" hidden></div>
+      </div>
     </section>
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=history-detail-v3"></script>
+  <script defer src="/static/app.js?v=ui-unify-v1"></script>
 </body>
 </html>

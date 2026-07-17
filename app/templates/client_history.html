@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.history }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=page-enter-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -19,18 +19,32 @@
     </div>
   </header>
 
-  <main class="mobile-client">
-    <section class="card compact-card">
-      <h2>{{ t.request_history }}</h2>
+  <main class="mobile-client card-readings-page service-theme-page">
+    <section class="card compact-card client-page-hero service-theme-hero">
+      <div>
+        <h2>{{ t.request_history }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </section>
 
-    <section class="card">
-      <div id="request-history" class="history-list"></div>
-      <div id="history-result" class="result rich-result" aria-live="polite" hidden></div>
+    <section class="card auth-gated-card service-theme-shell">
+      <div class="auth-required-panel" hidden>
+        <h3>{{ t.sign_in_required_title }}</h3>
+        <p>{{ t.sign_in_required_text }}</p>
+        <a class="primary-btn" href="/static/auth/login.html?next=/client/history">{{ t.sign_in_required_action }}</a>
+      </div>
+      <div class="auth-required-content">
+        <div id="request-history" class="history-list"></div>
+        <div id="history-result" class="result rich-result" aria-live="polite" hidden></div>
+      </div>
     </section>
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=page-enter-v1"></script>
+  <script defer src="/static/app.js?v=ui-unify-v1"></script>
 </body>
 </html>

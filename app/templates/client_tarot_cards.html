@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.tarot_cards }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=tarot-ux-v2" />
+  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -21,11 +21,21 @@
     </div>
   </header>
 
-  <main class="mobile-client card-readings-page tarot-cards-page tarot-flow-page">
+  <main class="mobile-client card-readings-page service-theme-page tarot-cards-page tarot-flow-page">
     <section class="card compact-card client-page-hero service-theme-hero">
-      <div>
-        <h2>{{ t.tarot_cards }}</h2>
-        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      <div class="page-heading-with-back">
+        <button
+          type="button"
+          id="tarot-back-topics"
+          class="page-back-arrow"
+          hidden
+          aria-label="{{ t.tarot_back_topics }}"
+          title="{{ t.tarot_back_topics }}"
+        ></button>
+        <div>
+          <h2 id="tarot-page-title">{{ t.tarot_cards }}</h2>
+          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+        </div>
       </div>
       <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
         <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
@@ -48,9 +58,6 @@
         </section>
 
         <section id="tarot-step-details" class="tarot-flow-step" data-step="details" hidden>
-          <button type="button" id="tarot-back-topics" class="secondary-btn compact-action-btn tarot-back-btn">{{ t.tarot_back_topics }}</button>
-          <h3 id="tarot-details-title" class="tarot-flow-title"></h3>
-
           <div id="tarot-partner-panel" class="form-grid tarot-detail-panel" hidden>
             <label>{{ t.tarot_partner_name }}
               <input id="tarot-partner-name" maxlength="100" autocomplete="off" />
@@ -98,6 +105,6 @@
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=tarot-ux-v2"></script>
+  <script defer src="/static/app.js?v=ui-unify-v1"></script>
 </body>
 </html>
