@@ -141,9 +141,14 @@ function wireDashboardCarousel() {
   let touchStartScrollTop = 0;
   let isAnimating = false;
   let wheelLockUntil = 0;
+  let fitFrame = 0;
   const transitionMs = prefersReducedMotion() ? 0 : 560;
   const transitionSafetyMs = transitionMs + 80;
   const goServicesButton = element("dashboard-go-services");
+  const mobileFitMq = window.matchMedia("(max-width: 767px)");
+  const supportsZoom = typeof CSS !== "undefined" && typeof CSS.supports === "function"
+    ? CSS.supports("zoom", "0.5")
+    : "zoom" in document.documentElement.style;
 
   const goToServicesSlide = () => {
     applySlide(Math.min(slides.length - 1, 1));
@@ -160,7 +165,58 @@ function wireDashboardCarousel() {
     );
   };
 
+  const resetSlideFit = (body) => {
+    body.style.zoom = "";
+    body.style.transform = "";
+    body.style.width = "";
+    body.style.marginBottom = "";
+  };
+
+  const fitSlideBodies = () => {
+    slides.forEach((slide) => {
+      const body = slide.querySelector(":scope > .dashboard-slide-body");
+      if (!body) {
+        return;
+      }
+      resetSlideFit(body);
+      if (!mobileFitMq.matches) {
+        return;
+      }
+      const available = slide.clientHeight;
+      if (available <= 0) {
+        return;
+      }
+      const needed = body.scrollHeight;
+      if (needed <= available + 1) {
+        return;
+      }
+      const scale = Math.max(0.7, Math.min(1, available / needed));
+      if (supportsZoom) {
+        body.style.zoom = String(scale);
+        return;
+      }
+      body.style.transformOrigin = "top center";
+      body.style.transform = `scale(${scale})`;
+      body.style.width = `${100 / scale}%`;
+      body.style.marginBottom = `${-((needed * (1 - scale)))}px`;
+    });
+  };
+
+  const scheduleFitSlideBodies = () => {
+    if (fitFrame) {
+      window.cancelAnimationFrame(fitFrame);
+    }
+    fitFrame = window.requestAnimationFrame(() => {
+      fitFrame = 0;
+      fitSlideBodies();
+      syncTrackPosition(currentSlide);
+    });
+  };
+
   const canScrollInsideActiveSlide = (deltaY) => {
+    if (mobileFitMq.matches) {
+      return false;
+    }
     const activeSlide = slides[currentSlide];
     if (!activeSlide) {
       return false;
@@ -238,6 +294,7 @@ function wireDashboardCarousel() {
         isAnimating = false;
       }, transitionMs);
     }
+    scheduleFitSlideBodies();
     return true;
   };
 
@@ -327,8 +384,22 @@ function wireDashboardCarousel() {
   });
 
   window.addEventListener("resize", () => {
-    syncTrackPosition(currentSlide);
+    scheduleFitSlideBodies();
   });
+
+  if (typeof mobileFitMq.addEventListener === "function") {
+    mobileFitMq.addEventListener("change", scheduleFitSlideBodies);
+  } else if (typeof mobileFitMq.addListener === "function") {
+    mobileFitMq.addListener(scheduleFitSlideBodies);
+  }
+
+  if (typeof ResizeObserver === "function") {
+    const resizeObserver = new ResizeObserver(() => {
+      scheduleFitSlideBodies();
+    });
+    resizeObserver.observe(carousel);
+    slides.forEach((slide) => resizeObserver.observe(slide));
+  }
 
   applySlide(currentSlide, { force: true });
 }
