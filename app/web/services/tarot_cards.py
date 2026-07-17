@@ -303,7 +303,7 @@ def spread_options(language: str = "ru") -> list[dict[str, Any]]:
 
 
 def _card_image_url(card_id: str) -> str:
-    return f"/static/img/tarot/cards/{card_id}.png"
+    return f"/static/img/tarot/cards/{card_id}.webp"
 
 
 def _public_card(card: dict[str, Any], language: str, include_meanings: bool = False) -> dict[str, Any]:

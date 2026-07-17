@@ -3137,7 +3137,7 @@ function tarotCardImageUrl(card) {
     return card.image_url;
   }
   if (card?.id) {
-    return `/static/img/tarot/cards/${card.id}.png`;
+    return `/static/img/tarot/cards/${card.id}.webp`;
   }
   return "";
 }
@@ -3160,7 +3160,7 @@ function renderTarotCardButton(card, isSelected = false, index = 0, extraClass =
         <span class="tarot-card-back-symbol">✦</span>
       </span>
       <span class="tarot-card-face tarot-card-front ${imageUrl ? "has-art" : ""}">
-        ${imageUrl ? `<img class="tarot-card-art" src="${imageUrl}" alt="${name}" loading="lazy" decoding="async" onerror="this.closest('.tarot-card-front')?.classList.remove('has-art'); this.remove();" />` : ""}
+        ${imageUrl ? `<img class="tarot-card-art" src="${imageUrl}" alt="${name}" width="512" height="768" loading="lazy" decoding="async" onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src=this.src.replace(/\\.webp(\\?.*)?\$/,'.jpg\$1');}else{this.closest('.tarot-card-front')?.classList.remove('has-art');this.remove();}" />` : ""}
         <span class="tarot-card-fallback">
           <span class="tarot-card-corner">${symbol}</span>
           <span class="tarot-card-symbol">${symbol}</span>
