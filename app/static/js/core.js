@@ -1748,15 +1748,6 @@ async function mountTelegramLoginWidget() {
     // Fall back to opening the bot if config is unavailable.
   }
 
-  const hint = element("telegram-login-hint");
-  if (hint && domain) {
-    hint.hidden = false;
-    hint.textContent =
-      lang === "en"
-        ? `If Telegram says "Bot domain invalid", open @BotFather → /setdomain → ${domain}`
-        : `Если Telegram пишет "Bot domain invalid": @BotFather → /setdomain → ${domain}`;
-  }
-
   btn.addEventListener("click", () => {
     setResult("auth-result", i18n.loading);
     if (!botId) {
