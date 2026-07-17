@@ -95,6 +95,7 @@ const i18n = lang === "en"
     codeSent: "Code sent to your email",
     passwordsMismatch: "Passwords do not match",
     passwordResetSuccess: "Password updated",
+    invalidVerificationCode: "Enter the 6-digit code from email",
     loading: "Loading...",
     noHistory: "No request history yet",
     noTickets: "No tickets yet",
@@ -181,6 +182,7 @@ const i18n = lang === "en"
     codeSent: "Код отправлен на почту",
     passwordsMismatch: "Пароли не совпадают",
     passwordResetSuccess: "Пароль обновлён",
+    invalidVerificationCode: "Введите 6-значный код из письма",
     loading: "Загрузка...",
     noHistory: "История запросов пока пуста",
     noTickets: "Обращений пока нет",
@@ -1515,6 +1517,46 @@ function togglePasswordResetPanel(isVisible) {
   if (panel) {
     panel.hidden = !isVisible;
   }
+  if (isVisible) {
+    setPasswordResetStep("start");
+  }
+}
+
+function setPasswordResetStep(step) {
+  const start = element("password-reset-step-start");
+  const code = element("password-reset-step-code");
+  const password = element("password-reset-step-password");
+  if (start) {
+    start.hidden = step !== "start";
+  }
+  if (code) {
+    code.hidden = step !== "code";
+  }
+  if (password) {
+    password.hidden = step !== "password";
+  }
+}
+
+function resetPasswordResetFormFields() {
+  const codeInput = element("password-reset-code");
+  const newPassword = element("password-reset-new");
+  const confirmPassword = element("password-reset-confirm");
+  if (codeInput) {
+    codeInput.value = "";
+  }
+  if (newPassword) {
+    newPassword.value = "";
+  }
+  if (confirmPassword) {
+    confirmPassword.value = "";
+  }
+  setResult("password-reset-result", "");
+}
+
+async function requestPasswordResetCode() {
+  setResult("password-reset-result", i18n.loading);
+  await apiRequest("/api/auth/email/password-reset/request", "POST", undefined, { redirectOnUnauthorized: true });
+  setResult("password-reset-result", i18n.codeSent);
 }
 
 async function loadProfile() {
@@ -1687,34 +1729,83 @@ function wireAuthPages() {
 }
 
 function wirePasswordResetForm() {
+  const panel = element("email-password-reset-panel");
+  if (!panel) {
+    return;
+  }
+
+  const startBtn = element("password-reset-start-btn");
   const requestBtn = element("password-reset-request-btn");
+  const nextBtn = element("password-reset-code-next-btn");
   const form = element("email-password-reset-form");
-  if (requestBtn) {
-    requestBtn.addEventListener("click", async () => {
-      setResult("password-reset-result", i18n.loading);
+
+  if (startBtn) {
+    startBtn.addEventListener("click", async () => {
+      setPasswordResetStep("code");
+      resetPasswordResetFormFields();
       try {
-        await apiRequest("/api/auth/email/password-reset/request", "POST", undefined, { redirectOnUnauthorized: true });
-        setResult("password-reset-result", i18n.codeSent);
+        await requestPasswordResetCode();
       } catch (error) {
         setResult("password-reset-result", error.message);
       }
     });
   }
+
+  if (requestBtn) {
+    requestBtn.addEventListener("click", async () => {
+      try {
+        await requestPasswordResetCode();
+      } catch (error) {
+        setResult("password-reset-result", error.message);
+      }
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      const code = (element("password-reset-code")?.value || "").trim();
+      if (!/^\d{6}$/.test(code)) {
+        setResult("password-reset-result", i18n.invalidVerificationCode);
+        return;
+      }
+      setResult("password-reset-result", "");
+      setPasswordResetStep("password");
+    });
+  }
+
+  panel.querySelectorAll("[data-password-reset-cancel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetPasswordResetFormFields();
+      setPasswordResetStep("start");
+    });
+  });
+
   if (form) {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       setResult("password-reset-result", i18n.loading);
       try {
+        const code = (element("password-reset-code")?.value || "").trim();
         const newPassword = element("password-reset-new")?.value || "";
         const passwordConfirm = element("password-reset-confirm")?.value || "";
+        if (!/^\d{6}$/.test(code)) {
+          throw new Error(i18n.invalidVerificationCode);
+        }
         if (newPassword !== passwordConfirm) {
           throw new Error(i18n.passwordsMismatch);
         }
-        await apiRequest("/api/auth/email/password-reset/confirm", "POST", {
-          code: element("password-reset-code")?.value.trim(),
-          new_password: newPassword,
-          password_confirm: passwordConfirm,
-        }, { redirectOnUnauthorized: true });
+        await apiRequest(
+          "/api/auth/email/password-reset/confirm",
+          "POST",
+          {
+            code,
+            new_password: newPassword,
+            password_confirm: passwordConfirm,
+          },
+          { redirectOnUnauthorized: true },
+        );
+        resetPasswordResetFormFields();
+        setPasswordResetStep("start");
         setResult("password-reset-result", i18n.passwordResetSuccess);
       } catch (error) {
         setResult("password-reset-result", error.message);

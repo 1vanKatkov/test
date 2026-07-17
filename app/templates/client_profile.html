@@ -39,13 +39,28 @@
 
   <section class="card service-theme-shell profile-password-card" id="email-password-reset-panel" hidden>
     <h2>{{ t.password_reset }}</h2>
-    <form id="email-password-reset-form" class="form-grid service-theme-form">
+
+    <div id="password-reset-step-start" class="form-grid service-theme-form">
+      <button type="button" id="password-reset-start-btn" class="primary-btn">{{ t.password_reset }}</button>
+    </div>
+
+    <div id="password-reset-step-code" class="form-grid service-theme-form" hidden>
+      <p class="muted">{{ t.password_reset_code_hint }}</p>
       <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
-      <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" /></label>
-      <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" /></label>
-      <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" /></label>
-      <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
-    </form>
+      <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" /></label>
+      <button type="button" id="password-reset-code-next-btn" class="primary-btn">{{ t.next }}</button>
+      <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back }}</button>
+    </div>
+
+    <div id="password-reset-step-password" hidden>
+      <form id="email-password-reset-form" class="form-grid service-theme-form">
+        <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" required /></label>
+        <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" required /></label>
+        <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
+        <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back }}</button>
+      </form>
+    </div>
+
     <pre id="password-reset-result" class="result"></pre>
   </section>
 {% endblock %}
