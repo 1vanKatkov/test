@@ -163,12 +163,21 @@ def _extract_user(data: dict[str, str]) -> dict[str, Any]:
     return user_data
 
 
+def resolve_telegram_bot_id() -> str:
+    for token in _bot_tokens():
+        bot_id = token.split(":", 1)[0].strip()
+        if bot_id.isdigit():
+            return bot_id
+    return ""
+
+
 def telegram_auth_health() -> dict[str, bool | int | str]:
     tokens = _bot_tokens()
     return {
         "configured": len(tokens) > 0,
         "bot_tokens_count": len(tokens),
         "bot_username": resolve_telegram_bot_username(),
+        "bot_id": resolve_telegram_bot_id(),
         "login_widget_ready": bool(tokens and resolve_telegram_bot_username()),
     }
 

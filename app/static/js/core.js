@@ -1718,45 +1718,44 @@ function applyTelegramAuthResult(result) {
 }
 
 async function mountTelegramLoginWidget() {
-  const block = element("telegram-login-block");
-  const host = element("telegram-login-widget");
-  if (!block || !host || host.dataset.mounted === "1") {
+  const btn = element("telegram-login-btn");
+  if (!btn || btn.dataset.wired === "1") {
     return;
   }
+  btn.dataset.wired = "1";
+  let botId = "";
+  let botUsername = "astrolhub_bot";
   try {
     const response = await fetch(resolveApiUrl("/api/auth/telegram/login-config"), { credentials: "same-origin" });
-    if (!response.ok) {
-      return;
-    }
-    const data = await response.json();
-    if (!data.configured || !data.bot_username) {
-      return;
-    }
-    block.hidden = false;
-    host.dataset.mounted = "1";
-    window.onTelegramAuth = async (user) => {
-      setResult("auth-result", i18n.loading);
-      try {
-        const result = await apiRequest("/api/auth/telegram/widget", "POST", user);
-        applyTelegramAuthResult(result);
-        window.location.href = resolvePostLoginRedirect();
-      } catch (error) {
-        setResult("auth-result", error.message || i18n.telegramAuthFailed);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.bot_id) {
+        botId = String(data.bot_id);
       }
-    };
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.setAttribute("data-telegram-login", data.bot_username);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "12");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    host.innerHTML = "";
-    host.appendChild(script);
+      if (data.bot_username) {
+        botUsername = String(data.bot_username);
+      }
+    }
   } catch {
-    // Widget is optional when Telegram is not configured.
+    // Fall back to opening the bot if config is unavailable.
   }
+
+  btn.addEventListener("click", () => {
+    setResult("auth-result", i18n.loading);
+    if (!botId) {
+      window.location.href = `https://t.me/${botUsername}`;
+      return;
+    }
+    const origin = window.location.origin;
+    const nextPath = resolvePostLoginRedirect();
+    const returnTo = `${origin}/api/auth/telegram/widget-callback?next=${encodeURIComponent(nextPath)}`;
+    const authUrl = new URL("https://oauth.telegram.org/auth");
+    authUrl.searchParams.set("bot_id", botId);
+    authUrl.searchParams.set("origin", origin);
+    authUrl.searchParams.set("request_access", "write");
+    authUrl.searchParams.set("return_to", returnTo);
+    window.location.href = authUrl.toString();
+  });
 }
 
 function wireLoginPage() {

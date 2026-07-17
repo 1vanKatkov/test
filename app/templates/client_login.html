@@ -27,10 +27,11 @@
         <label>{{ t.password }} <input id="login-password" type="password" autocomplete="current-password" required minlength="8" /></label>
         <button type="submit" class="primary-btn">{{ t.login }}</button>
       </form>
-      <div class="auth-telegram-block" id="telegram-login-block" hidden>
+      <div class="auth-telegram-block" id="telegram-login-block">
         <p class="muted auth-divider">{{ t.or_divider }}</p>
-        <p class="muted auth-telegram-hint">{{ t.login_with_telegram }}</p>
-        <div id="telegram-login-widget" class="telegram-login-widget"></div>
+        <button type="button" id="telegram-login-btn" class="telegram-login-btn">
+          {{ t.login_with_telegram }}
+        </button>
       </div>
       <p class="muted auth-switch-line">
         {{ t.no_account }}

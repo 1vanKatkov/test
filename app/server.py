@@ -35,6 +35,7 @@ from app.web.auth.telegram_auth import (
     issue_telegram_auth_token,
     issue_telegram_username_login_url,
     optional_telegram_auth,
+    resolve_telegram_bot_id,
     resolve_telegram_bot_username,
     resolve_telegram_identity,
     resolve_telegram_login_widget_identity,
@@ -1565,7 +1566,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "tg-login-widget-v1",
+        "assets_version": "tg-login-btn-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -1985,10 +1986,36 @@ async def verify_telegram_auth(request: Request, payload: TelegramVerifyRequest)
 @app.get("/api/auth/telegram/login-config")
 async def telegram_login_config():
     username = resolve_telegram_bot_username()
+    bot_id = resolve_telegram_bot_id()
     return {
-        "configured": bool(settings.telegram_bot_token and username),
+        "configured": bool(settings.telegram_bot_token and username and bot_id),
         "bot_username": username,
+        "bot_id": bot_id,
     }
+
+
+@app.get("/api/auth/telegram/widget-callback")
+async def telegram_widget_callback(request: Request):
+    params = {key: value for key, value in request.query_params.items() if key != "next"}
+    next_raw = (request.query_params.get("next") or "/client").strip() or "/client"
+    if not next_raw.startswith("/") or next_raw.startswith("//"):
+        next_raw = "/client"
+    identity, is_new_user = resolve_telegram_login_widget_identity(params)
+    language = _sync_guest_lang_after_auth(request, identity.internal_user_id, identity.language)
+    token = issue_telegram_auth_token(identity)
+    if is_new_user:
+        record_transaction(
+            identity.internal_user_id,
+            settings.starting_credits,
+            "signup_bonus",
+            "telegram_welcome_bonus",
+            {"provider": "telegram"},
+        )
+    response = RedirectResponse(url=next_raw, status_code=302)
+    _set_telegram_auth_cookie(response, token)
+    if language in {"ru", "en"}:
+        _set_lang_cookie(response, language)
+    return response
 
 
 @app.post("/api/auth/telegram/widget")
