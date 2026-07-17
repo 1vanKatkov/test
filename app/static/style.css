@@ -3468,12 +3468,15 @@ body.modal-open {
   left: 50%;
   bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 50;
-  width: min(506px, calc(100vw - 32px));
+  width: min(506px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
   transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
-  gap: 8px;
-  padding: 9px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 8px;
   border: 1px solid rgba(128, 78, 207, 0.32);
   border-radius: 23px;
   background:
@@ -3481,21 +3484,40 @@ body.modal-open {
     linear-gradient(180deg, rgba(21, 13, 47, 0.78), rgba(8, 7, 24, 0.9));
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(18px);
+  box-sizing: border-box;
+}
+
+.mobile-bottom-nav > .bottom-nav-item[hidden] {
+  display: none !important;
 }
 
 .bottom-nav-item {
-  display: grid;
-  justify-items: center;
-  gap: 5px;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   min-height: 58px;
-  padding: 8px 6px 7px;
+  padding: 8px 2px 7px;
   color: rgba(201, 183, 226, 0.76);
-  font-size: 12px;
+  font-size: clamp(10px, 2.7vw, 12px);
   font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
   text-decoration: none;
   border: 1px solid transparent;
   border-radius: 17px;
   transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.bottom-nav-item > span:not(.bottom-nav-icon) {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bottom-nav-item.is-active {
