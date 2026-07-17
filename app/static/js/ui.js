@@ -125,8 +125,7 @@ function wireDashboardCarousel() {
   }
   const track = carousel.querySelector(".dashboard-carousel-track");
   const slides = Array.from(carousel.querySelectorAll(".dashboard-slide"));
-  const dots = Array.from(carousel.querySelectorAll(".dashboard-carousel-dot"));
-  if (!track || !slides.length || !dots.length) {
+  if (!track || !slides.length) {
     return;
   }
 
@@ -258,11 +257,6 @@ function wireDashboardCarousel() {
         slide.scrollTop = 0;
       }
     });
-    dots.forEach((dot, dotIndex) => {
-      const active = dotIndex === next;
-      dot.classList.toggle("is-active", active);
-      dot.setAttribute("aria-selected", active ? "true" : "false");
-    });
 
     if (previous !== next) {
       const previousSlide = slides[previous];
@@ -297,12 +291,6 @@ function wireDashboardCarousel() {
     scheduleFitSlideBodies();
     return true;
   };
-
-  dots.forEach((dot) => {
-    dot.addEventListener("click", () => {
-      applySlide(Number(dot.dataset.slideIndex || 0));
-    });
-  });
 
   if (goServicesButton) {
     goServicesButton.addEventListener("click", goToServicesSlide);
