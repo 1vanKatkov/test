@@ -3502,9 +3502,9 @@ body.modal-open {
   min-height: 58px;
   padding: 8px 2px 7px;
   color: rgba(201, 183, 226, 0.76);
-  font-size: clamp(10px, 2.7vw, 12px);
+  font-size: clamp(9px, 2.4vw, 12px);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
   text-align: center;
   text-decoration: none;
   border: 1px solid transparent;
@@ -3518,6 +3518,9 @@ body.modal-open {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  hyphens: none;
 }
 
 .bottom-nav-item.is-active {

@@ -784,7 +784,7 @@ def _translations(lang: str) -> dict:
         "tarot_cards": "Таро",
         "astrology": "Астропрогноз",
         "topup": "Пополнение",
-        "home": "На главную",
+        "home": "Главная",
         "dream_description": "Описание сна",
         "get_interpretation": "Получить интерпретацию",
         "cost_label": "Стоимость",
@@ -1558,7 +1558,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "bottom-nav-row-v1",
+        "assets_version": "bottom-nav-nowrap-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
