@@ -15,6 +15,31 @@ if ! grep -q 'api/auth/email/health' app/server.py; then
   exit 1
 fi
 
+if [[ -f .env ]]; then
+  echo "==> Ensure classic email verification is enabled when SMTP is configured"
+  if grep -qE '^SMTP_HOST=.+' .env && grep -qE '^SMTP_FROM=.+' .env; then
+    if grep -qE '^EMAIL_SKIP_VERIFICATION=' .env; then
+      sed -i 's/^EMAIL_SKIP_VERIFICATION=.*/EMAIL_SKIP_VERIFICATION=false/' .env
+    else
+      printf '\nEMAIL_SKIP_VERIFICATION=false\n' >> .env
+    fi
+  fi
+  if ! grep -qE '^EMAIL_AUTH_SECRET=.+' .env \
+    || grep -qE '^EMAIL_AUTH_SECRET=(replace-with-long-random-secret|change-me-email-auth-secret)?$' .env; then
+    SECRET="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(48))
+PY
+)"
+    if grep -qE '^EMAIL_AUTH_SECRET=' .env; then
+      sed -i "s|^EMAIL_AUTH_SECRET=.*|EMAIL_AUTH_SECRET=${SECRET}|" .env
+    else
+      printf '\nEMAIL_AUTH_SECRET=%s\n' "$SECRET" >> .env
+    fi
+    echo "==> Generated EMAIL_AUTH_SECRET in .env"
+  fi
+fi
+
 if [[ -x .venv/bin/python ]]; then
   PYTHON=".venv/bin/python"
   PIP=".venv/bin/pip"
@@ -39,4 +64,4 @@ curl -fsS http://127.0.0.1:8000/health | tee /tmp/astrolhub-health.json
 echo
 curl -fsS http://127.0.0.1:8000/api/auth/email/health
 echo
-echo "==> Done. build must be f3aa0cd-auth-static-v1 or newer."
+echo "==> Done. Expect email_skip_verification=false and smtp_configured=true for classic OTP."

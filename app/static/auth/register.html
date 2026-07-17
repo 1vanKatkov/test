@@ -11,7 +11,7 @@
   data-page="register"
   data-api-base=""
   data-lang="ru"
-  data-email-skip-verification="true"
+  data-email-skip-verification="false"
 >
   <script>
     (function () {
@@ -44,7 +44,7 @@
         <label><span data-auth-label="email">Email</span> <input id="register-email" type="email" autocomplete="email" required /></label>
         <label><span data-auth-label="password">Пароль</span> <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
         <label><span data-auth-label="repeatPassword">Повтор пароля</span> <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
-        <button type="submit" class="primary-btn" id="register-submit-btn" data-auth-label="registerSubmit">Регистрация</button>
+        <button type="submit" class="primary-btn" id="register-submit-btn" data-auth-label="registerSubmitCode">Отправить код</button>
       </form>
       <p class="muted auth-switch-line">
         <span data-auth-label="haveAccount">Уже есть аккаунт?</span>

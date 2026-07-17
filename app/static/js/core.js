@@ -422,10 +422,10 @@ async function initAuthStaticPage() {
     hiddenEmail.value = verifyEmail;
   }
   if (document.body.dataset.page === "register") {
-    document.body.dataset.emailSkipVerification = "true";
     const submitBtn = element("register-submit-btn");
     if (submitBtn) {
-      submitBtn.textContent = copy.registerSubmit;
+      const skip = document.body.dataset.emailSkipVerification === "true";
+      submitBtn.textContent = skip ? copy.registerSubmit : copy.registerSubmitCode;
     }
   }
   try {

@@ -138,7 +138,11 @@ def _issue_and_store_code(email: str, purpose: str, payload: dict, lang: str) ->
         payload=payload,
         expires_at=expires_at,
     )
-    send_verification_email(email, code, purpose, lang)
+    try:
+        send_verification_email(email, code, purpose, lang)
+    except Exception:
+        db.delete_email_verification(email, purpose)
+        raise
 
 
 def _verify_stored_code(email: str, purpose: str, code: str) -> dict:

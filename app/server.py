@@ -1553,7 +1553,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "tarot-ai-below-v1",
+        "assets_version": "email-verify-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -2018,7 +2018,7 @@ async def verify_telegram_username_link_post(request: Request, payload: Telegram
     return response
 
 
-API_BUILD_ID = "78fdf5a-admin-list-v1"
+API_BUILD_ID = "75f8746-email-verify-v1"
 
 
 @app.get("/api/health")

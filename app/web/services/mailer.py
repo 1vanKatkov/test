@@ -80,6 +80,16 @@ def send_verification_email(to_email: str, code: str, purpose: str, lang: str = 
     message.set_content(_body_for_purpose(code, purpose, lang))
 
     try:
+        logger.info(
+            "Sending verification email to %s (purpose=%s, host=%s, port=%s, from=%s, tls=%s, ssl=%s)",
+            to_email,
+            purpose,
+            settings.smtp_host,
+            settings.smtp_port,
+            settings.smtp_from,
+            settings.smtp_use_tls,
+            settings.smtp_use_ssl,
+        )
         with _connect_smtp() as smtp:
             if settings.smtp_user:
                 smtp.login(settings.smtp_user, settings.smtp_password)

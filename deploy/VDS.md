@@ -5,7 +5,7 @@
 ```bash
 cd /root/opt/test/test
 chmod +x deploy/vds-deploy.sh
-EMAIL_SKIP_VERIFICATION=true ./deploy/vds-deploy.sh
+./deploy/vds-deploy.sh
 ```
 
 Or manually:
@@ -21,13 +21,64 @@ curl -s http://127.0.0.1:8000/api/auth/email/health
 
 ## Expected responses
 
-`/health` must include `build` (not only `{"status":"ok"}`):
+`/health` must include `build` (not only `{"status":"ok"}`).
+
+`/api/auth/email/health` must return **200** with email verification enabled:
 
 ```json
-{"status":"ok","build":"f3aa0cd-auth-static-v1","email_auth":true,"email_skip_verification":true}
+{
+  "smtp_configured": true,
+  "email_skip_verification": false,
+  "smtp_host_set": true,
+  "smtp_from_set": true,
+  "smtp_user_set": true
+}
 ```
 
-`/api/auth/email/health` must return **200**, not `{"detail":"Not Found"}`.
+If `email_skip_verification` is `true`, registration skips the email code.
+If `smtp_configured` is `false`, start/resend will return **503**.
+
+## Email verification `.env` on server
+
+Set these in `/root/opt/test/test/.env` (do not commit secrets):
+
+```env
+EMAIL_SKIP_VERIFICATION=false
+EMAIL_AUTH_SECRET=<long-random-secret>
+EMAIL_AUTH_TTL_SECONDS=2592000
+EMAIL_CODE_TTL_SECONDS=600
+EMAIL_CODE_MAX_ATTEMPTS=5
+EMAIL_CODE_RESEND_COOLDOWN_SECONDS=60
+
+# Example: Gmail / Google Workspace with App Password (port 587 + STARTTLS)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USE_TLS=true
+SMTP_USE_SSL=false
+SMTP_USER=your-mailbox@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=your-mailbox@gmail.com
+
+# Example: port 465 (implicit SSL)
+# SMTP_PORT=465
+# SMTP_USE_TLS=false
+# SMTP_USE_SSL=true
+```
+
+After editing `.env`:
+
+```bash
+sudo systemctl restart miniapp
+curl -s http://127.0.0.1:8000/api/auth/email/health
+```
+
+Also keep:
+
+```env
+RUN_TELEGRAM_BOT=false
+```
+
+if bots are not run on this host.
 
 ## If you still get Not Found
 
@@ -62,12 +113,3 @@ sudo systemctl stop miniapp
 fuser -k 8000/tcp || true
 sudo systemctl start miniapp
 ```
-
-## `.env` on server
-
-```env
-EMAIL_SKIP_VERIFICATION=true
-RUN_TELEGRAM_BOT=false
-```
-
-Restart after any `.env` change.

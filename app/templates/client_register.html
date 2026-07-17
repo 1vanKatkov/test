@@ -28,7 +28,7 @@
         <label>{{ t.email }} <input id="register-email" type="email" autocomplete="email" required /></label>
         <label>{{ t.password }} <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
         <label>{{ t.repeat_password }} <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
-        <button type="submit" class="primary-btn">{% if email_skip_verification %}{{ t.register }}{% else %}{{ t.send_code }}{% endif %}</button>
+        <button type="submit" class="primary-btn" id="register-submit-btn">{% if email_skip_verification %}{{ t.register }}{% else %}{{ t.send_code }}{% endif %}</button>
       </form>
       <p class="muted auth-switch-line">
         {{ t.have_account }}
