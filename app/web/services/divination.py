@@ -222,7 +222,13 @@ Reading format:
 
 Give a complete natal chart reading for the selected topic. Keep it practical, emotionally safe, and easy to scan on mobile.
 When a computed chart is present, cite concrete chart factors instead of generic sun-sign style text."""
-    return chat_completion(_tarot_model(lang), prompt, timeout_seconds=90, max_tokens=1600, system_prompt=TAROT_SYSTEM_PROMPTS[lang])
+    return chat_completion(
+        _tarot_model(lang),
+        prompt,
+        timeout_seconds=120,
+        max_tokens=8000,
+        system_prompt=TAROT_SYSTEM_PROMPTS[lang],
+    )
 
 
 def astrology_forecast(
@@ -252,7 +258,7 @@ When a computed chart is present, ground the forecast in those chart factors."""
     return chat_completion(
         _astrology_model(lang),
         prompt,
-        timeout_seconds=90,
-        max_tokens=1600,
+        timeout_seconds=120,
+        max_tokens=8000,
         system_prompt=ASTROLOGY_SYSTEM_PROMPTS[lang],
     )

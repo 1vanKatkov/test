@@ -621,9 +621,14 @@ def tarot_card_reading(
         raise HTTPException(status_code=400, detail="Question is required")
     cards = _select_cards(spread_data, selected_card_ids, lang)
     model = settings.model_tarot_en if lang == "en" else settings.model_tarot
-    max_tokens = 2200 if spread_data["size"] >= 5 else 1600
-    if spread_data.get("day_mode"):
-        max_tokens = 1200
+    size = int(spread_data.get("size") or 1)
+    if spread_data.get("day_mode") or size <= 1:
+        max_tokens = 4000
+    elif size <= 3:
+        max_tokens = 7000
+    else:
+        max_tokens = 12000
+    timeout_seconds = 150 if size >= 5 else 120
     interpretation = chat_completion(
         model,
         _build_prompt(
@@ -636,7 +641,7 @@ def tarot_card_reading(
             subtopic=subtopic,
             topic_title=topic_data[lang],
         ),
-        timeout_seconds=90,
+        timeout_seconds=timeout_seconds,
         max_tokens=max_tokens,
         system_prompt=TAROT_CARD_SYSTEM_PROMPTS[lang],
     )

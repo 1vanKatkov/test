@@ -31,20 +31,12 @@ def _extract_provider_error_detail(response: requests.Response) -> str:
     return f"AI provider status {response.status_code}"
 
 
-def chat_completion(
+def _request_completion(
+    messages: list[dict[str, str]],
     model: str,
-    prompt: str,
-    timeout_seconds: int = 60,
-    max_tokens: int | None = None,
-    system_prompt: str | None = None,
-) -> str:
-    if not settings.openrouter_api_key:
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY is not configured")
-
-    messages: list[dict[str, str]] = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
+    timeout_seconds: int,
+    max_tokens: int | None,
+) -> tuple[str, str | None]:
     payload: dict[str, Any] = {"model": model, "messages": messages}
     if isinstance(max_tokens, int) and max_tokens > 0:
         payload["max_tokens"] = max_tokens
@@ -72,8 +64,49 @@ def chat_completion(
     if not choices:
         raise HTTPException(status_code=502, detail="AI provider returned no choices")
 
-    content = (choices[0].get("message") or {}).get("content")
+    choice = choices[0] if isinstance(choices[0], dict) else {}
+    content = (choice.get("message") or {}).get("content")
     if not content:
         raise HTTPException(status_code=502, detail="AI provider returned empty content")
-    return content
+    finish_reason = choice.get("finish_reason")
+    return str(content), str(finish_reason) if finish_reason else None
 
+
+def chat_completion(
+    model: str,
+    prompt: str,
+    timeout_seconds: int = 60,
+    max_tokens: int | None = None,
+    system_prompt: str | None = None,
+    max_continuations: int = 2,
+) -> str:
+    if not settings.openrouter_api_key:
+        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY is not configured")
+
+    messages: list[dict[str, str]] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    content, finish_reason = _request_completion(messages, model, timeout_seconds, max_tokens)
+    full = content
+    continuations = 0
+
+    while finish_reason == "length" and continuations < max_continuations:
+        continuations += 1
+        messages.append({"role": "assistant", "content": full})
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    "Continue the previous response from exactly where it stopped. "
+                    "Do not repeat earlier text. Keep the same language, tone, and Markdown structure."
+                ),
+            }
+        )
+        continuation, finish_reason = _request_completion(
+            messages, model, timeout_seconds, max_tokens
+        )
+        full = f"{full.rstrip()}\n\n{continuation.lstrip()}"
+
+    return full
