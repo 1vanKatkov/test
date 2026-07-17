@@ -1,0 +1,53 @@
+{#
+  Shared client page hero.
+  Optional vars:
+    hero_title (required)
+    hero_title_id
+    hero_class
+    hero_back_href + hero_back_label
+    hero_back_button_id + hero_back_label (+ hero_back_hidden)
+    hero_show_auth (default true)
+    hero_show_spark (default true)
+#}
+<section class="card compact-card client-page-hero service-theme-hero{% if hero_class %} {{ hero_class }}{% endif %}">
+  {% if hero_back_href or hero_back_button_id %}
+  <div class="page-heading-with-back">
+    {% if hero_back_button_id %}
+    <button
+      type="button"
+      id="{{ hero_back_button_id }}"
+      class="page-back-arrow"
+      {% if hero_back_hidden %}hidden{% endif %}
+      aria-label="{{ hero_back_label }}"
+      title="{{ hero_back_label }}"
+    ></button>
+    {% else %}
+    <a
+      class="page-back-arrow"
+      href="{{ hero_back_href }}"
+      aria-label="{{ hero_back_label }}"
+      title="{{ hero_back_label }}"
+    ></a>
+    {% endif %}
+    <div>
+      <h2{% if hero_title_id %} id="{{ hero_title_id }}"{% endif %}>{{ hero_title }}</h2>
+      {% if hero_show_auth is not defined or hero_show_auth %}
+      <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div>
+    <h2{% if hero_title_id %} id="{{ hero_title_id }}"{% endif %}>{{ hero_title }}</h2>
+    {% if hero_show_auth is not defined or hero_show_auth %}
+    <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if hero_show_spark is not defined or hero_show_spark %}
+  <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+    <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+    <span id="page-sparks">-</span>
+  </span>
+  {% endif %}
+</section>

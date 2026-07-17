@@ -1,54 +1,38 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ about.title }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=dashboard-slider-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ about.title }}{% endblock %}
+
+{% block body_attrs %}
   data-auth-provider="{{ initial_auth_provider }}"
   data-auth-username="{{ initial_auth_username }}"
-  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
-  data-lang="{{ lang }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% endblock %}
+
+{% block main_class %}mobile-client card-readings-page service-theme-page service-about-page{% endblock %}
+
+{% block content %}
+  <section class="service-about-hero">
+    <span class="service-about-badge">{{ t.about_service_badge or ('How this tool works' if lang == 'en' else 'Как работает инструмент') }}</span>
+    <div class="page-heading-with-back">
+      <a
+        class="page-back-arrow"
+        href="{{ about.back_url }}"
+        aria-label="{{ about.back_label }}"
+        title="{{ about.back_label }}"
+      ></a>
+      <h1>{{ about.title }}</h1>
     </div>
-  </header>
+    <p>{{ about.subtitle }}</p>
+  </section>
 
-  <main class="mobile-client card-readings-page service-theme-page service-about-page">
-    <section class="service-about-hero">
-      <span class="service-about-badge">{{ t.about_service_badge or ('How this tool works' if lang == 'en' else 'Как работает инструмент') }}</span>
-      <div class="page-heading-with-back">
-        <a
-          class="page-back-arrow"
-          href="{{ about.back_url }}"
-          aria-label="{{ about.back_label }}"
-          title="{{ about.back_label }}"
-        ></a>
-        <h1>{{ about.title }}</h1>
+  <section class="service-about-list" aria-label="{{ about.title }}">
+    {% for item in about["items"] %}
+    <article class="service-about-card">
+      <span class="service-about-index">{{ loop.index }}</span>
+      <div>
+        <h2>{{ item.question }}</h2>
+        <p>{{ item.answer }}</p>
       </div>
-      <p>{{ about.subtitle }}</p>
-    </section>
-
-    <section class="service-about-list" aria-label="{{ about.title }}">
-      {% for item in about["items"] %}
-      <article class="service-about-card">
-        <span class="service-about-index">{{ loop.index }}</span>
-        <div>
-          <h2>{{ item.question }}</h2>
-          <p>{{ item.answer }}</p>
-        </div>
-      </article>
-      {% endfor %}
-    </section>
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=birth-time-mask-v1"></script>
-</body>
-</html>
+    </article>
+    {% endfor %}
+  </section>
+{% endblock %}

@@ -1,72 +1,56 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.profile }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
-  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.profile }}{% endblock %}
+
+{% block main_class %}mobile-client card-readings-page service-theme-page profile-theme-page{% endblock %}
+
+{% block content %}
+  <section class="card compact-card service-theme-hero profile-hero">
+    <div class="profile-hero-head">
+      <div>
+        <h2>{{ t.profile }}</h2>
+        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      </div>
+      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+        <span id="page-sparks">-</span>
+      </span>
     </div>
-  </header>
+    <div class="profile-hero-actions">
+      <a class="secondary-btn profile-support-btn" href="/client/support">{{ t.support }}</a>
+      <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
+    </div>
+  </section>
 
-  <main class="mobile-client card-readings-page service-theme-page profile-theme-page">
-    <section class="card compact-card service-theme-hero profile-hero">
-      <div class="profile-hero-head">
-        <div>
-          <h2>{{ t.profile }}</h2>
-          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
-        </div>
-        <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-          <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-          <span id="page-sparks">-</span>
-        </span>
-      </div>
-      <div class="profile-hero-actions">
-        <a class="secondary-btn profile-support-btn" href="/client/support">{{ t.support }}</a>
-        <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
-      </div>
-    </section>
+  <section class="card service-theme-shell profile-personas-card">
+    <div class="profile-personas-head">
+      <h2>{{ t.my_personas }}</h2>
+      <button
+        type="button"
+        id="profile-persona-add-btn"
+        class="profile-persona-add-btn"
+        aria-label="{{ t.persona_add }}"
+        title="{{ t.persona_add }}"
+      >+</button>
+    </div>
+    <div id="profile-personas-list" class="persona-list"></div>
+    <div id="profile-persona-result" class="result rich-result" hidden></div>
+  </section>
 
-    <section class="card service-theme-shell profile-personas-card">
-      <div class="profile-personas-head">
-        <h2>{{ t.my_personas }}</h2>
-        <button
-          type="button"
-          id="profile-persona-add-btn"
-          class="profile-persona-add-btn"
-          aria-label="{{ t.persona_add }}"
-          title="{{ t.persona_add }}"
-        >+</button>
-      </div>
-      <div id="profile-personas-list" class="persona-list"></div>
-      <div id="profile-persona-result" class="result rich-result" hidden></div>
-    </section>
+  <section class="card service-theme-shell profile-password-card" id="email-password-reset-panel" hidden>
+    <h2>{{ t.password_reset }}</h2>
+    <form id="email-password-reset-form" class="form-grid service-theme-form">
+      <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
+      <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" /></label>
+      <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" /></label>
+      <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" /></label>
+      <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
+    </form>
+    <pre id="password-reset-result" class="result"></pre>
+  </section>
+{% endblock %}
 
-    <section class="card service-theme-shell profile-password-card" id="email-password-reset-panel" hidden>
-      <h2>{{ t.password_reset }}</h2>
-      <form id="email-password-reset-form" class="form-grid service-theme-form">
-        <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
-        <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" /></label>
-        <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" /></label>
-        <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" /></label>
-        <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
-      </form>
-      <pre id="password-reset-result" class="result"></pre>
-    </section>
-
-  </main>
-
+{% block after_main %}
   <div id="profile-persona-modal" class="natal-modal" hidden>
     <div class="natal-modal-backdrop" data-profile-persona-close></div>
     <section class="natal-modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-persona-modal-title">
@@ -85,8 +69,4 @@
       </form>
     </section>
   </div>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
+{% endblock %}

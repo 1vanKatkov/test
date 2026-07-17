@@ -1,50 +1,21 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.lunar_calendar }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.lunar_calendar }}{% endblock %}
+
+{% block content %}
+  {% with hero_title=t.lunar_calendar %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+
+  <section class="card service-theme-shell">
+    <div class="auth-required-content">
+      <form id="lunar-form" class="form-grid service-theme-form">
+        <label>{{ t.year }} <input id="lunar-year" type="number" min="1970" max="2100" /></label>
+        <label>{{ t.month }} <input id="lunar-month" type="number" min="1" max="12" /></label>
+        <button type="submit" class="primary-btn">{{ t.load }}</button>
+      </form>
+      <div id="lunar-calendar" class="lunar-grid"></div>
+      <div id="lunar-result" class="result" aria-live="polite" hidden></div>
     </div>
-  </header>
-
-  <main class="mobile-client card-readings-page service-theme-page">
-    <section class="card compact-card client-page-hero service-theme-hero">
-      <div>
-        <h2>{{ t.lunar_calendar }}</h2>
-        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
-      </div>
-      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-        <span id="page-sparks">-</span>
-      </span>
-    </section>
-
-    <section class="card service-theme-shell">
-      <div class="auth-required-content">
-        <form id="lunar-form" class="form-grid service-theme-form">
-          <label>{{ t.year }} <input id="lunar-year" type="number" min="1970" max="2100" /></label>
-          <label>{{ t.month }} <input id="lunar-month" type="number" min="1" max="12" /></label>
-          <button type="submit" class="primary-btn">{{ t.load }}</button>
-        </form>
-        <div id="lunar-calendar" class="lunar-grid"></div>
-        <div id="lunar-result" class="result" aria-live="polite" hidden></div>
-      </div>
-    </section>
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
+  </section>
+{% endblock %}

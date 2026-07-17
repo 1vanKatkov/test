@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ brand_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ assets_version }}" />
+  {% block head_extra %}{% endblock %}
+</head>
+<body
+  class="app-shell mobile-client-shell{% block body_class %}{% endblock %}"
+  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
+  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
+  data-lang="{{ lang }}"
+  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
+  {% block body_attrs %}{% endblock %}
+>
+  {% block header %}
+  <header class="app-topbar client-topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/client">{{ brand_name }}</a>
+      {% block topbar_trailing %}
+      {% include "partials/client_user_chip.html" %}
+      {% endblock %}
+    </div>
+  </header>
+  {% endblock %}
+
+  <main class="{% block main_class %}mobile-client card-readings-page service-theme-page{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block after_main %}{% endblock %}
+
+  {% block bottom_nav %}
+  {% include "partials/client_bottom_nav.html" %}
+  {% endblock %}
+
+  <script defer src="/static/app.js?v={{ assets_version }}"></script>
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

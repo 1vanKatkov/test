@@ -1,37 +1,22 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.numerology_report }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=history-detail-v3" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.numerology_report }}{% endblock %}
+
+{% block body_attrs %}
   data-report-id="{{ report_id }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
+{% endblock %}
+
+{% block topbar_trailing %}{% endblock %}
+
+{% block main_class %}mobile-client card-readings-page service-theme-page numerology-report-page{% endblock %}
+
+{% block content %}
+  <section class="card compact-card client-page-hero service-theme-hero numerology-report-hero">
+    <img class="numerology-report-hero-icon" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
+    <div>
+      <h2>{{ t.numerology_report }}</h2>
     </div>
-  </header>
-
-  <main class="mobile-client card-readings-page service-theme-page numerology-report-page">
-    <section class="card compact-card client-page-hero service-theme-hero numerology-report-hero">
-      <img class="numerology-report-hero-icon" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
-      <div>
-        <h2>{{ t.numerology_report }}</h2>
-      </div>
-    </section>
-    <section id="numerology-report-view" class="card service-theme-report"></section>
-    <div id="numerology-result" class="result rich-result" hidden></div>
-
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=history-detail-v3"></script>
-</body>
-</html>
+  </section>
+  <section id="numerology-report-view" class="card service-theme-report"></section>
+  <div id="numerology-result" class="result rich-result" hidden></div>
+{% endblock %}

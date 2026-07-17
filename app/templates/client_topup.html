@@ -1,111 +1,88 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.topup }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.topup }}{% endblock %}
+
+{% block content %}
+  {% with hero_title=t.topup %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+
+  <section class="card service-theme-shell topup-tabs-card">
+    <div class="topup-tabs" role="tablist" aria-label="{{ t.topup }}">
+      <button type="button" class="topup-tab is-active" data-topup-tab="sparks" role="tab" aria-selected="true">
+        {{ t.topup_tab_sparks }}
+      </button>
+      <button type="button" class="topup-tab" data-topup-tab="plus" role="tab" aria-selected="false">
+        {{ t.topup_tab_plus }}
+      </button>
     </div>
-  </header>
 
-  <main class="mobile-client card-readings-page service-theme-page">
-    <section class="card compact-card client-page-hero service-theme-hero">
-      <div>
-        <h2>{{ t.topup }}</h2>
-        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
-      </div>
-      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-        <span id="page-sparks">-</span>
-      </span>
-    </section>
+    <div id="topup-panel-sparks" class="topup-tab-panel is-active" role="tabpanel">
+      <h3>{{ t.yookassa_payment }}</h3>
+      <p id="payment-topup-notice" class="payment-topup-notice" hidden></p>
+      <form id="payment-create-form" class="form-grid service-theme-form">
+        <label>{{ t.spark_package }}
+          <select id="payment-package" required></select>
+        </label>
+        <label>{{ t.receipt_email }}
+          <input id="payment-email" type="email" required placeholder="name@example.com" />
+        </label>
+        <label class="payment-offer-consent">
+          <input id="payment-offer-accepted" type="checkbox" required />
+          <span>
+            {{ t.public_offer_ack_prefix }}
+            <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
+          </span>
+        </label>
+        <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
+      </form>
+      <div id="payment-result" class="result" aria-live="polite" hidden></div>
+    </div>
 
-    <section class="card service-theme-shell topup-tabs-card">
-      <div class="topup-tabs" role="tablist" aria-label="{{ t.topup }}">
-        <button type="button" class="topup-tab is-active" data-topup-tab="sparks" role="tab" aria-selected="true">
-          {{ t.topup_tab_sparks }}
-        </button>
-        <button type="button" class="topup-tab" data-topup-tab="plus" role="tab" aria-selected="false">
-          {{ t.topup_tab_plus }}
-        </button>
-      </div>
-
-      <div id="topup-panel-sparks" class="topup-tab-panel is-active" role="tabpanel">
-        <h3>{{ t.yookassa_payment }}</h3>
-        <p id="payment-topup-notice" class="payment-topup-notice" hidden></p>
-        <form id="payment-create-form" class="form-grid service-theme-form">
-          <label>{{ t.spark_package }}
-            <select id="payment-package" required></select>
-          </label>
-          <label>{{ t.receipt_email }}
-            <input id="payment-email" type="email" required placeholder="name@example.com" />
-          </label>
-          <label class="payment-offer-consent">
-            <input id="payment-offer-accepted" type="checkbox" required />
-            <span>
-              {{ t.public_offer_ack_prefix }}
-              <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
-            </span>
-          </label>
-          <button type="submit" class="primary-btn">{{ t.create_payment }}</button>
-        </form>
-        <div id="payment-result" class="result" aria-live="polite" hidden></div>
-      </div>
-
-      <div id="topup-panel-plus" class="topup-tab-panel" role="tabpanel" hidden>
-        <div class="plus-subscription-head">
-          <div>
-            <p class="plus-subscription-kicker">{{ t.plus_subscription_intro }}</p>
-            <h3>{{ t.plus_subscription_title }}</h3>
-            <p class="plus-subscription-price">{{ t.plus_subscription_price }}</p>
-            <p class="plus-subscription-note">{{ t.plus_subscription_sparks_note }}</p>
-          </div>
-          <span id="plus-subscription-status" class="plus-badge plus-badge-large" hidden>{{ t.plus_badge or "Plus" }}</span>
+    <div id="topup-panel-plus" class="topup-tab-panel" role="tabpanel" hidden>
+      <div class="plus-subscription-head">
+        <div>
+          <p class="plus-subscription-kicker">{{ t.plus_subscription_intro }}</p>
+          <h3>{{ t.plus_subscription_title }}</h3>
+          <p class="plus-subscription-price">{{ t.plus_subscription_price }}</p>
+          <p class="plus-subscription-note">{{ t.plus_subscription_sparks_note }}</p>
         </div>
-        <ul class="plus-subscription-benefits">
-          <li>{{ t.plus_subscription_benefit_1 }}</li>
-          <li>{{ t.plus_subscription_benefit_2 }}</li>
-          <li>{{ t.plus_subscription_benefit_3 }}</li>
-          <li>{{ t.plus_subscription_benefit_4 }}</li>
-          <li>{{ t.plus_subscription_benefit_5 }}</li>
-          <li>{{ t.plus_subscription_benefit_6 }}</li>
-        </ul>
-        <form id="plus-subscription-form" class="form-grid service-theme-form">
-          <label>{{ t.receipt_email }}
-            <input id="plus-subscription-email" type="email" required placeholder="name@example.com" />
-          </label>
-          <label class="payment-offer-consent">
-            <input id="plus-subscription-offer-accepted" type="checkbox" required />
-            <span>
-              {{ t.public_offer_ack_prefix }}
-              <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
-            </span>
-          </label>
-          <button type="submit" class="primary-btn plus-subscription-btn">{{ t.plus_subscription_cta }}</button>
-        </form>
-        <div id="plus-subscription-result" class="result" aria-live="polite" hidden></div>
+        <span id="plus-subscription-status" class="plus-badge plus-badge-large" hidden>{{ t.plus_badge or "Plus" }}</span>
       </div>
-    </section>
+      <ul class="plus-subscription-benefits">
+        <li>{{ t.plus_subscription_benefit_1 }}</li>
+        <li>{{ t.plus_subscription_benefit_2 }}</li>
+        <li>{{ t.plus_subscription_benefit_3 }}</li>
+        <li>{{ t.plus_subscription_benefit_4 }}</li>
+        <li>{{ t.plus_subscription_benefit_5 }}</li>
+        <li>{{ t.plus_subscription_benefit_6 }}</li>
+      </ul>
+      <form id="plus-subscription-form" class="form-grid service-theme-form">
+        <label>{{ t.receipt_email }}
+          <input id="plus-subscription-email" type="email" required placeholder="name@example.com" />
+        </label>
+        <label class="payment-offer-consent">
+          <input id="plus-subscription-offer-accepted" type="checkbox" required />
+          <span>
+            {{ t.public_offer_ack_prefix }}
+            <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>.
+          </span>
+        </label>
+        <button type="submit" class="primary-btn plus-subscription-btn">{{ t.plus_subscription_cta }}</button>
+      </form>
+      <div id="plus-subscription-result" class="result" aria-live="polite" hidden></div>
+    </div>
+  </section>
 
-    <section class="card service-theme-shell">
-      <div class="auth-required-content">
-        <h3>{{ "Payment history" if lang == "en" else "История платежей" }}</h3>
-        <div id="payments-history" class="history-list"></div>
-      </div>
-    </section>
-  </main>
+  <section class="card service-theme-shell">
+    <div class="auth-required-content">
+      <h3>{{ "Payment history" if lang == "en" else "История платежей" }}</h3>
+      <div id="payments-history" class="history-list"></div>
+    </div>
+  </section>
+{% endblock %}
 
+{% block after_main %}
   <div id="topup-choice-modal" class="modal-overlay" hidden>
     <div class="modal-card topup-choice-modal" role="dialog" aria-modal="true" aria-labelledby="topup-choice-title">
       <p class="plus-subscription-kicker">{{ t.plus_subscription_intro }}</p>
@@ -126,8 +103,4 @@
       </div>
     </div>
   </div>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
+{% endblock %}

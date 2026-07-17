@@ -1,39 +1,21 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.tarot_result_title }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.tarot_result_title }}{% endblock %}
+
+{% block body_attrs %}
   data-report-id="{{ report_id }}"
   data-report-module="tarot_cards"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
-    </div>
-  </header>
+{% endblock %}
 
-  <main class="mobile-client card-readings-page tarot-cards-page">
-    <section class="card compact-card client-page-hero service-theme-hero">
-      <div>
-        <h2>{{ t.tarot_result_title }}</h2>
-      </div>
-    </section>
-    <section class="card service-theme-shell">
-      <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite"></div>
-      <a class="secondary-btn" href="/client/tarot-cards">{{ t.tarot_another_spread }}</a>
-    </section>
-  </main>
+{% block main_class %}mobile-client card-readings-page service-theme-page tarot-cards-page{% endblock %}
 
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
+{% block content %}
+  {% with hero_title=t.tarot_result_title, hero_show_auth=false %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+
+  <section class="card service-theme-shell">
+    <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite"></div>
+    <a class="secondary-btn" href="/client/tarot-cards">{{ t.tarot_another_spread }}</a>
+  </section>
+{% endblock %}

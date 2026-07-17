@@ -1,110 +1,81 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.tarot_cards }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
-  data-lang="{{ lang }}"
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.tarot_cards }}{% endblock %}
+
+{% block body_attrs %}
   data-cost-tarot-cards="{{ cost_tarot_cards }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% endblock %}
+
+{% block main_class %}mobile-client card-readings-page service-theme-page tarot-cards-page tarot-flow-page{% endblock %}
+
+{% block content %}
+  {% with
+    hero_title=t.tarot_cards,
+    hero_title_id='tarot-page-title',
+    hero_back_button_id='tarot-back-topics',
+    hero_back_label=t.tarot_back_topics,
+    hero_back_hidden=true
+  %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+
+  <section class="card auth-gated-card service-theme-shell">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot-cards">{{ t.sign_in_required_action }}</a>
     </div>
-  </header>
+    <div class="auth-required-content">
+      <a class="service-about-inline-link" href="/client/about/tarot-cards?back=/client/tarot-cards">{{ t.about_tarot_cards or 'О картах Таро' }}</a>
 
-  <main class="mobile-client card-readings-page service-theme-page tarot-cards-page tarot-flow-page">
-    <section class="card compact-card client-page-hero service-theme-hero">
-      <div class="page-heading-with-back">
-        <button
-          type="button"
-          id="tarot-back-topics"
-          class="page-back-arrow"
-          hidden
-          aria-label="{{ t.tarot_back_topics }}"
-          title="{{ t.tarot_back_topics }}"
-        ></button>
-        <div>
-          <h2 id="tarot-page-title">{{ t.tarot_cards }}</h2>
-          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+      <section id="tarot-step-topics" class="tarot-flow-step is-active" data-step="topics">
+        <h3 class="tarot-flow-title">{{ t.tarot_flow_title }}</h3>
+        <div id="tarot-topic-grid" class="tarot-topic-grid" role="list"></div>
+      </section>
+
+      <section id="tarot-step-details" class="tarot-flow-step" data-step="details" hidden>
+        <div id="tarot-partner-panel" class="form-grid tarot-detail-panel" hidden>
+          <label>{{ t.tarot_partner_name }}
+            <input id="tarot-partner-name" maxlength="100" autocomplete="off" />
+          </label>
         </div>
-      </div>
-      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-        <span id="page-sparks">-</span>
-      </span>
-    </section>
 
-    <section class="card auth-gated-card service-theme-shell">
-      <div class="auth-required-panel" hidden>
-        <h3>{{ t.sign_in_required_title }}</h3>
-        <p>{{ t.sign_in_required_text }}</p>
-        <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot-cards">{{ t.sign_in_required_action }}</a>
-      </div>
-      <div class="auth-required-content">
-        <a class="service-about-inline-link" href="/client/about/tarot-cards?back=/client/tarot-cards">{{ t.about_tarot_cards or 'О картах Таро' }}</a>
+        <div id="tarot-subtopic-panel" class="tarot-detail-panel" hidden>
+          <p class="muted">{{ t.tarot_relationships_focus }}</p>
+          <div id="tarot-subtopic-grid" class="tarot-subtopic-grid" role="list"></div>
+        </div>
 
-        <section id="tarot-step-topics" class="tarot-flow-step is-active" data-step="topics">
-          <h3 class="tarot-flow-title">{{ t.tarot_flow_title }}</h3>
-          <div id="tarot-topic-grid" class="tarot-topic-grid" role="list"></div>
-        </section>
+        <div id="tarot-question-panel" class="form-grid tarot-detail-panel" hidden>
+          <label>{{ t.tarot_cards_question }}
+            <textarea id="tarot-cards-question" rows="4" maxlength="1000"></textarea>
+          </label>
+          <div id="tarot-question-examples" class="tarot-question-examples"></div>
+        </div>
 
-        <section id="tarot-step-details" class="tarot-flow-step" data-step="details" hidden>
-          <div id="tarot-partner-panel" class="form-grid tarot-detail-panel" hidden>
-            <label>{{ t.tarot_partner_name }}
-              <input id="tarot-partner-name" maxlength="100" autocomplete="off" />
-            </label>
+        <button type="button" id="tarot-start-reading" class="primary-btn">
+          {{ t.tarot_start_reading }} · {{ cost_tarot_cards }} <span class="spark-icon" aria-hidden="true">✦</span>
+        </button>
+        <div id="tarot-cards-form-result" class="result rich-result" aria-live="polite" hidden></div>
+      </section>
+
+      <section id="tarot-step-shuffle" class="tarot-flow-step" data-step="shuffle" hidden>
+        <div id="tarot-stage" class="tarot-stage tarot-shuffle-stage" data-phase="shuffling">
+          <div class="tarot-shuffle-copy">
+            <h3 class="tarot-flow-title">{{ t.tarot_shuffling }}</h3>
+            <p id="tarot-draw-status" class="muted" aria-live="polite">{{ t.tarot_shuffling }}</p>
           </div>
+          <div id="tarot-card-deck" class="tarot-card-deck tarot-deck-stack is-shuffling" aria-hidden="true"></div>
+          <div id="tarot-spread-row" class="tarot-spread-row" role="list" aria-label="{{ t.tarot_cards_selected }}"></div>
+        </div>
+      </section>
 
-          <div id="tarot-subtopic-panel" class="tarot-detail-panel" hidden>
-            <p class="muted">{{ t.tarot_relationships_focus }}</p>
-            <div id="tarot-subtopic-grid" class="tarot-subtopic-grid" role="list"></div>
-          </div>
-
-          <div id="tarot-question-panel" class="form-grid tarot-detail-panel" hidden>
-            <label>{{ t.tarot_cards_question }}
-              <textarea id="tarot-cards-question" rows="4" maxlength="1000"></textarea>
-            </label>
-            <div id="tarot-question-examples" class="tarot-question-examples"></div>
-          </div>
-
-          <button type="button" id="tarot-start-reading" class="primary-btn">
-            {{ t.tarot_start_reading }} · {{ cost_tarot_cards }} <span class="spark-icon" aria-hidden="true">✦</span>
-          </button>
-          <div id="tarot-cards-form-result" class="result rich-result" aria-live="polite" hidden></div>
-        </section>
-
-        <section id="tarot-step-shuffle" class="tarot-flow-step" data-step="shuffle" hidden>
-          <div id="tarot-stage" class="tarot-stage tarot-shuffle-stage" data-phase="shuffling">
-            <div class="tarot-shuffle-copy">
-              <h3 class="tarot-flow-title">{{ t.tarot_shuffling }}</h3>
-              <p id="tarot-draw-status" class="muted" aria-live="polite">{{ t.tarot_shuffling }}</p>
-            </div>
-            <div id="tarot-card-deck" class="tarot-card-deck tarot-deck-stack is-shuffling" aria-hidden="true"></div>
-            <div id="tarot-spread-row" class="tarot-spread-row" role="list" aria-label="{{ t.tarot_cards_selected }}"></div>
-          </div>
-        </section>
-
-        <section id="tarot-step-result" class="tarot-flow-step" data-step="result" hidden>
-          <h3 class="tarot-flow-title">{{ t.tarot_result_title }}</h3>
-          <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite"></div>
-          <div class="tarot-result-actions">
-            <button type="button" id="tarot-another-spread" class="primary-btn">{{ t.tarot_another_spread }}</button>
-          </div>
-        </section>
-      </div>
-    </section>
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
+      <section id="tarot-step-result" class="tarot-flow-step" data-step="result" hidden>
+        <h3 class="tarot-flow-title">{{ t.tarot_result_title }}</h3>
+        <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite"></div>
+        <div class="tarot-result-actions">
+          <button type="button" id="tarot-another-spread" class="primary-btn">{{ t.tarot_another_spread }}</button>
+        </div>
+      </section>
+    </div>
+  </section>
+{% endblock %}

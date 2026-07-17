@@ -1,79 +1,51 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.numerology }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.numerology }}{% endblock %}
+
+{% block body_attrs %}
   data-cost-sonnik="{{ cost_sonnik }}"
   data-cost-numerology="{{ cost_numerology }}"
   data-cost-sovmestimost="{{ cost_sovmestimost }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% endblock %}
+
+{% block content %}
+  {% with hero_title=t.numerology %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+
+  <section class="card auth-gated-card service-theme-shell">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/numerology">{{ t.sign_in_required_action }}</a>
     </div>
-  </header>
-
-  <main class="mobile-client card-readings-page service-theme-page">
-    <section class="card compact-card client-page-hero service-theme-hero">
-      <div>
-        <h2>{{ t.numerology }}</h2>
-        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
-      </div>
-      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-        <span id="page-sparks">-</span>
-      </span>
-    </section>
-
-    <section class="card auth-gated-card service-theme-shell">
-      <div class="auth-required-panel" hidden>
-        <h3>{{ t.sign_in_required_title }}</h3>
-        <p>{{ t.sign_in_required_text }}</p>
-        <a class="primary-btn" href="/static/auth/login.html?next=/client/numerology">{{ t.sign_in_required_action }}</a>
-      </div>
-      <div class="auth-required-content">
-        <a class="service-about-inline-link" href="/client/about/numerology?back=/client/numerology">{{ t.about_numerology or 'О нумерологии' }}</a>
-        <form id="numerology-form" class="form-grid service-theme-form" novalidate>
-          <section class="persona-picker-card">
-            <h3>{{ t.personas }}</h3>
-            <div class="persona-mode-tabs">
-              <label><input type="radio" name="numerology-persona-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
-              <label><input type="radio" name="numerology-persona-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
-            </div>
-            <div id="numerology-persona-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel" hidden>
-              <div id="numerology-persona-choices" class="persona-choice-list" role="listbox" aria-label="{{ t.persona_select_placeholder }}"></div>
-            </div>
-            <div id="numerology-persona-manual-persona-panel" class="form-grid persona-subpanel persona-manual-panel">
-              <label>{{ t.persona_name }} <input id="numerology-persona-name" /></label>
-              <label>{{ t.birth_date }} <input id="numerology-persona-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
-              <input id="numerology-persona-birth-time" type="hidden" value="" />
-              <label>{{ t.astrology_birth_place }} <input id="numerology-persona-birth-place" /></label>
-              <label>{{ t.persona_note }} <textarea id="numerology-persona-note" rows="3"></textarea></label>
-              <label class="payment-offer-consent">
-                <input id="numerology-persona-save-persona" type="checkbox" />
-                <span>{{ t.persona_save_offer }}</span>
-              </label>
-            </div>
-          </section>
-          <button type="submit" class="primary-btn">{{ t.generate_report }} · {{ cost_numerology }} <span class="spark-icon" aria-hidden="true">✦</span></button>
-        </form>
-        <div id="numerology-result" class="result rich-result" aria-live="polite" hidden></div>
-      </div>
-    </section>
-
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
-
+    <div class="auth-required-content">
+      <a class="service-about-inline-link" href="/client/about/numerology?back=/client/numerology">{{ t.about_numerology or 'О нумерологии' }}</a>
+      <form id="numerology-form" class="form-grid service-theme-form" novalidate>
+        <section class="persona-picker-card">
+          <h3>{{ t.personas }}</h3>
+          <div class="persona-mode-tabs">
+            <label><input type="radio" name="numerology-persona-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
+            <label><input type="radio" name="numerology-persona-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
+          </div>
+          <div id="numerology-persona-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel" hidden>
+            <div id="numerology-persona-choices" class="persona-choice-list" role="listbox" aria-label="{{ t.persona_select_placeholder }}"></div>
+          </div>
+          <div id="numerology-persona-manual-persona-panel" class="form-grid persona-subpanel persona-manual-panel">
+            <label>{{ t.persona_name }} <input id="numerology-persona-name" /></label>
+            <label>{{ t.birth_date }} <input id="numerology-persona-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
+            <input id="numerology-persona-birth-time" type="hidden" value="" />
+            <label>{{ t.astrology_birth_place }} <input id="numerology-persona-birth-place" /></label>
+            <label>{{ t.persona_note }} <textarea id="numerology-persona-note" rows="3"></textarea></label>
+            <label class="payment-offer-consent">
+              <input id="numerology-persona-save-persona" type="checkbox" />
+              <span>{{ t.persona_save_offer }}</span>
+            </label>
+          </div>
+        </section>
+        <button type="submit" class="primary-btn">{{ t.generate_report }} · {{ cost_numerology }} <span class="spark-icon" aria-hidden="true">✦</span></button>
+      </form>
+      <div id="numerology-result" class="result rich-result" aria-live="polite" hidden></div>
+    </div>
+  </section>
+{% endblock %}

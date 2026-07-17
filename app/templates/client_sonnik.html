@@ -1,63 +1,36 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.sonnik }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=ui-unify-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} - {{ t.sonnik }}{% endblock %}
+
+{% block body_attrs %}
   data-cost-sonnik="{{ cost_sonnik }}"
   data-cost-numerology="{{ cost_numerology }}"
   data-cost-sovmestimost="{{ cost_sovmestimost }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
+{% endblock %}
+
+{% block content %}
+  {% with hero_title=t.sonnik %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+
+  <section class="card auth-gated-card service-theme-shell">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/sonnik">{{ t.sign_in_required_action }}</a>
     </div>
-  </header>
-
-  <main class="mobile-client card-readings-page service-theme-page">
-    <section class="card compact-card client-page-hero service-theme-hero">
-      <div>
-        <h2>{{ t.sonnik }}</h2>
-        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
-      </div>
-      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-        <span id="page-sparks">-</span>
-      </span>
-    </section>
-
-    <section class="card auth-gated-card service-theme-shell">
-      <div class="auth-required-panel" hidden>
-        <h3>{{ t.sign_in_required_title }}</h3>
-        <p>{{ t.sign_in_required_text }}</p>
-        <a class="primary-btn" href="/static/auth/login.html?next=/client/sonnik">{{ t.sign_in_required_action }}</a>
-      </div>
-      <div class="auth-required-content">
-        <a class="service-about-inline-link" href="/client/about/sonnik?back=/client/sonnik">{{ t.about_sonnik or 'О соннике' }}</a>
-        <form id="sonnik-form" class="form-grid service-theme-form" novalidate>
-          {% with prefix='sonnik-persona', default_mode='manual', use_choices=false %}
-          {% include "partials/persona_picker.html" %}
-          {% endwith %}
-          <label>{{ t.dream_description }}
-            <textarea id="dream-text" rows="6" required></textarea>
-          </label>
-          <button type="submit" class="primary-btn">{{ t.get_interpretation }} · {{ cost_sonnik }} <span class="spark-icon" aria-hidden="true">✦</span></button>
-        </form>
-        <div id="sonnik-result" class="result rich-result" aria-live="polite" hidden></div>
-      </div>
-    </section>
-
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=ui-unify-v1"></script>
-</body>
-</html>
+    <div class="auth-required-content">
+      <a class="service-about-inline-link" href="/client/about/sonnik?back=/client/sonnik">{{ t.about_sonnik or 'О соннике' }}</a>
+      <form id="sonnik-form" class="form-grid service-theme-form" novalidate>
+        {% with prefix='sonnik-persona', default_mode='manual', use_choices=false %}
+        {% include "partials/persona_picker.html" %}
+        {% endwith %}
+        <label>{{ t.dream_description }}
+          <textarea id="dream-text" rows="6" required></textarea>
+        </label>
+        <button type="submit" class="primary-btn">{{ t.get_interpretation }} · {{ cost_sonnik }} <span class="spark-icon" aria-hidden="true">✦</span></button>
+      </form>
+      <div id="sonnik-result" class="result rich-result" aria-live="polite" hidden></div>
+    </div>
+  </section>
+{% endblock %}

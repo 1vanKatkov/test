@@ -1,26 +1,12 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ brand_name }} - {{ t.cabinet }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=dashboard-faq-v1" />
-</head>
-<body
-  class="app-shell mobile-client-shell client-dashboard-page"
-  data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
-  data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
-  data-lang="{{ lang }}"
-  data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
->
-  <header class="app-topbar client-topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/client">{{ brand_name }}</a>
-      {% include "partials/client_user_chip.html" %}
-    </div>
-  </header>
+{% extends "layouts/client_base.html" %}
 
-  <main class="mobile-client">
+{% block title %}{{ brand_name }} - {{ t.cabinet }}{% endblock %}
+
+{% block body_class %} client-dashboard-page{% endblock %}
+
+{% block main_class %}mobile-client{% endblock %}
+
+{% block content %}
     <section id="dashboard-carousel" class="dashboard-carousel" data-slide="0" aria-roledescription="carousel" tabindex="0">
       <div class="dashboard-carousel-track">
         <section class="dashboard-slide dashboard-slide-intro dashboard-template-slide is-active" aria-label="{{ t.dashboard_slider_dot_intro }}">
@@ -204,10 +190,4 @@
         ></button>
       </div>
     </section>
-
-  </main>
-
-  {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=dashboard-faq-v1"></script>
-</body>
-</html>
+{% endblock %}
