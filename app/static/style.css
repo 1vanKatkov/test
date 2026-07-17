@@ -996,6 +996,7 @@ button:disabled {
   text-decoration: underline;
   text-decoration-color: rgba(255, 214, 126, 0.42);
   text-underline-offset: 4px;
+  overflow-wrap: anywhere;
 }
 
 .service-about-inline-link:hover {
@@ -1013,15 +1014,22 @@ button:disabled {
 }
 
 .astrology-layout-page .astrology-about-link {
-  margin-top: -5px;
-  margin-bottom: 16px;
+  margin-top: 0;
+  margin-bottom: 4px;
   display: inline-block;
+  padding-inline: 1px;
 }
 
 .service-theme-shell {
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.service-theme-page .service-theme-shell.auth-gated-card,
+.service-theme-page .service-theme-shell {
+  border-radius: 0;
+  overflow: visible;
 }
 
 .service-theme-shell .auth-required-content {
