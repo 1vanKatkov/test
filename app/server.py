@@ -70,6 +70,7 @@ from app.web.schemas import (
 )
 from app.web.services import compatibility, divination, numerology, payments, sonnik, tarot_cards
 from app.web.services.balance import admin_debit, charge, credit, get_balance, get_subscription_info, record_transaction, refund
+from app.web.services.mailer import smtp_is_configured
 from config import settings
 
 
@@ -2034,7 +2035,7 @@ async def api_health():
 async def api_email_health():
     return {
         "build": API_BUILD_ID,
-        "smtp_configured": bool(settings.smtp_host and settings.smtp_from),
+        "smtp_configured": smtp_is_configured(),
         "smtp_host_set": bool(settings.smtp_host),
         "smtp_from_set": bool(settings.smtp_from),
         "smtp_user_set": bool(settings.smtp_user),

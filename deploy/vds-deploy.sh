@@ -2,7 +2,14 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-SERVICE_NAME="${SERVICE_NAME:-miniapp}"
+SERVICE_NAME="${SERVICE_NAME:-}"
+if [[ -z "$SERVICE_NAME" ]]; then
+  if systemctl list-unit-files astrolhub.service >/dev/null 2>&1 && systemctl cat astrolhub.service >/dev/null 2>&1; then
+    SERVICE_NAME="astrolhub"
+  else
+    SERVICE_NAME="miniapp"
+  fi
+fi
 
 cd "$APP_DIR"
 
@@ -16,13 +23,23 @@ if ! grep -q 'api/auth/email/health' app/server.py; then
 fi
 
 if [[ -f .env ]]; then
-  echo "==> Ensure classic email verification is enabled when SMTP is configured"
-  if grep -qE '^SMTP_HOST=.+' .env && grep -qE '^SMTP_FROM=.+' .env; then
+  echo "==> Ensure classic email verification is enabled when real SMTP is configured"
+  SMTP_HOST_VAL="$(grep -E '^SMTP_HOST=' .env | tail -n1 | cut -d= -f2- || true)"
+  SMTP_FROM_VAL="$(grep -E '^SMTP_FROM=' .env | tail -n1 | cut -d= -f2- || true)"
+  SMTP_USER_VAL="$(grep -E '^SMTP_USER=' .env | tail -n1 | cut -d= -f2- || true)"
+  SMTP_PASS_VAL="$(grep -E '^SMTP_PASSWORD=' .env | tail -n1 | cut -d= -f2- || true)"
+  if [[ -n "$SMTP_HOST_VAL" && -n "$SMTP_FROM_VAL" \
+    && "$SMTP_HOST_VAL" != *example.com* \
+    && "$SMTP_FROM_VAL" != *example* \
+    && "$SMTP_USER_VAL" != your-smtp-user \
+    && -n "$SMTP_PASS_VAL" ]]; then
     if grep -qE '^EMAIL_SKIP_VERIFICATION=' .env; then
       sed -i 's/^EMAIL_SKIP_VERIFICATION=.*/EMAIL_SKIP_VERIFICATION=false/' .env
     else
       printf '\nEMAIL_SKIP_VERIFICATION=false\n' >> .env
     fi
+  else
+    echo "==> SMTP looks incomplete/placeholder; leaving EMAIL_SKIP_VERIFICATION unchanged"
   fi
   if ! grep -qE '^EMAIL_AUTH_SECRET=.+' .env \
     || grep -qE '^EMAIL_AUTH_SECRET=(replace-with-long-random-secret|change-me-email-auth-secret)?$' .env; then

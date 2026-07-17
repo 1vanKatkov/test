@@ -13,8 +13,33 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+_PLACEHOLDER_SMTP_MARKERS = (
+    "example.com",
+    "your-domain.example",
+    "your-smtp-user",
+    "your-mailbox@",
+)
+
+
+def _looks_like_placeholder(value: str) -> bool:
+    lowered = (value or "").strip().lower()
+    if not lowered:
+        return True
+    return any(marker in lowered for marker in _PLACEHOLDER_SMTP_MARKERS)
+
+
+def smtp_is_configured() -> bool:
+    if not settings.smtp_host or not settings.smtp_from:
+        return False
+    if _looks_like_placeholder(settings.smtp_host) or _looks_like_placeholder(settings.smtp_from):
+        return False
+    if settings.smtp_user and _looks_like_placeholder(settings.smtp_user):
+        return False
+    return True
+
+
 def _smtp_configured() -> bool:
-    return bool(settings.smtp_host and settings.smtp_from)
+    return smtp_is_configured()
 
 
 def _subject_for_purpose(purpose: str, lang: str) -> str:
