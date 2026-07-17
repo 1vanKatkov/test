@@ -4771,41 +4771,6 @@ button.page-back-arrow {
   font-weight: 600;
 }
 
-.auth-telegram-block {
-  margin-top: 16px;
-  display: grid;
-  gap: 10px;
-  justify-items: stretch;
-}
-
-.auth-divider {
-  margin: 0;
-  width: 100%;
-  text-align: center;
-  position: relative;
-}
-
-.telegram-login-btn {
-  width: 100%;
-  border: 0;
-  border-radius: 14px;
-  padding: 12px 16px;
-  font: inherit;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(180deg, #54baf3 0%, #2aabee 100%);
-  box-shadow: 0 10px 24px rgba(42, 171, 238, 0.28);
-  cursor: pointer;
-}
-
-.telegram-login-btn:hover {
-  filter: brightness(1.05);
-}
-
-.telegram-login-btn:active {
-  transform: translateY(1px);
-}
-
 .compact-actions {
   margin-top: 10px;
   display: flex;

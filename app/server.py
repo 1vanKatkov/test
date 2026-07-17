@@ -1566,7 +1566,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "tg-login-no-hint-v1",
+        "assets_version": "no-tg-login-btn-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,

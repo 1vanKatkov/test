@@ -1700,82 +1700,11 @@ function wireRegisterVerifyPage() {
   }
 }
 
-function applyTelegramAuthResult(result) {
-  if (result.token) {
-    persistEmailAuthToken("");
-    persistTelegramAuthToken(result.token);
-  }
-  if (result.profile) {
-    saveTimedCache(PROFILE_CACHE_KEY, result.profile);
-    applyProfileUi(result.profile);
-  }
-  if (typeof result.balance === "number") {
-    saveTimedCache(BALANCE_CACHE_KEY, result.balance);
-    setBalance(result.balance);
-  }
-  toggleEmailAuthEntry();
-  updateAdminTileVisibility().catch(() => {});
-}
-
-async function mountTelegramLoginWidget() {
-  const btn = element("telegram-login-btn");
-  if (!btn || btn.dataset.wired === "1") {
-    return;
-  }
-  btn.dataset.wired = "1";
-  let botId = "";
-  let botUsername = "astrolhub_bot";
-  let origin = window.location.origin;
-  let domain = "";
-  try {
-    const response = await fetch(resolveApiUrl("/api/auth/telegram/login-config"), { credentials: "same-origin" });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.bot_id) {
-        botId = String(data.bot_id);
-      }
-      if (data.bot_username) {
-        botUsername = String(data.bot_username);
-      }
-      if (data.origin) {
-        origin = String(data.origin).replace(/\/$/, "");
-      }
-      if (data.domain) {
-        domain = String(data.domain);
-      }
-    }
-  } catch {
-    // Fall back to opening the bot if config is unavailable.
-  }
-
-  btn.addEventListener("click", () => {
-    setResult("auth-result", i18n.loading);
-    if (!botId) {
-      window.location.href = `https://t.me/${botUsername}`;
-      return;
-    }
-    if (domain && window.location.hostname !== domain) {
-      // Keep OAuth origin aligned with BotFather domain.
-      window.location.href = `${origin}/static/auth/login.html${window.location.search || ""}`;
-      return;
-    }
-    const nextPath = resolvePostLoginRedirect();
-    const returnTo = `${origin}/api/auth/telegram/widget-callback?next=${encodeURIComponent(nextPath)}`;
-    const authUrl = new URL("https://oauth.telegram.org/auth");
-    authUrl.searchParams.set("bot_id", botId);
-    authUrl.searchParams.set("origin", origin);
-    authUrl.searchParams.set("request_access", "write");
-    authUrl.searchParams.set("return_to", returnTo);
-    window.location.href = authUrl.toString();
-  });
-}
-
 function wireLoginPage() {
   const loginForm = element("email-login-form");
   if (!loginForm) {
     return;
   }
-  mountTelegramLoginWidget();
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     setResult("auth-result", i18n.loading);

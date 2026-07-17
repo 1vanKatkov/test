@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Astrolhub - Вход</title>
-  <link rel="stylesheet" href="/static/style.css?v=tg-login-no-hint-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=no-tg-login-btn-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell auth-page auth-static-page"
@@ -43,12 +43,6 @@
         <label><span data-auth-label="password">Пароль</span> <input id="login-password" type="password" autocomplete="current-password" required minlength="8" /></label>
         <button type="submit" class="primary-btn" data-auth-label="loginSubmit">Войти</button>
       </form>
-      <div class="auth-telegram-block" id="telegram-login-block">
-        <p class="muted auth-divider" data-auth-label="orDivider">или</p>
-        <button type="button" id="telegram-login-btn" class="telegram-login-btn" data-auth-label="loginWithTelegram">
-          Войти через Telegram
-        </button>
-      </div>
       <p class="muted auth-switch-line">
         <span data-auth-label="noAccount">Нет аккаунта?</span>
         <a class="auth-register-link" href="/static/auth/register.html" data-auth-label="goRegister">Зарегистрироваться</a>
@@ -57,6 +51,6 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=tg-login-no-hint-v1"></script>
+  <script defer src="/static/app.js?v=no-tg-login-btn-v1"></script>
 </body>
 </html>
