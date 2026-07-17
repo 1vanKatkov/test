@@ -3196,7 +3196,9 @@ function renderTarotTopicGrid() {
   }
   grid.innerHTML = tarotCardsTopics.map((topic) => `
     <button type="button" class="tarot-topic-card" data-topic-id="${escapeHtml(topic.id)}" role="listitem">
-      <span class="tarot-topic-icon" aria-hidden="true">${escapeHtml(topic.icon || "✦")}</span>
+      <span class="tarot-topic-icon" aria-hidden="true">
+        <img class="tarot-topic-icon-img" src="${escapeHtml(topic.icon || "")}" alt="" width="44" height="44" loading="lazy" decoding="async" />
+      </span>
       <strong>${escapeHtml(topic.title)}</strong>
       <small>${topic.size} ${lang === "en" ? "cards" : "карт"}</small>
     </button>
@@ -3284,20 +3286,43 @@ function prepareTarotSpreadSlots(size) {
 
 async function placeTarotCardOnTable(card, index) {
   const slot = document.querySelector(`.tarot-spread-slot[data-slot="${index}"]`);
+  const deck = element("tarot-card-deck");
   if (!slot) {
     return;
   }
-  slot.innerHTML = renderTarotCardButton(card, false, index, "is-dealing-to-table");
+  slot.innerHTML = renderTarotCardButton(card, false, index, "is-dealing-from-deck");
   slot.classList.add("is-filled");
   const cardNode = slot.querySelector(".tarot-card");
-  if (prefersReducedMotion()) {
-    cardNode?.classList.add("is-flipped", "is-selected", "is-arrived");
+  if (!cardNode) {
     return;
   }
-  await wait(120 + index * 120);
-  cardNode?.classList.add("is-arrived");
+  if (prefersReducedMotion()) {
+    cardNode.classList.add("is-flipped", "is-selected", "is-arrived");
+    return;
+  }
+
+  const deckRect = deck?.getBoundingClientRect();
+  const slotRect = slot.getBoundingClientRect();
+  const cardRect = cardNode.getBoundingClientRect();
+  if (deckRect && cardRect.width) {
+    const fromX = deckRect.left + deckRect.width / 2 - (cardRect.left + cardRect.width / 2);
+    const fromY = deckRect.top + deckRect.height / 2 - (cardRect.top + cardRect.height / 2);
+    cardNode.style.setProperty("--deal-from-x", `${fromX}px`);
+    cardNode.style.setProperty("--deal-from-y", `${fromY}px`);
+  } else {
+    cardNode.style.setProperty("--deal-from-x", "0px");
+    cardNode.style.setProperty("--deal-from-y", "-120px");
+  }
+
+  // Force reflow so the starting transform is applied before animation.
+  void cardNode.offsetWidth;
+  cardNode.classList.add("is-flying");
+  await wait(520);
+  cardNode.classList.add("is-arrived");
+  cardNode.classList.remove("is-flying", "is-dealing-from-deck");
+  await wait(160);
+  cardNode.classList.add("is-flipped", "is-selected");
   await wait(280);
-  cardNode?.classList.add("is-flipped", "is-selected");
 }
 
 function renderTarotCardsResult(result) {
@@ -3394,11 +3419,6 @@ async function startTarotReadingFlow() {
 
     setBalance(result.balance);
     tarotLastReportUrl = result.report_url || "";
-    const saveLink = element("tarot-save-spread");
-    if (saveLink && tarotLastReportUrl) {
-      saveLink.href = tarotLastReportUrl;
-      saveLink.hidden = false;
-    }
     showTarotStep("result");
     renderTarotCardsResult(result);
     element("tarot-step-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
@@ -3483,10 +3503,7 @@ function wireTarotCardsForm() {
   });
   element("tarot-back-topics")?.addEventListener("click", () => resetTarotFlow());
   element("tarot-start-reading")?.addEventListener("click", () => startTarotReadingFlow());
-  element("tarot-ask-another")?.addEventListener("click", () => resetTarotFlow());
-  element("tarot-get-month")?.addEventListener("click", () => {
-    resetTarotFlow("month_full");
-  });
+  element("tarot-another-spread")?.addEventListener("click", () => resetTarotFlow());
   element("tarot-subtopic-grid")?.addEventListener("click", (event) => {
     const chip = event.target.closest("[data-subtopic-id]");
     if (!chip || !selectedTarotTopic) {

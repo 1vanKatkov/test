@@ -1707,6 +1707,44 @@ button:disabled {
   gap: 12px;
 }
 
+.tarot-cards-page.tarot-flow-page,
+.tarot-cards-page {
+  position: relative;
+}
+
+.tarot-cards-page .service-theme-shell {
+  border-color: rgba(212, 175, 95, 0.28);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(126, 72, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 8%, rgba(255, 214, 126, 0.1), transparent 30%),
+    linear-gradient(165deg, rgba(16, 12, 40, 0.97), rgba(8, 10, 26, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 229, 154, 0.05), 0 18px 40px rgba(24, 10, 58, 0.28);
+}
+
+.tarot-cards-page .service-theme-hero {
+  border-color: rgba(212, 175, 95, 0.24);
+  background:
+    radial-gradient(circle at 80% 20%, rgba(255, 214, 126, 0.12), transparent 40%),
+    linear-gradient(145deg, rgba(22, 14, 52, 0.96), rgba(10, 12, 30, 0.98));
+}
+
+.tarot-shuffle-stage {
+  min-height: 360px;
+  align-content: start;
+  justify-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.tarot-shuffle-stage .tarot-card-deck {
+  order: 1;
+}
+
+.tarot-shuffle-stage .tarot-spread-row {
+  order: 2;
+  width: 100%;
+}
+
 .tarot-fixed-spread {
   display: flex;
   align-items: center;
@@ -1737,13 +1775,17 @@ button:disabled {
   gap: 18px;
   padding: 16px;
   overflow: hidden;
-  border: 1px solid rgba(151, 119, 255, 0.38);
+  border: 1px solid rgba(212, 175, 95, 0.34);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(255, 229, 154, 0.14), transparent 32%),
-    radial-gradient(circle at 20% 20%, rgba(183, 88, 255, 0.2), transparent 34%),
-    linear-gradient(160deg, rgba(24, 15, 66, 0.98), rgba(7, 11, 33, 0.98));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 42px rgba(81, 44, 167, 0.26);
+    radial-gradient(circle at 50% 0%, rgba(255, 214, 126, 0.14), transparent 34%),
+    radial-gradient(circle at 18% 22%, rgba(126, 72, 255, 0.22), transparent 36%),
+    radial-gradient(circle at 82% 78%, rgba(88, 40, 160, 0.28), transparent 42%),
+    linear-gradient(168deg, rgba(18, 10, 42, 0.98), rgba(6, 8, 22, 0.99));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 229, 154, 0.08),
+    inset 0 0 48px rgba(0, 0, 0, 0.35),
+    0 18px 42px rgba(40, 18, 90, 0.36);
 }
 
 .tarot-stage::before {
@@ -1752,9 +1794,14 @@ button:disabled {
   inset: 14px;
   border-radius: 20px;
   background:
-    linear-gradient(90deg, transparent 0 48%, rgba(255, 229, 154, 0.06) 49% 51%, transparent 52%),
-    radial-gradient(ellipse at center, rgba(255, 229, 154, 0.11), transparent 58%);
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 229, 154, 0.55), transparent),
+    radial-gradient(1.2px 1.2px at 28% 62%, rgba(255, 229, 154, 0.35), transparent),
+    radial-gradient(1.4px 1.4px at 64% 24%, rgba(220, 190, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 78% 70%, rgba(255, 229, 154, 0.45), transparent),
+    radial-gradient(1.3px 1.3px at 46% 84%, rgba(220, 190, 255, 0.32), transparent),
+    radial-gradient(ellipse at center, rgba(255, 229, 154, 0.08), transparent 58%);
   pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 229, 154, 0.12);
 }
 
 .tarot-stage > * {
@@ -1830,11 +1877,22 @@ button:disabled {
 .tarot-topic-icon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
   border-radius: 14px;
-  background: rgba(255, 229, 154, 0.12);
-  font-size: 22px;
+  border: 1px solid rgba(255, 229, 154, 0.28);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 229, 154, 0.16), transparent 62%),
+    rgba(12, 10, 36, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tarot-topic-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .tarot-subtopic-grid,
@@ -1859,12 +1917,6 @@ button:disabled {
 .tarot-subtopic-chip:hover {
   border-color: rgba(255, 229, 154, 0.55);
   background: rgba(78, 48, 156, 0.55);
-}
-
-.tarot-shuffle-stage {
-  min-height: 320px;
-  place-items: center;
-  text-align: center;
 }
 
 .tarot-shuffle-copy {
@@ -1979,6 +2031,24 @@ button:disabled {
   opacity: 1;
   animation: tarotDealToTable 0.68s cubic-bezier(0.18, 0.78, 0.18, 1) both;
   animation-delay: calc(var(--card-index, 0) * 80ms);
+}
+
+.tarot-card.is-dealing-from-deck {
+  opacity: 0;
+  transform: translate(var(--deal-from-x, 0px), var(--deal-from-y, -120px)) scale(0.72) rotate(-12deg);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.tarot-card.is-dealing-from-deck.is-flying {
+  opacity: 1;
+  animation: tarotDealFromDeck 0.52s cubic-bezier(0.16, 0.78, 0.18, 1) forwards;
+}
+
+.tarot-card.is-dealing-from-deck.is-arrived,
+.tarot-card.is-arrived {
+  opacity: 1;
+  transform: none;
 }
 
 .tarot-spread-slot .tarot-card:active {
@@ -2197,6 +2267,24 @@ button:disabled {
   }
 }
 
+@keyframes tarotDealFromDeck {
+  0% {
+    opacity: 0.35;
+    transform: translate(var(--deal-from-x, 0px), var(--deal-from-y, -120px)) scale(0.7) rotate(-14deg);
+    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35));
+  }
+  55% {
+    opacity: 1;
+    transform: translate(calc(var(--deal-from-x, 0px) * 0.18), calc(var(--deal-from-y, -120px) * 0.12 - 8px)) scale(1.04) rotate(4deg);
+    filter: drop-shadow(0 18px 22px rgba(126, 66, 255, 0.28));
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.3));
+  }
+}
+
 @keyframes tarotLockedShake {
   0%,
   100% {
@@ -2270,13 +2358,17 @@ button:disabled {
 
   .tarot-card-deck.is-dealing .tarot-deck-pile,
   .tarot-card.is-dealing-to-table.is-arrived,
+  .tarot-card.is-dealing-from-deck.is-flying,
   .tarot-result-card,
   .tarot-interpretation {
     animation: none !important;
   }
 
   .tarot-card.is-dealing-to-table,
-  .tarot-card.is-dealing-to-table.is-arrived {
+  .tarot-card.is-dealing-to-table.is-arrived,
+  .tarot-card.is-dealing-from-deck,
+  .tarot-card.is-dealing-from-deck.is-flying,
+  .tarot-card.is-arrived {
     opacity: 1;
     transform: none;
   }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.tarot_result_title }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=tarot-art-v2" />
+  <link rel="stylesheet" href="/static/style.css?v=tarot-ux-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -29,11 +29,11 @@
     </section>
     <section class="card service-theme-shell">
       <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite"></div>
-      <a class="secondary-btn" href="/client/tarot-cards">{{ t.tarot_ask_another }}</a>
+      <a class="secondary-btn" href="/client/tarot-cards">{{ t.tarot_another_spread }}</a>
     </section>
   </main>
 
   {% include "partials/client_bottom_nav.html" %}
-  <script defer src="/static/app.js?v=tarot-art-v2"></script>
+  <script defer src="/static/app.js?v=tarot-ux-v1"></script>
 </body>
 </html>

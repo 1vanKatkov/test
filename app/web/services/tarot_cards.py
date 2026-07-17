@@ -61,7 +61,7 @@ What to do in the coming days (one paragraph + 2–4 concrete bullets).""",
 
 TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
     "relationships": {
-        "icon": "❤️",
+        "icon": "/static/img/tarot/topics/relationships.webp",
         "ru": "Отношения",
         "en": "Relationships",
         "spread_id": "relationships_5",
@@ -92,7 +92,7 @@ TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
         "focus_field": "love",
     },
     "money": {
-        "icon": "💰",
+        "icon": "/static/img/tarot/topics/money.webp",
         "ru": "Деньги",
         "en": "Money",
         "spread_id": "money_5",
@@ -117,7 +117,7 @@ TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
         "focus_field": "finances",
     },
     "career": {
-        "icon": "💼",
+        "icon": "/static/img/tarot/topics/career.webp",
         "ru": "Карьера",
         "en": "Career",
         "spread_id": "career_5",
@@ -142,7 +142,7 @@ TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
         "focus_field": "career",
     },
     "personal_path": {
-        "icon": "🌙",
+        "icon": "/static/img/tarot/topics/personal_path.webp",
         "ru": "Личный путь",
         "en": "Personal path",
         "spread_id": "personal_5",
@@ -167,7 +167,7 @@ TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
         "focus_field": "growth",
     },
     "question": {
-        "icon": "🔮",
+        "icon": "/static/img/tarot/topics/question.webp",
         "ru": "Ответ на вопрос",
         "en": "Answer a question",
         "spread_id": "question_3",
@@ -192,7 +192,7 @@ TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
         "focus_field": "general",
     },
     "card_of_day": {
-        "icon": "📅",
+        "icon": "/static/img/tarot/topics/card_of_day.webp",
         "ru": "Карта дня",
         "en": "Card of the day",
         "spread_id": "card_of_day",
@@ -206,7 +206,7 @@ TOPIC_DEFINITIONS: dict[str, dict[str, Any]] = {
         "day_mode": True,
     },
     "month_full": {
-        "icon": "⭐",
+        "icon": "/static/img/tarot/topics/month_full.webp",
         "ru": "Полный расклад месяца",
         "en": "Full monthly spread",
         "spread_id": "month_7",
