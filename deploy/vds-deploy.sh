@@ -72,6 +72,14 @@ echo "==> Install Python dependencies"
 "$PIP" install -r requirements.txt
 
 echo "==> Restart systemd service: $SERVICE_NAME"
+# Prefer run_all.py so Telegram bot starts with the API process.
+if [[ -f deploy/astrolhub.service.example ]] && [[ "$SERVICE_NAME" == "astrolhub" ]]; then
+  if ! grep -q 'run_all.py' /etc/systemd/system/astrolhub.service 2>/dev/null; then
+    echo "==> Updating astrolhub.service to run_all.py (API + Telegram bot)"
+    cp deploy/astrolhub.service.example /etc/systemd/system/astrolhub.service
+    sudo systemctl daemon-reload
+  fi
+fi
 sudo systemctl restart "$SERVICE_NAME"
 sleep 3
 sudo systemctl is-active --quiet "$SERVICE_NAME"

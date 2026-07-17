@@ -100,8 +100,9 @@ async def _run(
 
     logger.info("Telegram bot started (%s)", lang)
     await application.initialize()
+    await application.bot.delete_webhook(drop_pending_updates=False)
     await application.start()
-    await application.updater.start_polling()
+    await application.updater.start_polling(drop_pending_updates=False)
 
     try:
         while True:

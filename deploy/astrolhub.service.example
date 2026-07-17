@@ -1,0 +1,16 @@
+[Unit]
+Description=Astrolhub (FastAPI + Telegram bot)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/opt/test/test
+EnvironmentFile=-/root/opt/test/test/.env
+Environment="PATH=/root/opt/test/test/.venv/bin"
+ExecStart=/root/opt/test/test/.venv/bin/python run_all.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
