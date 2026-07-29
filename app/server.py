@@ -1572,7 +1572,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "dashboard-no-dots-v1",
+        "assets_version": "compat-model-fallback-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -3044,6 +3044,7 @@ async def api_sovmestimost_names_dates(
         birth_place=payload.persona1_birth_place,
         note=payload.persona1_note,
         required=True,
+        require_birth_details=False,
     )
     persona2 = _persona_context_from_values(
         user_id=user_id,
@@ -3054,6 +3055,7 @@ async def api_sovmestimost_names_dates(
         birth_place=payload.persona2_birth_place,
         note=payload.persona2_note,
         required=True,
+        require_birth_details=False,
     )
     name1 = persona1["name"]
     date1 = persona1["birth_date"]

@@ -96,6 +96,35 @@ def _resolve_model(language: str) -> str:
     return settings.model_sovmestimost
 
 
+def _resolve_models(language: str) -> list[str]:
+    primary = _resolve_model(language)
+    if (language or "").strip().lower() == "en":
+        fallbacks = [settings.model_sonnik_en, settings.model_sonnik, "google/gemini-2.5-flash"]
+    else:
+        fallbacks = [settings.model_sonnik, settings.model_sonnik_en, "google/gemini-2.5-flash"]
+    models: list[str] = []
+    for model in [primary, *fallbacks]:
+        if model and model not in models:
+            models.append(model)
+    return models
+
+
+def _chat_with_fallback(language: str, prompt: str) -> str:
+    errors: list[str] = []
+    for model in _resolve_models(language):
+        try:
+            return chat_completion(model, prompt)
+        except HTTPException as exc:
+            detail = str(exc.detail or "")
+            errors.append(f"{model}: {detail}")
+            # Retry only when the configured preset/model is unavailable.
+            if "No endpoints found" not in detail and exc.status_code != 502:
+                raise
+            continue
+    if errors:
+        raise HTTPException(status_code=502, detail=errors[-1])
+    raise HTTPException(status_code=502, detail="Compatibility model is not configured")
+
 def calculate_expression_number(name: str) -> int:
     total = 0
     for char in name.upper().strip():
@@ -162,7 +191,7 @@ def by_names(name1: str, name2: str, language: str = "ru") -> str:
     expression_data = f"Name 1: {name1}\nExpression number: {expr1}\nName 2: {name2}\nExpression number: {expr2}"
     prompt_template = _load_prompt(language, "prompt_names_only_ai")
     prompt = prompt_template.format(user_input=f"{name1} and {name2}", expression_data=expression_data)
-    return chat_completion(_resolve_model(language), prompt)
+    return _chat_with_fallback(language, prompt)
 
 
 def by_names_dates(
@@ -215,5 +244,5 @@ def by_names_dates(
     )
     if persona_blocks:
         prompt = f"{prompt}\n\n{persona_blocks}\n\nUse persona and natal-chart details for deeper personalization when relevant."
-    return chat_completion(_resolve_model(language), prompt)
+    return _chat_with_fallback(language, prompt)
 

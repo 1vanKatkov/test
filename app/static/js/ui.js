@@ -16,9 +16,50 @@ function wireCompatibilityForms() {
     const secondStep = element("compat-step-2");
     const nextButton = element("compat-next-btn");
     const submitButton = element("compat-submit-btn");
+    const resultNode = element("compat-result");
     const firstLabel = namesDatesForm.dataset.stepFirstLabel || (lang === "en" ? "Enter the first person" : "Введите первую личность");
     const secondLabel = namesDatesForm.dataset.stepSecondLabel || (lang === "en" ? "Enter the second person" : "Введите вторую личность");
     let currentStep = 1;
+
+    const showCompatError = (message) => {
+      setResult("compat-result", message);
+      resultNode?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
+    };
+
+    const setStepFieldsActive = (stepNode, active) => {
+      if (!stepNode) {
+        return;
+      }
+      stepNode.querySelectorAll("input, select, textarea, button").forEach((control) => {
+        if (!(control instanceof HTMLElement)) {
+          return;
+        }
+        if (control.matches("input[type='radio']")) {
+          control.disabled = !active;
+          return;
+        }
+        if (
+          control instanceof HTMLInputElement
+          || control instanceof HTMLTextAreaElement
+          || control instanceof HTMLSelectElement
+        ) {
+          if (!active) {
+            if (control.required) {
+              control.dataset.wasRequired = "true";
+            }
+            control.required = false;
+            control.disabled = true;
+            return;
+          }
+          control.disabled = false;
+          if (control.dataset.wasRequired === "true") {
+            control.required = true;
+          }
+        } else {
+          control.disabled = !active;
+        }
+      });
+    };
 
     const renderStep = () => {
       const isSecond = currentStep === 2;
@@ -37,6 +78,12 @@ function wireCompatibilityForms() {
       if (stepTitle) {
         stepTitle.textContent = isSecond ? secondLabel : firstLabel;
       }
+      setStepFieldsActive(firstStep, !isSecond);
+      setStepFieldsActive(secondStep, isSecond);
+      togglePersonaPanels(isSecond ? "compat-persona2" : "compat-persona1");
+      if (isSecond) {
+        renderPersonaSelect("compat-persona2");
+      }
     };
 
     renderStep();
@@ -53,9 +100,10 @@ function wireCompatibilityForms() {
             birthPlaceKey: "persona1_birth_place",
             noteKey: "persona1_note",
             skipSave: true,
+            requireBirthDetails: false,
           });
         } catch (error) {
-          setResult("compat-result", error.message);
+          showCompatError(error.message);
           return;
         }
         currentStep = 2;
@@ -78,6 +126,7 @@ function wireCompatibilityForms() {
           birthTimeKey: "persona1_birth_time",
           birthPlaceKey: "persona1_birth_place",
           noteKey: "persona1_note",
+          requireBirthDetails: false,
         });
         secondPersona = await resolvePersonaForPrefix("compat-persona2", {
           idKey: "persona2_id",
@@ -86,9 +135,10 @@ function wireCompatibilityForms() {
           birthTimeKey: "persona2_birth_time",
           birthPlaceKey: "persona2_birth_place",
           noteKey: "persona2_note",
+          requireBirthDetails: false,
         });
       } catch (error) {
-        setResult("compat-result", error.message);
+        showCompatError(error.message);
         return;
       }
       const firstResolved = firstPersona.resolvedPersona || {};
