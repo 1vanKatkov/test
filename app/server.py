@@ -9,10 +9,12 @@ from typing import NamedTuple
 from datetime import date, timedelta
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
+from pydantic import ValidationError as PydanticValidationError
 
 from app.web.auth.email_auth import (
     EmailIdentity,
@@ -75,6 +77,7 @@ from app.web.schemas import (
 from app.web.services import compatibility, divination, numerology, payments, sonnik, tarot_cards
 from app.web.services.balance import admin_debit, charge, credit, get_balance, get_subscription_info, record_transaction, refund
 from app.web.services.mailer import smtp_is_configured
+from app.web.services.validation_i18n import format_validation_errors
 from config import settings
 
 
@@ -99,6 +102,18 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title=settings.app_title, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(_: Request, exc: RequestValidationError):
+    message = format_validation_errors(list(exc.errors()))
+    return JSONResponse(status_code=422, content={"detail": message, "error": message})
+
+
+@app.exception_handler(PydanticValidationError)
+async def pydantic_validation_exception_handler(_: Request, exc: PydanticValidationError):
+    message = format_validation_errors(list(exc.errors()))
+    return JSONResponse(status_code=422, content={"detail": message, "error": message})
 
 
 def _normalize_lang(lang: str = "") -> str:
@@ -1572,7 +1587,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "compat-model-fallback-v1",
+        "assets_version": "daily-sparks-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,

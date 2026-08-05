@@ -102,6 +102,10 @@ class Settings:
     model_astrology: str = os.getenv("MODEL_ASTROLOGY", os.getenv("MODEL_SONNIK", "@preset/sonnik"))
     model_astrology_en: str = os.getenv("MODEL_ASTROLOGY_EN", os.getenv("MODEL_SONNIK_EN", "@preset/sonnikeng"))
     starting_credits: int = int(os.getenv("STARTING_CREDITS", "10"))
+    daily_sparks_enabled: bool = _bool_from_env("DAILY_SPARKS_ENABLED", True)
+    daily_sparks_amount: int = int(os.getenv("DAILY_SPARKS_AMOUNT", "3"))
+    daily_notify_interval_days: int = int(os.getenv("DAILY_NOTIFY_INTERVAL_DAYS", "2"))
+    daily_sparks_check_seconds: int = int(os.getenv("DAILY_SPARKS_CHECK_SECONDS", "3600"))
     cost_sonnik: int = 5
     cost_numerology: int = 10
     cost_sovmestimost: int = 5

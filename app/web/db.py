@@ -209,6 +209,15 @@ class Database:
             )
             conn.execute(
                 """
+                CREATE TABLE IF NOT EXISTS app_meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS tarot_cards (
                     id TEXT PRIMARY KEY,
                     number INTEGER,
@@ -1154,6 +1163,49 @@ class Database:
                 LIMIT ?
                 """,
                 (date_from, date_to, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    def get_app_meta(self, key: str) -> str | None:
+        conn = self.connect()
+        try:
+            row = conn.execute("SELECT value FROM app_meta WHERE key = ?", (key,)).fetchone()
+            return str(row["value"]) if row else None
+        finally:
+            conn.close()
+
+    def set_app_meta(self, key: str, value: str) -> None:
+        now = self._now()
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO app_meta (key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+                """,
+                (key, value, now),
+            )
+
+    def list_all_users_for_daily_grant(self) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute("SELECT id, provider, credits FROM users ORDER BY id ASC").fetchall()
+        finally:
+            conn.close()
+
+    def list_telegram_users_for_notify(self) -> list[sqlite3.Row]:
+        conn = self.connect()
+        try:
+            return conn.execute(
+                """
+                SELECT id, provider_user_id, username, language, credits
+                FROM users
+                WHERE provider = 'telegram'
+                ORDER BY id ASC
+                """
             ).fetchall()
         finally:
             conn.close()
