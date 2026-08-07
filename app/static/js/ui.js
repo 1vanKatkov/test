@@ -247,6 +247,24 @@ function wireDashboardCarousel() {
     return body.getBoundingClientRect().height;
   };
 
+  const densifyIntroSlide = (slide, available, needed) => {
+    if (!slide.classList.contains("dashboard-slide-intro")) {
+      return;
+    }
+    slide.classList.remove("is-dense", "is-compact", "is-ultra");
+    if (needed <= available + 1) {
+      return;
+    }
+    const ratio = needed / Math.max(available, 1);
+    slide.classList.add("is-dense");
+    if (ratio > 1.12) {
+      slide.classList.add("is-compact");
+    }
+    if (ratio > 1.28) {
+      slide.classList.add("is-ultra");
+    }
+  };
+
   const fitSlideBodies = () => {
     slides.forEach((slide) => {
       const body = slide.querySelector(":scope > .dashboard-slide-body")
@@ -255,19 +273,33 @@ function wireDashboardCarousel() {
         return;
       }
       resetSlideFit(body);
+      slide.classList.remove("is-dense", "is-compact", "is-ultra");
       const available = slide.clientHeight;
       if (available <= 0) {
         return;
       }
-      const needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
+
+      let needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
+      densifyIntroSlide(slide, available, needed);
+      // Re-measure after density classes change layout.
+      needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
       if (needed <= available + 1) {
         return;
       }
 
-      let low = 0.52;
+      // Progressive densify if still overflowing before scale.
+      if (slide.classList.contains("dashboard-slide-intro") && !slide.classList.contains("is-ultra")) {
+        slide.classList.add("is-dense", "is-compact", "is-ultra");
+        needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
+        if (needed <= available + 1) {
+          return;
+        }
+      }
+
+      let low = 0.48;
       let high = Math.min(1, available / needed);
       let best = high;
-      for (let i = 0; i < 8; i += 1) {
+      for (let i = 0; i < 10; i += 1) {
         const mid = (low + high) / 2;
         const measured = measureScaledHeight(body, mid);
         if (measured <= available + 1) {
@@ -277,10 +309,9 @@ function wireDashboardCarousel() {
           high = mid;
         }
       }
-      applyBodyScale(body, Math.max(0.52, Math.min(1, best)));
-      // Final safety: if still overflowing after fit, clamp hard.
+      applyBodyScale(body, Math.max(0.48, Math.min(1, best)));
       if (body.getBoundingClientRect().height > available + 2) {
-        applyBodyScale(body, Math.max(0.52, available / Math.max(needed, 1)));
+        applyBodyScale(body, Math.max(0.48, available / Math.max(needed, 1)));
       }
     });
   };
