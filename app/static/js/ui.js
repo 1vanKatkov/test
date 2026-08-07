@@ -219,35 +219,69 @@ function wireDashboardCarousel() {
     body.style.transform = "";
     body.style.width = "";
     body.style.marginBottom = "";
+    body.style.maxHeight = "";
+  };
+
+  const applyBodyScale = (body, scale) => {
+    if (scale >= 0.999) {
+      resetSlideFit(body);
+      return;
+    }
+    if (supportsZoom) {
+      body.style.zoom = String(scale);
+      body.style.transform = "";
+      body.style.width = "";
+      body.style.marginBottom = "";
+      return;
+    }
+    body.style.zoom = "";
+    body.style.transformOrigin = "top center";
+    body.style.transform = `scale(${scale})`;
+    body.style.width = `${100 / scale}%`;
+    body.style.marginBottom = `${-(body.scrollHeight * (1 - scale))}px`;
+  };
+
+  const measureScaledHeight = (body, scale) => {
+    applyBodyScale(body, scale);
+    // zoom affects layout metrics; transform does not — use getBoundingClientRect for both.
+    return body.getBoundingClientRect().height;
   };
 
   const fitSlideBodies = () => {
     slides.forEach((slide) => {
-      const body = slide.querySelector(":scope > .dashboard-slide-body");
+      const body = slide.querySelector(":scope > .dashboard-slide-body")
+        || slide.querySelector(".dashboard-slide-body");
       if (!body) {
         return;
       }
       resetSlideFit(body);
-      if (!mobileFitMq.matches) {
-        return;
-      }
       const available = slide.clientHeight;
       if (available <= 0) {
         return;
       }
-      const needed = body.scrollHeight;
+      const needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
       if (needed <= available + 1) {
         return;
       }
-      const scale = Math.max(0.7, Math.min(1, available / needed));
-      if (supportsZoom) {
-        body.style.zoom = String(scale);
-        return;
+
+      let low = 0.52;
+      let high = Math.min(1, available / needed);
+      let best = high;
+      for (let i = 0; i < 8; i += 1) {
+        const mid = (low + high) / 2;
+        const measured = measureScaledHeight(body, mid);
+        if (measured <= available + 1) {
+          best = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
       }
-      body.style.transformOrigin = "top center";
-      body.style.transform = `scale(${scale})`;
-      body.style.width = `${100 / scale}%`;
-      body.style.marginBottom = `${-((needed * (1 - scale)))}px`;
+      applyBodyScale(body, Math.max(0.52, Math.min(1, best)));
+      // Final safety: if still overflowing after fit, clamp hard.
+      if (body.getBoundingClientRect().height > available + 2) {
+        applyBodyScale(body, Math.max(0.52, available / Math.max(needed, 1)));
+      }
     });
   };
 
@@ -258,27 +292,15 @@ function wireDashboardCarousel() {
     fitFrame = window.requestAnimationFrame(() => {
       fitFrame = 0;
       fitSlideBodies();
-      syncTrackPosition(currentSlide);
+      // Second pass after layout settles (fonts / images / safe-area).
+      window.requestAnimationFrame(() => {
+        fitSlideBodies();
+        syncTrackPosition(currentSlide);
+      });
     });
   };
 
-  const canScrollInsideActiveSlide = (deltaY) => {
-    if (mobileFitMq.matches) {
-      return false;
-    }
-    const activeSlide = slides[currentSlide];
-    if (!activeSlide) {
-      return false;
-    }
-    const maxScroll = activeSlide.scrollHeight - activeSlide.clientHeight;
-    if (maxScroll <= 1) {
-      return false;
-    }
-    if (deltaY > 0) {
-      return activeSlide.scrollTop < maxScroll - 1;
-    }
-    return activeSlide.scrollTop > 1;
-  };
+  const canScrollInsideActiveSlide = () => false;
 
   const syncTrackPosition = (index) => {
     const offset = Math.max(0, track.clientHeight) * index;
@@ -423,6 +445,12 @@ function wireDashboardCarousel() {
 
   window.addEventListener("resize", () => {
     scheduleFitSlideBodies();
+  });
+  window.visualViewport?.addEventListener("resize", () => {
+    scheduleFitSlideBodies();
+  });
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(scheduleFitSlideBodies, 120);
   });
 
   if (typeof mobileFitMq.addEventListener === "function") {

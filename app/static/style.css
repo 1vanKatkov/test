@@ -3770,10 +3770,9 @@ button.page-back-arrow {
   min-height: 100%;
   max-height: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
   display: block;
   opacity: 0.45;
   transform: scale(0.97);
@@ -3790,8 +3789,11 @@ button.page-back-arrow {
   gap: 12px;
   align-content: start;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   box-sizing: border-box;
   transform-origin: top center;
+  overflow: hidden;
 }
 
 .dashboard-slide.is-active {
@@ -3825,7 +3827,7 @@ button.page-back-arrow {
 }
 
 .dashboard-slide-services {
-  overflow-y: auto;
+  overflow: hidden;
   padding-right: 2px;
 }
 
@@ -3834,7 +3836,7 @@ button.page-back-arrow {
 }
 
 .dashboard-slide-faq {
-  overflow-y: auto;
+  overflow: hidden;
   padding-right: 2px;
 }
 
@@ -4228,6 +4230,7 @@ button.page-back-arrow {
 
 .mobile-client-shell.client-dashboard-page .dashboard-carousel {
   height: calc(100dvh - 88px);
+  min-height: 0;
 }
 
 @media (max-width: 767px) {
@@ -4406,15 +4409,43 @@ button.page-back-arrow {
 }
 
 @media (max-width: 767px) and (max-height: 740px) {
+  .mobile-client-shell.client-dashboard-page .dashboard-template-hero {
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 10px;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-hero-copy h1 {
+    font-size: clamp(28px, 9vw, 38px);
+  }
+
   .mobile-client-shell.client-dashboard-page .dashboard-template-hero-copy p {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-top: 4px;
+    font-size: 12px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-template-section-subtitle {
     display: none;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-slide-body {
+    gap: 6px;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-list {
+    gap: 6px;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card {
+    padding: 8px 10px;
+    grid-template-columns: 32px minmax(0, 1fr) 56px;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-art {
+    width: 56px;
+    height: 44px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card small {
@@ -4422,6 +4453,11 @@ button.page-back-arrow {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-cta.dashboard-go-services-btn {
+    min-height: 44px;
+    font-size: 16px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-services .tile-description {
@@ -4439,6 +4475,28 @@ button.page-back-arrow {
   }
 }
 
+@media (max-width: 767px) and (max-height: 640px) {
+  .mobile-client-shell.client-dashboard-page .dashboard-template-section-head {
+    display: none;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-hero-copy p {
+    display: none;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card small {
+    display: none;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-art {
+    display: none;
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+}
+
 .dashboard-template-slide {
   gap: 16px;
   min-height: 0;
@@ -4448,7 +4506,7 @@ button.page-back-arrow {
   position: relative;
   width: calc(100% + 24px);
   margin: -14px -12px 0;
-  min-height: 228px;
+  min-height: 0;
   overflow: hidden;
   border-radius: 0 0 24px 24px;
   padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 16px;
@@ -4856,65 +4914,98 @@ button.page-back-arrow {
 }
 
 .dashboard-slide-intro.dashboard-template-slide {
-  overflow-y: auto;
+  overflow: hidden;
   padding-right: 2px;
 }
 
 .dashboard-slide-intro.dashboard-template-slide .dashboard-slide-body {
-  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashboard-slide-intro .dashboard-template-hero {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.dashboard-slide-intro .dashboard-template-section-head {
+  flex: 0 0 auto;
+}
+
+.dashboard-slide-intro .dashboard-template-feature-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+.dashboard-slide-intro .dashboard-template-feature-card {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.dashboard-slide-intro .dashboard-template-cta.dashboard-go-services-btn {
+  flex: 0 0 auto;
+  margin-top: auto;
 }
 
 .client-dashboard-page .dashboard-slide-intro.dashboard-template-slide .dashboard-slide-body {
-  padding-bottom: 28px;
+  padding-bottom: 8px;
 }
 
 @media (max-width: 390px), (max-height: 760px) {
   .dashboard-template-slide {
-    gap: 12px;
+    gap: 10px;
   }
 
   .dashboard-template-hero {
     width: calc(100% + 20px);
     margin: -14px -10px 0;
-    min-height: 196px;
-    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px 14px;
+    min-height: 0;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 14px 12px;
   }
 
   .dashboard-template-hero-copy h1 {
-    font-size: clamp(36px, 11vw, 48px);
+    font-size: clamp(32px, 10vw, 44px);
   }
 
   .dashboard-template-hero-copy p {
-    margin-top: 8px;
+    margin-top: 6px;
     font-size: 13px;
   }
 
   .dashboard-template-user-card {
     width: fit-content;
     max-width: 100%;
-    margin-top: 10px;
+    margin-top: 8px;
     padding: 8px 10px;
   }
 
   .dashboard-template-feature-list {
-    gap: 10px;
+    gap: 8px;
   }
 
   .dashboard-template-feature-card {
-    min-height: 104px;
+    min-height: 0;
     grid-template-columns: 40px minmax(0, 1fr) 72px;
     gap: 8px;
-    padding: 12px;
+    padding: 10px 12px;
   }
 
   .dashboard-template-feature-icon img {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
   .dashboard-template-feature-art {
-    width: 72px;
-    height: 60px;
+    width: 68px;
+    height: 56px;
   }
 
   .dashboard-template-feature-card strong {
@@ -4926,12 +5017,12 @@ button.page-back-arrow {
   }
 
   .dashboard-template-section-title {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .dashboard-template-cta.dashboard-go-services-btn {
-    min-height: 54px;
-    font-size: 19px;
+    min-height: 48px;
+    font-size: 17px;
   }
 }
 
