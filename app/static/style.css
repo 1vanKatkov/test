@@ -4268,7 +4268,7 @@ button.page-back-arrow {
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro.dashboard-template-slide .dashboard-slide-body {
     padding-bottom: 0;
-    flex: 1 1 0;
+    flex: 0 1 auto;
     min-height: 0;
     height: auto;
   }
@@ -4937,8 +4937,8 @@ button.page-back-arrow {
   flex-direction: column;
   gap: 8px;
   padding-bottom: 0;
-  /* flex-basis 0 + min-height 0: body fills leftover space and never pushes CTA off-screen */
-  flex: 1 1 0;
+  /* Don't stretch: keep CTA dock right under the cards (higher on screen). */
+  flex: 0 1 auto;
   height: auto;
   max-height: none;
   min-height: 0;
@@ -4947,10 +4947,10 @@ button.page-back-arrow {
 
 .dashboard-slide-cta-dock {
   flex: 0 0 auto;
-  margin-top: auto;
+  margin-top: 0;
   display: flex;
   justify-content: center;
-  padding: 8px 0 4px;
+  padding: 10px 0 4px;
   z-index: 3;
 }
 
