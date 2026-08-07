@@ -4266,9 +4266,11 @@ button.page-back-arrow {
     -webkit-overflow-scrolling: auto;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro.dashboard-template-slide,
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro.dashboard-template-slide .dashboard-slide-body {
     padding-bottom: 0;
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-template-slide {
@@ -4318,36 +4320,42 @@ button.page-back-arrow {
     gap: 8px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card {
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-card {
     min-height: 0;
-    grid-template-columns: 36px minmax(0, 1fr) 64px;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: 18px;
+    height: auto;
+    grid-template-columns: 28px minmax(0, 1fr) 48px;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 14px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-icon img {
-    width: 32px;
-    height: 32px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-icon img {
+    width: 24px;
+    height: 24px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-art {
-    width: 64px;
-    height: 52px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-art {
+    width: 48px;
+    height: 36px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card strong {
-    font-size: 13px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-card strong {
+    font-size: 12px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card small {
-    font-size: 11px;
-    line-height: 1.3;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-card small {
+    font-size: 10px;
+    line-height: 1.2;
+    -webkit-line-clamp: 2;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-cta.dashboard-go-services-btn {
-    min-height: 48px;
-    font-size: 17px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-cta-dock {
+    padding: 6px 0 max(2px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-cta-dock .dashboard-template-cta.dashboard-go-services-btn {
+    min-height: 44px;
+    font-size: 16px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-services-title {
@@ -4438,26 +4446,26 @@ button.page-back-arrow {
     gap: 6px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card {
-    padding: 8px 10px;
-    grid-template-columns: 32px minmax(0, 1fr) 56px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-card {
+    padding: 5px 8px;
+    grid-template-columns: 26px minmax(0, 1fr) 44px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-art {
-    width: 56px;
-    height: 44px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-art {
+    width: 44px;
+    height: 32px;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card small {
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-card small {
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-template-cta.dashboard-go-services-btn {
-    min-height: 44px;
-    font-size: 16px;
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-cta-dock .dashboard-template-cta.dashboard-go-services-btn {
+    min-height: 42px;
+    font-size: 15px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-services .tile-description {
@@ -4493,7 +4501,10 @@ button.page-back-arrow {
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-template-feature-card {
-    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr);
+    min-height: 0;
+    height: auto;
+    padding: 6px 8px;
   }
 }
 
@@ -4916,20 +4927,41 @@ button.page-back-arrow {
 .dashboard-slide-intro.dashboard-template-slide {
   overflow: hidden;
   padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .dashboard-slide-intro.dashboard-template-slide .dashboard-slide-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 8px;
-  height: 100%;
+  gap: 8px;
+  padding-bottom: 0;
+  /* flex-basis 0 + min-height 0: body fills leftover space and never pushes CTA off-screen */
+  flex: 1 1 0;
+  height: auto;
+  max-height: none;
   min-height: 0;
   overflow: hidden;
 }
 
+.dashboard-slide-cta-dock {
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+  z-index: 3;
+}
+
+.dashboard-slide-cta-dock .dashboard-template-cta.dashboard-go-services-btn {
+  width: min(320px, 92%);
+  margin: 0;
+  min-height: 48px;
+}
+
 .dashboard-slide-intro .dashboard-template-hero {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
 }
 
@@ -4938,25 +4970,56 @@ button.page-back-arrow {
 }
 
 .dashboard-slide-intro .dashboard-template-feature-list {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: inherit;
+  gap: 6px;
+  overflow: hidden;
 }
 
 .dashboard-slide-intro .dashboard-template-feature-card {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-height: 0;
+  height: auto;
+  max-height: none;
+  padding: 7px 10px;
+  gap: 6px;
+  grid-template-columns: 28px minmax(0, 1fr) 48px;
+  align-items: center;
+  border-radius: 14px;
 }
 
-.dashboard-slide-intro .dashboard-template-cta.dashboard-go-services-btn {
-  flex: 0 0 auto;
-  margin-top: auto;
+.dashboard-slide-intro .dashboard-template-feature-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+.dashboard-slide-intro .dashboard-template-feature-art {
+  width: 48px;
+  height: 36px;
+}
+
+.dashboard-slide-intro .dashboard-template-feature-card strong {
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.dashboard-slide-intro .dashboard-template-feature-card small {
+  font-size: 10px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dashboard-slide-intro .dashboard-template-feature-copy {
+  gap: 2px;
 }
 
 .client-dashboard-page .dashboard-slide-intro.dashboard-template-slide .dashboard-slide-body {
-  padding-bottom: 8px;
+  padding-bottom: 0;
 }
 
 .dashboard-slide-intro.is-dense .dashboard-template-section-subtitle,
@@ -4972,12 +5035,32 @@ button.page-back-arrow {
   display: none;
 }
 
+.dashboard-slide-intro.is-compact .dashboard-template-feature-card {
+  padding: 7px 10px;
+  grid-template-columns: 28px minmax(0, 1fr);
+}
+
+.dashboard-slide-intro.is-compact .dashboard-template-feature-art {
+  display: none;
+}
+
 .dashboard-slide-intro.is-ultra .dashboard-template-feature-art {
   display: none;
 }
 
 .dashboard-slide-intro.is-ultra .dashboard-template-feature-card {
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr);
+  padding: 6px 10px;
+  gap: 6px;
+}
+
+.dashboard-slide-intro.is-ultra .dashboard-template-feature-list {
+  gap: 4px;
+}
+
+.dashboard-slide-intro.is-ultra .dashboard-slide-cta-dock .dashboard-template-cta {
+  min-height: 44px;
+  font-size: 16px;
 }
 
 @media (max-width: 390px), (max-height: 760px) {
@@ -5239,27 +5322,25 @@ button.page-back-arrow {
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    flex: 1 1 auto;
+    gap: 8px;
+    flex: 0 1 auto;
     min-height: 0;
+    align-content: start;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-card {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    align-content: start;
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-content: center;
     justify-items: start;
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
-    height: 100%;
-    padding: 14px;
+    height: auto;
+    padding: 8px 10px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-feature-art {
-    width: 72px;
-    height: 56px;
-    justify-self: end;
-    order: -1;
+    display: none;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-hero {
@@ -5272,10 +5353,8 @@ button.page-back-arrow {
     font-size: clamp(36px, 4.5vw, 52px);
   }
 
-  .mobile-client-shell.client-dashboard-page .dashboard-slide-intro .dashboard-template-cta.dashboard-go-services-btn {
+  .mobile-client-shell.client-dashboard-page .dashboard-slide-cta-dock .dashboard-template-cta.dashboard-go-services-btn {
     width: min(360px, 100%);
-    justify-self: center;
-    align-self: center;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro.is-dense .dashboard-template-section-subtitle,
@@ -5302,7 +5381,7 @@ button.page-back-arrow {
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro.is-ultra .dashboard-template-feature-card {
     grid-template-rows: auto;
-    padding: 12px;
+    padding: 8px 10px;
   }
 
   .mobile-client-shell.client-dashboard-page .dashboard-slide-intro.is-ultra .dashboard-template-user-card {

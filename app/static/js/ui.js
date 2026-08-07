@@ -274,20 +274,22 @@ function wireDashboardCarousel() {
       }
       resetSlideFit(body);
       slide.classList.remove("is-dense", "is-compact", "is-ultra");
-      const available = slide.clientHeight;
+
+      const ctaDock = slide.querySelector(":scope > .dashboard-slide-cta-dock");
+      const ctaHeight = ctaDock ? Math.ceil(ctaDock.getBoundingClientRect().height) : 0;
+      const availableTotal = slide.clientHeight;
+      const available = Math.max(0, availableTotal - ctaHeight);
       if (available <= 0) {
         return;
       }
 
       let needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
       densifyIntroSlide(slide, available, needed);
-      // Re-measure after density classes change layout.
       needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
       if (needed <= available + 1) {
         return;
       }
 
-      // Progressive densify if still overflowing before scale.
       if (slide.classList.contains("dashboard-slide-intro") && !slide.classList.contains("is-ultra")) {
         slide.classList.add("is-dense", "is-compact", "is-ultra");
         needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
@@ -296,7 +298,7 @@ function wireDashboardCarousel() {
         }
       }
 
-      let low = 0.48;
+      let low = 0.45;
       let high = Math.min(1, available / needed);
       let best = high;
       for (let i = 0; i < 10; i += 1) {
@@ -309,9 +311,9 @@ function wireDashboardCarousel() {
           high = mid;
         }
       }
-      applyBodyScale(body, Math.max(0.48, Math.min(1, best)));
+      applyBodyScale(body, Math.max(0.45, Math.min(1, best)));
       if (body.getBoundingClientRect().height > available + 2) {
-        applyBodyScale(body, Math.max(0.48, available / Math.max(needed, 1)));
+        applyBodyScale(body, Math.max(0.45, available / Math.max(needed, 1)));
       }
     });
   };
