@@ -1878,9 +1878,11 @@ async def admin_dashboard(
     request: Request,
     lang: str = Query(default=""),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
 ):
     try:
-        _require_admin_email_user(email_identity)
+        _require_admin_user(email_identity, telegram_identity, max_identity)
     except HTTPException as exc:
         if exc.status_code == 401:
             return RedirectResponse(url="/static/auth/login.html?next=/admin", status_code=302)
@@ -2496,12 +2498,33 @@ def _require_authenticated_user(
     raise HTTPException(status_code=401, detail="Authentication is required")
 
 
-def _require_admin_email_user(email_identity: EmailIdentity | None) -> int:
-    if not email_identity:
-        raise HTTPException(status_code=401, detail="Admin access requires email authentication")
-    if not db.is_user_admin(email_identity.internal_user_id):
-        raise HTTPException(status_code=403, detail="Admin access denied")
-    return email_identity.internal_user_id
+def _require_admin_user(
+    email_identity: EmailIdentity | None = None,
+    telegram_identity: TelegramIdentity | None = None,
+    max_identity: MaxIdentity | None = None,
+) -> int:
+    candidates: list[int] = []
+    if email_identity is not None:
+        candidates.append(int(email_identity.internal_user_id))
+    if telegram_identity is not None:
+        candidates.append(int(telegram_identity.internal_user_id))
+    if max_identity is not None:
+        candidates.append(int(max_identity.internal_user_id))
+    if not candidates:
+        raise HTTPException(status_code=401, detail="Authentication is required")
+    for user_id in candidates:
+        if db.is_user_admin(user_id):
+            return user_id
+    raise HTTPException(status_code=403, detail="Admin access denied")
+
+
+def _require_admin_email_user(
+    email_identity: EmailIdentity | None,
+    telegram_identity: TelegramIdentity | None = None,
+    max_identity: MaxIdentity | None = None,
+) -> int:
+    # Backward-compatible alias used by admin routes.
+    return _require_admin_user(email_identity, telegram_identity, max_identity)
 
 
 def _admin_date_range(date_from: str = "", date_to: str = "", days: int = 30) -> tuple[str, str]:
@@ -2601,7 +2624,7 @@ async def api_admin_stats_overview(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _admin_user_id = _require_admin_email_user(email_identity)
+    _admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, **db.get_admin_overview_stats(start, end)}
 
@@ -2609,10 +2632,13 @@ async def api_admin_stats_overview(
 @app.get("/api/admin/me")
 async def api_admin_me(
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
 ):
-    if not email_identity:
-        return {"is_admin": False}
-    return {"is_admin": db.is_user_admin(email_identity.internal_user_id)}
+    for identity in (email_identity, telegram_identity, max_identity):
+        if identity is not None and db.is_user_admin(int(identity.internal_user_id)):
+            return {"is_admin": True}
+    return {"is_admin": False}
 
 
 @app.get("/api/admin/users/search")
@@ -2622,9 +2648,11 @@ async def api_admin_users_search(
     role: str = Query(default="", max_length=16),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     _record_admin_audit(
         admin_user_id,
         "search_users",
@@ -2650,9 +2678,11 @@ async def api_admin_users_search(
 @app.post("/api/admin/users/adjust-credits")
 async def api_admin_adjust_credits(
     payload: AdminAdjustCreditsRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     max_adjustment = max(settings.admin_max_credit_adjustment, 1)
     if abs(payload.amount) > max_adjustment:
         raise HTTPException(status_code=400, detail=f"Amount exceeds admin limit ({max_adjustment})")
@@ -2703,7 +2733,7 @@ async def api_admin_stats_modules(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _admin_user_id = _require_admin_email_user(email_identity)
+    _admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, "modules": [dict(row) for row in db.get_admin_module_stats(start, end)]}
 
@@ -2712,9 +2742,11 @@ async def api_admin_stats_modules(
 async def api_admin_stats_daily(
     date_from: str = Query(default="", alias="from"),
     date_to: str = Query(default="", alias="to"),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
+    _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, "days": [dict(row) for row in db.get_admin_daily_stats(start, end)]}
 
@@ -2723,9 +2755,11 @@ async def api_admin_stats_daily(
 async def api_admin_stats_payments(
     date_from: str = Query(default="", alias="from"),
     date_to: str = Query(default="", alias="to"),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
+    _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, "payments": [dict(row) for row in db.get_admin_payment_stats(start, end)]}
 
@@ -2734,9 +2768,11 @@ async def api_admin_stats_payments(
 async def api_admin_stats_sparks(
     date_from: str = Query(default="", alias="from"),
     date_to: str = Query(default="", alias="to"),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
+    _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, "sparks": [dict(row) for row in db.get_admin_spark_stats(start, end)]}
 
@@ -2745,9 +2781,11 @@ async def api_admin_stats_sparks(
 async def api_admin_stats_providers(
     date_from: str = Query(default="", alias="from"),
     date_to: str = Query(default="", alias="to"),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
+    _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, "providers": [dict(row) for row in db.get_admin_provider_stats(start, end)]}
 
@@ -2756,9 +2794,11 @@ async def api_admin_stats_providers(
 async def api_admin_stats_top_users(
     date_from: str = Query(default="", alias="from"),
     date_to: str = Query(default="", alias="to"),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
+    _require_admin_user(email_identity, telegram_identity, max_identity)
     start, end = _admin_date_range(date_from, date_to)
     return {"success": True, "from": start, "to": end, "users": [dict(row) for row in db.get_admin_top_users(start, end)]}
 
@@ -2766,9 +2806,11 @@ async def api_admin_stats_top_users(
 @app.get("/api/admin/users/{user_id}")
 async def api_admin_user_detail(
     user_id: int,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     row = db.get_admin_user_detail(user_id)
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2779,9 +2821,11 @@ async def api_admin_user_detail(
 @app.get("/api/admin/users/{user_id}/history")
 async def api_admin_user_history(
     user_id: int,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     _record_admin_audit(admin_user_id, "view_user_history", user_id)
     return {"success": True, "items": [dict(row) for row in db.list_request_history(user_id=user_id, limit=50)]}
 
@@ -2789,9 +2833,11 @@ async def api_admin_user_history(
 @app.get("/api/admin/users/{user_id}/transactions")
 async def api_admin_user_transactions(
     user_id: int,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     _record_admin_audit(admin_user_id, "view_user_transactions", user_id)
     return {"success": True, "transactions": [dict(row) for row in db.list_transactions_for_user(user_id=user_id, limit=50)]}
 
@@ -2799,9 +2845,11 @@ async def api_admin_user_transactions(
 @app.get("/api/admin/users/{user_id}/payments")
 async def api_admin_user_payments(
     user_id: int,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     _record_admin_audit(admin_user_id, "view_user_payments", user_id)
     return {"success": True, "payments": [dict(row) for row in db.list_payments_for_user_admin(user_id=user_id, limit=50)]}
 
@@ -2810,9 +2858,11 @@ async def api_admin_user_payments(
 async def api_admin_set_role(
     user_id: int,
     payload: AdminSetRoleRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     user = db.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2830,10 +2880,12 @@ async def api_admin_set_role(
 
 @app.get("/api/admin/support/tickets")
 async def api_admin_support_tickets(
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
     status: str = Query(default=""),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     _record_admin_audit(admin_user_id, "list_support_tickets", metadata={"status": status.strip()})
     rows = db.list_support_tickets_admin(status=status.strip() or None)
     return {"success": True, "tickets": [dict(row) for row in rows]}
@@ -2846,7 +2898,7 @@ async def api_admin_support_ticket_details(
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     ticket = db.get_support_ticket(ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -2859,9 +2911,11 @@ async def api_admin_support_ticket_details(
 async def api_admin_support_ticket_reply(
     ticket_id: int,
     payload: AdminSupportReplyRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     ticket = db.get_support_ticket(ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -2875,9 +2929,11 @@ async def api_admin_support_ticket_reply(
 async def api_admin_support_ticket_status(
     ticket_id: int,
     payload: AdminTicketStatusRequest,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    admin_user_id = _require_admin_email_user(email_identity)
+    admin_user_id = _require_admin_user(email_identity, telegram_identity, max_identity)
     ticket = db.get_support_ticket(ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -2891,9 +2947,11 @@ async def api_admin_support_ticket_status(
 async def api_admin_audit_log(
     limit: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    _require_admin_email_user(email_identity)
+    _require_admin_user(email_identity, telegram_identity, max_identity)
     return {"success": True, "items": [dict(row) for row in db.list_admin_audit_log(limit=limit, offset=offset)]}
 
 
