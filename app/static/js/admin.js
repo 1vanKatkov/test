@@ -14,6 +14,8 @@ function adminText(key) {
     usersTotal: "Всего пользователей",
     newUsers: "Новые пользователи",
     activeUsers: "Активные пользователи",
+    uniqueVisitorsTotal: "Уникальные посетители",
+    uniqueVisitorsPeriod: "Уникальные заходы за период",
     requests: "Запросы",
     successfulPayments: "Успешные платежи",
     revenue: "Выручка",
@@ -21,11 +23,13 @@ function adminText(key) {
     sparksAdded: "Начислено искр",
     openTickets: "Открытые обращения",
     newUsersByDay: "Новые пользователи по дням",
+    uniqueVisitsByDay: "Уникальные заходы по дням",
     requestsByDay: "Запросы по дням",
     revenueByDay: "Выручка по дням",
     supportTicketsByDay: "Обращения в поддержку по дням",
     dateAxis: "Дата",
     usersAxis: "Пользователи",
+    visitsAxis: "Заходы",
     requestsAxis: "Запросы",
     revenueAxis: "Выручка, ₽",
     ticketsAxis: "Обращения",
@@ -53,6 +57,8 @@ function adminText(key) {
     usersTotal: "Users total",
     newUsers: "New users",
     activeUsers: "Active users",
+    uniqueVisitorsTotal: "Unique visitors",
+    uniqueVisitorsPeriod: "Unique visits in period",
     requests: "Requests",
     successfulPayments: "Successful payments",
     revenue: "Revenue",
@@ -60,11 +66,13 @@ function adminText(key) {
     sparksAdded: "Sparks added",
     openTickets: "Open tickets",
     newUsersByDay: "New users by day",
+    uniqueVisitsByDay: "Unique visits by day",
     requestsByDay: "Requests by day",
     revenueByDay: "Revenue by day",
     supportTicketsByDay: "Support tickets by day",
     dateAxis: "Date",
     usersAxis: "Users",
+    visitsAxis: "Visits",
     requestsAxis: "Requests",
     revenueAxis: "Revenue, ₽",
     ticketsAxis: "Tickets",
@@ -118,6 +126,8 @@ function renderAdminKpi(overview) {
     return;
   }
   const items = [
+    [adminText("uniqueVisitorsTotal"), overview.unique_visitors_total],
+    [adminText("uniqueVisitorsPeriod"), overview.unique_visitors_period],
     [adminText("usersTotal"), overview.users_total],
     [adminText("newUsers"), overview.new_users],
     [adminText("activeUsers"), overview.active_users],
@@ -221,6 +231,7 @@ function renderAdminDailyCharts(days) {
     return;
   }
   container.innerHTML = "";
+  renderAdminLineChart("admin-daily-charts", adminText("uniqueVisitsByDay"), days, "unique_visits", adminText("visitsAxis"));
   renderAdminLineChart("admin-daily-charts", adminText("newUsersByDay"), days, "new_users", adminText("usersAxis"));
   renderAdminLineChart("admin-daily-charts", adminText("requestsByDay"), days, "requests", adminText("requestsAxis"));
   renderAdminLineChart("admin-daily-charts", adminText("revenueByDay"), days, "revenue", adminText("revenueAxis"));

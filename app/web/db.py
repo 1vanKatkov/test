@@ -166,6 +166,20 @@ class Database:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS site_visits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    visitor_key TEXT NOT NULL,
+                    path TEXT NOT NULL DEFAULT '/',
+                    day TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(visitor_key, day)
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_day ON site_visits(day)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_visitor ON site_visits(visitor_key)")
             self._ensure_column(conn, "users", "subscription_end", "TEXT")
             self._ensure_column(conn, "users", "password_hash", "TEXT")
             self._ensure_column(conn, "users", "role", "TEXT DEFAULT 'user'")
@@ -843,11 +857,31 @@ class Database:
         finally:
             conn.close()
 
+    def record_site_visit(self, visitor_key: str, path: str = "/") -> bool:
+        """Record at most one unique visit per visitor_key per calendar day. Returns True if inserted."""
+        key = (visitor_key or "").strip()
+        if not key:
+            return False
+        clean_path = (path or "/")[:200]
+        now = self._now()
+        day = now[:10]
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO site_visits (visitor_key, path, day, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (key, clean_path, day, now),
+            )
+            return cursor.rowcount > 0
+
     def get_admin_overview_stats(self, date_from: str = "", date_to: str = "") -> dict[str, int]:
         conn = self.connect()
         try:
             period_clause = "substr(created_at, 1, 10) BETWEEN ? AND ?" if date_from and date_to else "1=1"
             period_params = (date_from, date_to) if date_from and date_to else ()
+            visit_period_clause = "day BETWEEN ? AND ?" if date_from and date_to else "1=1"
+            visit_period_params = (date_from, date_to) if date_from and date_to else ()
             users_total = int(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0])
             requests_total = int(conn.execute("SELECT COUNT(*) FROM request_history").fetchone()[0])
             payments_total = int(conn.execute("SELECT COUNT(*) FROM payments").fetchone()[0])
@@ -890,6 +924,13 @@ class Database:
                     period_params,
                 ).fetchone()[0]
             )
+            unique_visitors_total = int(conn.execute("SELECT COUNT(DISTINCT visitor_key) FROM site_visits").fetchone()[0])
+            unique_visitors_period = int(
+                conn.execute(
+                    f"SELECT COUNT(DISTINCT visitor_key) FROM site_visits WHERE {visit_period_clause}",
+                    visit_period_params,
+                ).fetchone()[0]
+            )
             return {
                 "users_total": users_total,
                 "requests_total": requests_total,
@@ -904,6 +945,8 @@ class Database:
                 "period_revenue": period_revenue,
                 "sparks_charged": sparks_charged,
                 "sparks_added": sparks_added,
+                "unique_visitors_total": unique_visitors_total,
+                "unique_visitors_period": unique_visitors_period,
             }
         finally:
             conn.close()
@@ -1061,7 +1104,7 @@ class Database:
     def get_admin_daily_stats(self, date_from: str, date_to: str) -> list[sqlite3.Row]:
         conn = self.connect()
         try:
-            params = (date_from, date_to) * 6
+            params = (date_from, date_to) * 7
             return conn.execute(
                 """
                 SELECT day,
@@ -1072,26 +1115,31 @@ class Database:
                        SUM(succeeded_payments) AS succeeded_payments,
                        SUM(sparks_charged) AS sparks_charged,
                        SUM(sparks_added) AS sparks_added,
-                       SUM(tickets_opened) AS tickets_opened
+                       SUM(tickets_opened) AS tickets_opened,
+                       SUM(unique_visits) AS unique_visits
                 FROM (
                     SELECT substr(created_at,1,10) AS day, COUNT(*) AS new_users, 0 AS requests, 0 AS active_users,
-                           0 AS revenue, 0 AS succeeded_payments, 0 AS sparks_charged, 0 AS sparks_added, 0 AS tickets_opened
+                           0 AS revenue, 0 AS succeeded_payments, 0 AS sparks_charged, 0 AS sparks_added, 0 AS tickets_opened,
+                           0 AS unique_visits
                     FROM users WHERE substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
                     UNION ALL
-                    SELECT substr(created_at,1,10), 0, COUNT(*), COUNT(DISTINCT user_id), 0, 0, 0, 0, 0
+                    SELECT substr(created_at,1,10), 0, COUNT(*), COUNT(DISTINCT user_id), 0, 0, 0, 0, 0, 0
                     FROM request_history WHERE substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
                     UNION ALL
-                    SELECT substr(created_at,1,10), 0, 0, 0, COALESCE(SUM(amount), 0), COUNT(*), 0, 0, 0
+                    SELECT substr(created_at,1,10), 0, 0, 0, COALESCE(SUM(amount), 0), COUNT(*), 0, 0, 0, 0
                     FROM payments WHERE status='succeeded' AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
                     UNION ALL
-                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, COALESCE(SUM(ABS(amount)), 0), 0, 0
+                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, COALESCE(SUM(ABS(amount)), 0), 0, 0, 0
                     FROM transactions WHERE amount < 0 AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
                     UNION ALL
-                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, 0, COALESCE(SUM(amount), 0), 0
+                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, 0, COALESCE(SUM(amount), 0), 0, 0
                     FROM transactions WHERE amount > 0 AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
                     UNION ALL
-                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, 0, 0, COUNT(*)
+                    SELECT substr(created_at,1,10), 0, 0, 0, 0, 0, 0, 0, COUNT(*), 0
                     FROM support_tickets WHERE substr(created_at,1,10) BETWEEN ? AND ? GROUP BY 1
+                    UNION ALL
+                    SELECT day, 0, 0, 0, 0, 0, 0, 0, 0, COUNT(*)
+                    FROM site_visits WHERE day BETWEEN ? AND ? GROUP BY 1
                 )
                 GROUP BY day
                 ORDER BY day

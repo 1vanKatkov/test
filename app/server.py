@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -102,6 +104,63 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title=settings.app_title, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+_logger = logging.getLogger(__name__)
+_BOT_UA_RE = re.compile(
+    r"bot|crawler|spider|curl|wget|python-requests|httpclient|monitor|uptime|healthcheck|scrapy|semrush|ahrefs",
+    re.I,
+)
+_SKIP_VISIT_PREFIXES = (
+    "/api/",
+    "/static/",
+    "/health",
+    "/favicon",
+    "/robots.txt",
+    "/sitemap",
+)
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    real_ip = (request.headers.get("x-real-ip") or "").strip()
+    if real_ip:
+        return real_ip
+    if request.client and request.client.host:
+        return request.client.host
+    return ""
+
+
+def _should_track_site_visit(request: Request) -> bool:
+    if request.method.upper() != "GET":
+        return False
+    path = request.url.path or "/"
+    lowered = path.lower()
+    if any(lowered.startswith(prefix) for prefix in _SKIP_VISIT_PREFIXES):
+        return False
+    ua = request.headers.get("user-agent") or ""
+    if not ua or _BOT_UA_RE.search(ua):
+        return False
+    return True
+
+
+def _visitor_key(request: Request) -> str:
+    ip = _client_ip(request)
+    ua = (request.headers.get("user-agent") or "")[:240]
+    raw = f"{ip}|{ua}".encode("utf-8", errors="ignore")
+    return hashlib.sha256(raw).hexdigest()[:32]
+
+
+@app.middleware("http")
+async def track_unique_site_visits(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code < 400 and _should_track_site_visit(request):
+        try:
+            await run_in_threadpool(db.record_site_visit, _visitor_key(request), request.url.path or "/")
+        except Exception:
+            _logger.exception("Failed to record site visit")
+    return response
 
 
 @app.exception_handler(RequestValidationError)
@@ -1587,7 +1646,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "dashboard-cta-higher-v6",
+        "assets_version": "admin-unique-visits-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
