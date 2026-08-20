@@ -5,63 +5,79 @@
 {% block main_class %}mobile-client card-readings-page service-theme-page profile-theme-page{% endblock %}
 
 {% block content %}
-  <section class="card compact-card service-theme-hero profile-hero">
-    <div class="profile-hero-head">
-      <div>
-        <h2>{{ t.profile }}</h2>
-        <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+  <section class="card auth-gated-card service-theme-shell profile-hero compact-card service-theme-hero">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/profile">{{ t.sign_in_required_action }}</a>
+    </div>
+    <div class="auth-required-content">
+      <div class="profile-hero-head">
+        <div>
+          <h2>{{ t.profile }}</h2>
+          <div class="muted"><span id="auth-provider">{{ initial_auth_provider }}</span></div>
+        </div>
+        <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
+          <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+          <span id="page-sparks">-</span>
+        </span>
       </div>
-      <span id="page-spark-pill" class="dashboard-spark-pill" hidden>
-        <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-        <span id="page-sparks">-</span>
-      </span>
-    </div>
-    <div class="profile-hero-actions">
-      <a class="secondary-btn profile-support-btn" href="/client/support">{{ t.support }}</a>
-      <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
+      <div class="profile-hero-actions">
+        <a class="secondary-btn profile-support-btn" href="/client/support">{{ t.support }}</a>
+        <button type="button" id="profile-logout-btn" class="secondary-btn profile-logout-btn" hidden>{{ t.logout or 'Выйти' }}</button>
+      </div>
     </div>
   </section>
 
-  <section class="card service-theme-shell profile-personas-card">
-    <div class="profile-personas-head">
-      <h2>{{ t.my_personas }}</h2>
-      <button
-        type="button"
-        id="profile-persona-add-btn"
-        class="profile-persona-add-btn"
-        aria-label="{{ t.persona_add }}"
-        title="{{ t.persona_add }}"
-      >+</button>
+  <section class="card auth-gated-card service-theme-shell profile-personas-card">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/profile">{{ t.sign_in_required_action }}</a>
     </div>
-    <div id="profile-personas-list" class="persona-list"></div>
-    <div id="profile-persona-result" class="result rich-result" hidden></div>
+    <div class="auth-required-content">
+      <div class="profile-personas-head">
+        <h2>{{ t.my_personas }}</h2>
+        <button
+          type="button"
+          id="profile-persona-add-btn"
+          class="profile-persona-add-btn"
+          aria-label="{{ t.persona_add }}"
+          title="{{ t.persona_add }}"
+        >+</button>
+      </div>
+      <div id="profile-personas-list" class="persona-list"></div>
+      <div id="profile-persona-result" class="result rich-result" hidden></div>
+    </div>
   </section>
 
-  <section class="card service-theme-shell profile-password-card" id="email-password-reset-panel" hidden>
-    <h2>{{ t.password_reset }}</h2>
+  <section class="card auth-gated-card service-theme-shell profile-password-card" id="email-password-reset-panel" hidden>
+    <div class="auth-required-content">
+      <h2>{{ t.password_reset }}</h2>
 
-    <div id="password-reset-step-start" class="form-grid service-theme-form">
-      <button type="button" id="password-reset-start-btn" class="primary-btn">{{ t.password_reset }}</button>
-    </div>
+      <div id="password-reset-step-start" class="form-grid service-theme-form">
+        <button type="button" id="password-reset-start-btn" class="primary-btn">{{ t.password_reset }}</button>
+      </div>
 
-    <div id="password-reset-step-code" class="form-grid service-theme-form" hidden>
-      <p class="muted">{{ t.password_reset_code_hint }}</p>
-      <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
-      <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" /></label>
-      <button type="button" id="password-reset-code-next-btn" class="primary-btn">{{ t.next }}</button>
-      <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back }}</button>
-    </div>
-
-    <div id="password-reset-step-password" hidden>
-      <form id="email-password-reset-form" class="form-grid service-theme-form">
-        <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" required /></label>
-        <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" required /></label>
-        <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
+      <div id="password-reset-step-code" class="form-grid service-theme-form" hidden>
+        <p class="muted">{{ t.password_reset_code_hint }}</p>
+        <button type="button" id="password-reset-request-btn" class="secondary-btn">{{ t.send_code }}</button>
+        <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" /></label>
+        <button type="button" id="password-reset-code-next-btn" class="primary-btn">{{ t.next }}</button>
         <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back }}</button>
-      </form>
-    </div>
+      </div>
 
-    <pre id="password-reset-result" class="result"></pre>
+      <div id="password-reset-step-password" hidden>
+        <form id="email-password-reset-form" class="form-grid service-theme-form">
+          <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
+          <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back }}</button>
+        </form>
+      </div>
+
+      <pre id="password-reset-result" class="result"></pre>
+    </div>
   </section>
 {% endblock %}
 

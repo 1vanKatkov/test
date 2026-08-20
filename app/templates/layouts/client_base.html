@@ -11,7 +11,7 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body
-  class="app-shell mobile-client-shell{% block body_class %}{% endblock %}"
+  class="app-shell mobile-client-shell is-guest{% block body_class %}{% endblock %}"
   data-dev-auth-bypass="{{ 'true' if dev_auth_bypass else 'false' }}"
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"

@@ -11,14 +11,21 @@
   {% include "partials/client_page_hero.html" %}
   {% endwith %}
 
-  <section class="card service-theme-shell">
-    <div class="history-row history-detail-card">
-      <div id="history-detail-meta" class="history-detail-meta"></div>
-      <div id="history-detail-request-text" class="history-detail-request-text"></div>
-      <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite" hidden></div>
-      <div id="history-detail-body" class="history-answer-body"></div>
-      <div id="history-detail-actions" class="history-actions"></div>
-      <div id="history-detail-result" class="result rich-result" hidden></div>
+  <section class="card auth-gated-card service-theme-shell">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/history">{{ t.sign_in_required_action }}</a>
+    </div>
+    <div class="auth-required-content">
+      <div class="history-row history-detail-card">
+        <div id="history-detail-meta" class="history-detail-meta"></div>
+        <div id="history-detail-request-text" class="history-detail-request-text"></div>
+        <div id="tarot-cards-result" class="result rich-result tarot-cards-result" aria-live="polite" hidden></div>
+        <div id="history-detail-body" class="history-answer-body"></div>
+        <div id="history-detail-actions" class="history-actions"></div>
+        <div id="history-detail-result" class="result rich-result" hidden></div>
+      </div>
     </div>
   </section>
 {% endblock %}

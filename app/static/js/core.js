@@ -24,6 +24,7 @@ const state = {
   personas: [],
   guestFreeRemaining: 0,
   guestFreeLimit: 2,
+  guestQuotaLoaded: false,
 };
 let telegramSdkLoadPromise = null;
 
@@ -815,15 +816,18 @@ function applyGuestFreeRemaining(value) {
 async function loadGuestQuota() {
   if (isLoggedIn()) {
     state.guestFreeRemaining = 0;
+    state.guestQuotaLoaded = true;
     return { remaining: 0, limit: 0, authenticated: true };
   }
   try {
     const result = await apiRequest("/api/guest/quota", "GET", null, { redirectOnUnauthorized: false });
     state.guestFreeLimit = Number(result.limit) || state.guestFreeLimit;
     state.guestFreeRemaining = Number(result.remaining) || 0;
+    state.guestQuotaLoaded = true;
     return result;
   } catch {
     state.guestFreeRemaining = 0;
+    state.guestQuotaLoaded = true;
     return { remaining: 0, limit: state.guestFreeLimit, authenticated: false };
   }
 }
@@ -1262,12 +1266,15 @@ function syncGuestOnlyChrome(isGuest) {
 function syncAuthRequiredSections(isGuest) {
   document.querySelectorAll(".auth-required-panel").forEach((panel) => {
     const allowsGuestFree = panel.getAttribute("data-guest-free-allowed") === "true";
-    const shouldLock = isGuest && !(allowsGuestFree && canUseGuestFreeReading());
+    // Before quota loads, keep guest-free services unlocked to avoid a login-wall flash.
+    const guestFreeOk = allowsGuestFree && (!state.guestQuotaLoaded || canUseGuestFreeReading());
+    const shouldLock = isGuest && !guestFreeOk;
     panel.hidden = !shouldLock;
   });
   document.querySelectorAll(".auth-required-content").forEach((content) => {
     const allowsGuestFree = content.getAttribute("data-guest-free-allowed") === "true";
-    const shouldLock = isGuest && !(allowsGuestFree && canUseGuestFreeReading());
+    const guestFreeOk = allowsGuestFree && (!state.guestQuotaLoaded || canUseGuestFreeReading());
+    const shouldLock = isGuest && !guestFreeOk;
     content.hidden = false;
     content.classList.toggle("is-auth-locked", shouldLock);
     content.querySelectorAll("input, textarea, select, button").forEach((control) => {

@@ -14,8 +14,8 @@
   --violet: #8b6ad9;
   --violet-strong: #7e48ff;
   --violet-soft: rgba(139, 106, 217, 0.2);
-  --violet-glow: var(--violet-glow);
-  --gold-soft: var(--gold-soft);
+  --violet-glow: rgba(126, 72, 255, 0.24);
+  --gold-soft: rgba(255, 214, 126, 0.28);
   --gold-btn-bg:
     radial-gradient(circle at 8% 14%, rgba(255, 255, 255, 0.58), transparent 28%),
     linear-gradient(180deg, #ffe3a3 0%, #f6c372 52%, #d99b4d 100%);
@@ -696,11 +696,11 @@ button:disabled {
   display: grid;
   gap: 10px;
   padding: 16px;
-  border: 1px solid rgba(101, 124, 255, 0.4);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(circle at top right, rgba(125, 84, 255, 0.28), transparent 36%),
-    rgba(15, 23, 48, 0.92);
+    radial-gradient(circle at top right, var(--violet-soft), transparent 36%),
+    linear-gradient(160deg, rgba(18, 14, 36, 0.96), rgba(12, 9, 26, 0.98));
 }
 
 .auth-gated-card {
@@ -5834,7 +5834,8 @@ button.page-back-arrow {
 }
 
 body.is-guest .guest-hide-save-persona,
-body.is-guest .guest-hide-saved-persona {
+body.is-guest .guest-hide-saved-persona,
+body.is-guest #profile-persona-add-btn {
   display: none !important;
 }
 
@@ -5963,4 +5964,93 @@ body.is-guest .guest-hide-saved-persona {
 
 .site-footer a:hover {
   text-decoration: underline;
+}
+
+/* Palette consistency overrides (violet/gold dark system) */
+.rich-result,
+.service-theme-page .rich-result,
+.service-theme-form,
+.service-theme-report,
+.ai-loading-card,
+.persona-picker-card,
+.profile-password-card,
+.selected-card-reading,
+.persona-mode-tabs label,
+.persona-list-row {
+  border-color: var(--border);
+  background:
+    radial-gradient(circle at top right, var(--violet-soft), transparent 42%),
+    linear-gradient(160deg, rgba(18, 14, 36, 0.96), rgba(12, 9, 26, 0.98));
+}
+
+.rich-result {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.rich-result hr {
+  border-color: rgba(232, 181, 90, 0.22);
+}
+
+.service-theme-form label,
+.form-grid.service-theme-form label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.service-theme-hero .muted,
+.service-about-hero p,
+.service-about-card p {
+  color: var(--muted);
+}
+
+.persona-mode-tabs label:has(input:checked),
+.persona-mode-tabs label.is-active {
+  border-color: rgba(232, 181, 90, 0.45);
+  box-shadow: 0 0 0 1px rgba(217, 155, 77, 0.18);
+}
+
+.profile-persona-add-btn {
+  border: 1px solid rgba(232, 181, 90, 0.35);
+  color: var(--accent);
+  background: rgba(217, 155, 77, 0.12);
+  box-shadow: none;
+}
+
+.profile-persona-add-btn:hover,
+.profile-persona-add-btn:focus-visible {
+  border-color: rgba(232, 181, 90, 0.55);
+  background: rgba(217, 155, 77, 0.2);
+  color: var(--primary-hover);
+}
+
+.floating-card,
+.section-alt,
+.feature-card {
+  border-color: var(--border);
+  background:
+    radial-gradient(circle at top right, var(--violet-soft), transparent 40%),
+    linear-gradient(160deg, rgba(18, 14, 36, 0.94), rgba(12, 9, 26, 0.98));
+}
+
+.feature-card:hover {
+  border-color: rgba(232, 181, 90, 0.4);
+}
+
+.site-header {
+  background: rgba(8, 5, 20, 0.88);
+  border-bottom-color: var(--border);
+}
+
+#numerology-form.service-theme-form,
+#compat-names-dates-form.service-theme-form,
+#astrology-form.service-theme-form,
+#sonnik-form.service-theme-form,
+#tarot-form.service-theme-form {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, var(--violet-soft), transparent 42%),
+    linear-gradient(160deg, rgba(18, 14, 36, 0.96), rgba(12, 9, 26, 0.98));
 }

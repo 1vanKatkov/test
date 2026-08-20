@@ -499,6 +499,30 @@ def _optional_persona_from_payload(user_id: int, payload) -> dict | None:
     )
 
 
+def _inline_persona_from_payload(payload, *, required: bool = False) -> dict | None:
+    """Build persona context from request fields only (no saved persona id)."""
+    return _persona_context_from_values(
+        user_id=0,
+        persona_id=0,
+        name=getattr(payload, "persona_name", "") or "",
+        birth_date=getattr(payload, "persona_birth_date", "") or "",
+        birth_time=getattr(payload, "persona_birth_time", "") or "",
+        birth_place=getattr(payload, "persona_birth_place", "") or "",
+        note=getattr(payload, "persona_note", "") or "",
+        required=required,
+        require_birth_details=False,
+    )
+
+
+def _reading_persona_context(user_id: int, payload, *, session, required: bool = False) -> dict | None:
+    if session.is_guest_free:
+        return _inline_persona_from_payload(payload, required=required)
+    if required:
+        return _tarot_persona_context(user_id, payload)
+    return _optional_persona_from_payload(user_id, payload)
+
+
+
 def _landing_telegram_bot_url(lang: str) -> str:
     page_lang = _normalize_lang(lang)
     if page_lang == "en":
@@ -810,6 +834,7 @@ def _translations(lang: str) -> dict:
             "feature_tarot_cards_desc": "Classic tarot reading with cards, spreads, and symbolic guidance.",
             "feature_astrology_desc": "Personal astrological forecast by date, place, and current focus.",
             "about_astrology": "About astrology",
+            "about_tarot": "About Tarot",
             "about_tarot_cards": "About Tarot cards",
             "about_sonnik": "About dreambook",
             "about_compatibility": "About compatibility",
@@ -1100,6 +1125,7 @@ def _translations(lang: str) -> dict:
         "feature_tarot_cards_desc": "Классическое гадание по картам Таро с раскладами и символическими подсказками.",
         "feature_astrology_desc": "Персональный астропрогноз по дате, месту и текущему фокусу.",
         "about_astrology": "Об астрологии",
+        "about_tarot": "О таро",
         "about_tarot_cards": "О картах Таро",
         "about_sonnik": "О соннике",
         "about_compatibility": "О совместимости",
@@ -1210,8 +1236,8 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
             "astrology": {
                 "title": "About Astrology",
                 "subtitle": "Astrology is a language of cycles, temperament, timing, and personal focus.",
-                "back_url": "/client/tarot",
-                "back_label": "Back to Astrology",
+                "back_url": "/client/astrology",
+                "back_label": "Back to Astrology Forecast",
                 "items": [
                     {
                         "question": "Why does astrology need exact birth data?",
@@ -1239,6 +1265,39 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
                         "answer": (
                             "If you are looking for a medical, legal, or emergency decision, astrology should not be the deciding tool. "
                             "Use it as reflection, not as a substitute for professional help."
+                        ),
+                    },
+                ],
+            },
+            "tarot": {
+                "title": "About Tarot Portraits",
+                "subtitle": "A Tarot portrait is a structured symbolic reading of a life theme, not a fixed verdict.",
+                "back_url": "/client/tarot",
+                "back_label": "Back to Tarot",
+                "items": [
+                    {
+                        "question": "What is a Tarot portrait?",
+                        "answer": (
+                            "It is a focused reading around a chosen theme: relationships, money, strengths, or a full personal overview. "
+                            "The goal is clarity and options, not fear or fatalism."
+                        ),
+                    },
+                    {
+                        "question": "Why does personal context matter?",
+                        "answer": (
+                            "Name, birth date, and optional details help keep the reading grounded in your situation instead of generic advice."
+                        ),
+                    },
+                    {
+                        "question": "Is the result a prediction of fate?",
+                        "answer": (
+                            "No. Treat it as a map of tendencies, tensions, and possible moves. Decisions stay yours."
+                        ),
+                    },
+                    {
+                        "question": "When should I not rely on Tarot alone?",
+                        "answer": (
+                            "Do not use it for medical, legal, or emergency decisions. Prefer reflection and practical next steps."
                         ),
                     },
                 ],
@@ -1385,8 +1444,8 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
         "astrology": {
             "title": "Об астрологии",
             "subtitle": "Астрология помогает увидеть личные ритмы, сильные стороны, периоды внимания и темы, которые сейчас требуют осознанности.",
-            "back_url": "/client/tarot",
-            "back_label": "Назад к Астрологии",
+            "back_url": "/client/astrology",
+            "back_label": "Назад к Астропрогнозу",
             "items": [
                 {
                     "question": "Почему в астрологии важны точное время и место рождения?",
@@ -1421,6 +1480,39 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
                     "answer": (
                         "Она помогает мягче относиться к своим особенностям, замечать подходящие периоды для действий и лучше понимать, "
                         "какие темы сейчас требуют внимания, дисциплины или отдыха."
+                    ),
+                },
+            ],
+        },
+        "tarot": {
+            "title": "О разборах Таро",
+            "subtitle": "Разбор Таро — это структурированное символическое чтение темы жизни, а не жёсткий приговор.",
+            "back_url": "/client/tarot",
+            "back_label": "Назад к Таро",
+            "items": [
+                {
+                    "question": "Что такое разбор Таро?",
+                    "answer": (
+                        "Это фокусный разбор выбранной темы: отношения, деньги, сильные стороны или полный личный обзор. "
+                        "Цель — ясность и варианты действий, а не страх или фатализм."
+                    ),
+                },
+                {
+                    "question": "Зачем нужен личный контекст?",
+                    "answer": (
+                        "Имя, дата рождения и дополнительные детали помогают сделать ответ ближе к вашей ситуации, а не общим советом."
+                    ),
+                },
+                {
+                    "question": "Это предсказание судьбы?",
+                    "answer": (
+                        "Нет. Относитесь к результату как к карте тенденций, напряжений и возможных шагов. Решение остаётся за вами."
+                    ),
+                },
+                {
+                    "question": "Когда на Таро лучше не опираться?",
+                    "answer": (
+                        "Не используйте разбор для медицинских, юридических или экстренных решений. Это инструмент рефлексии и практических выводов."
                     ),
                 },
             ],
@@ -1732,7 +1824,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "design-unify-v1",
+        "assets_version": "design-unify-v2",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -3166,7 +3258,7 @@ async def api_sonnik(
     )
     user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
-    persona_context = None if session.is_guest_free else _optional_persona_from_payload(user_id, payload)
+    persona_context = _reading_persona_context(user_id, payload, session=session, required=False)
     session.charge(settings.cost_sonnik, "sonnik", {"module": "sonnik"})
     try:
         interpretation = sonnik.interpret_dream(payload.dream_text, requested_language, persona_context)
@@ -3202,14 +3294,15 @@ async def api_numerology(
     )
     user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
+    # Numerology uses name + birth date only; guests cannot load saved personas.
     persona_context = _persona_context_from_values(
         user_id=user_id,
-        persona_id=None if session.is_guest_free else payload.persona_id,
+        persona_id=0 if session.is_guest_free else payload.persona_id,
         name=payload.persona_name or payload.full_name,
         birth_date=payload.persona_birth_date or payload.birth_date,
-        birth_time=None if session.is_guest_free else payload.persona_birth_time,
-        birth_place=None if session.is_guest_free else payload.persona_birth_place,
-        note=None if session.is_guest_free else payload.persona_note,
+        birth_time="" if session.is_guest_free else (payload.persona_birth_time or ""),
+        birth_place="" if session.is_guest_free else (payload.persona_birth_place or ""),
+        note="" if session.is_guest_free else (payload.persona_note or ""),
         required=True,
         require_birth_details=False,
     )
@@ -3339,25 +3432,26 @@ async def api_sovmestimost_names_dates(
     )
     user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
+    # Compatibility by names/dates uses name + date; guests cannot load saved personas.
     persona1 = _persona_context_from_values(
         user_id=user_id,
-        persona_id=None if session.is_guest_free else payload.persona1_id,
+        persona_id=0 if session.is_guest_free else payload.persona1_id,
         name=payload.persona1_name or payload.name1,
         birth_date=payload.persona1_birth_date or payload.date1,
-        birth_time=None if session.is_guest_free else payload.persona1_birth_time,
-        birth_place=None if session.is_guest_free else payload.persona1_birth_place,
-        note=None if session.is_guest_free else payload.persona1_note,
+        birth_time="" if session.is_guest_free else (payload.persona1_birth_time or ""),
+        birth_place="" if session.is_guest_free else (payload.persona1_birth_place or ""),
+        note="" if session.is_guest_free else (payload.persona1_note or ""),
         required=True,
         require_birth_details=False,
     )
     persona2 = _persona_context_from_values(
         user_id=user_id,
-        persona_id=None if session.is_guest_free else payload.persona2_id,
+        persona_id=0 if session.is_guest_free else payload.persona2_id,
         name=payload.persona2_name or payload.name2,
         birth_date=payload.persona2_birth_date or payload.date2,
-        birth_time=None if session.is_guest_free else payload.persona2_birth_time,
-        birth_place=None if session.is_guest_free else payload.persona2_birth_place,
-        note=None if session.is_guest_free else payload.persona2_note,
+        birth_time="" if session.is_guest_free else (payload.persona2_birth_time or ""),
+        birth_place="" if session.is_guest_free else (payload.persona2_birth_place or ""),
+        note="" if session.is_guest_free else (payload.persona2_note or ""),
         required=True,
         require_birth_details=False,
     )
@@ -3420,7 +3514,7 @@ async def api_tarot_reading(
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     topic = _validate_card_reading_topic(payload.topic)
     spread = _validate_tarot_spread(payload.spread)
-    persona_context = None if session.is_guest_free else _tarot_persona_context(user_id, payload)
+    persona_context = _reading_persona_context(user_id, payload, session=session, required=True)
     session.charge(settings.cost_tarot, "tarot", {"module": "tarot"})
     try:
         result = divination.tarot_reading(payload.question, topic, spread, requested_language, persona_context)
@@ -3480,7 +3574,7 @@ async def api_tarot_cards_reading(
         selected_card_ids = tarot_cards.validate_draw_token(payload.draw_token, topic)
     except HTTPException as exc:
         return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": session.balance()})
-    persona_context = None if session.is_guest_free else _optional_persona_from_payload(user_id, payload)
+    persona_context = _reading_persona_context(user_id, payload, session=session, required=False)
     session.charge(settings.cost_tarot_cards, "tarot_cards", {"module": "tarot_cards", "topic": topic})
     try:
         result = tarot_cards.tarot_card_reading(
@@ -3566,12 +3660,12 @@ async def api_astrology_forecast(
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     persona_context = _persona_context_from_values(
         user_id=user_id,
-        persona_id=None if session.is_guest_free else payload.persona_id,
+        persona_id=0 if session.is_guest_free else payload.persona_id,
         name=payload.persona_name or payload.name,
         birth_date=payload.persona_birth_date or payload.birth_date,
         birth_time=payload.persona_birth_time or payload.birth_time,
         birth_place=payload.persona_birth_place or payload.birth_place,
-        note=None if session.is_guest_free else payload.persona_note,
+        note=payload.persona_note or "",
         required=True,
         require_birth_details=False,
     )

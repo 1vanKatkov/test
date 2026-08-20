@@ -2,7 +2,7 @@
 
 {% block title %}{{ brand_name }} - {{ t.tarot }}{% endblock %}
 
-{% block body_class %} astrology-layout-page{% endblock %}
+{% block body_class %} tarot-layout-page{% endblock %}
 
 {% block body_attrs %}
   data-cost-tarot="{{ cost_tarot }}"
@@ -31,7 +31,7 @@
       {% endif %}
     </div>
     <div class="auth-required-content" data-guest-free-allowed="true">
-      <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?back=/client/tarot">{{ t.about_astrology or 'Об астрологии' }}</a>
+      <a class="service-about-inline-link" href="/client/about/tarot?back=/client/tarot">{{ t.about_tarot or 'О таро' }}</a>
       {% if not selected_card_reading_topic %}
       <div class="card-reading-grid" aria-label="{{ t.tarot }}">
         {% for topic in card_reading_topics %}

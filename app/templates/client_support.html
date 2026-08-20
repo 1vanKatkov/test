@@ -8,6 +8,11 @@
   {% endwith %}
 
   <section class="card auth-gated-card service-theme-shell">
+    <div class="auth-required-panel" hidden>
+      <h3>{{ t.sign_in_required_title }}</h3>
+      <p>{{ t.sign_in_required_text }}</p>
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/support">{{ t.sign_in_required_action }}</a>
+    </div>
     <div class="auth-required-content">
       <p class="muted">
         {{ t.support_email_hint or "Контакт для связи:" }}

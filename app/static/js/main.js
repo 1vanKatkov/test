@@ -9,7 +9,6 @@ async function boot() {
   initPageEntranceAnimation();
   await initAuthStaticPage();
   toggleHeaderAuthLinks();
-  syncAuthRequiredSections(!isLoggedIn());
   wirePaymentForms();
   wirePlusSubscriptionForm();
   wireTopupPage();
@@ -56,6 +55,7 @@ async function boot() {
   syncAuthChrome(profile);
   await loadGuestQuota();
   syncAuthRequiredSections(!isLoggedIn());
+  syncGuestPersonaUi();
   await loadPersonas();
   await loadTarotCardsDeck().catch(() => {});
   await loadTarotCardsReport().catch(() => {});
