@@ -813,33 +813,9 @@ async function loadGuestQuota() {
 }
 
 function syncGuestFreeBanner() {
-  const allowedRoot = document.querySelector("[data-guest-free-allowed='true']");
-  let banner = document.getElementById("guest-free-banner");
-  if (!allowedRoot) {
-    if (banner) {
-      banner.hidden = true;
-    }
-    return;
-  }
-  if (!banner) {
-    banner = document.createElement("div");
-    banner.id = "guest-free-banner";
-    banner.className = "guest-free-banner";
-    const panel = document.querySelector(".auth-required-panel[data-guest-free-allowed='true']");
-    const content = document.querySelector(".auth-required-content[data-guest-free-allowed='true']");
-    const anchor = panel || content;
-    if (anchor?.parentElement) {
-      anchor.parentElement.insertBefore(banner, anchor);
-    } else {
-      return;
-    }
-  }
-  if (!isLoggedIn() && guestFreeRemaining() > 0) {
-    const template = document.body.dataset.guestFreeBanner || i18n.guestFreeBanner || "";
-    banner.textContent = String(template).replace("{n}", String(guestFreeRemaining()));
-    banner.hidden = false;
-  } else {
-    banner.hidden = true;
+  const banner = document.getElementById("guest-free-banner");
+  if (banner) {
+    banner.remove();
   }
 }
 
