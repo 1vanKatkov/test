@@ -131,6 +131,7 @@ const i18n = lang === "en"
     logout: "Log out",
     signInRedirecting: "Redirecting to login...",
     guestFreeBanner: "You have {n} free reading(s) left without registration.",
+    guestFreeCtaSuffix: "0",
     guestQuotaExceeded: "Free readings used up. Please sign in to continue.",
     personaSaved: "Persona saved",
     personaDeleted: "Persona deleted",
@@ -226,6 +227,7 @@ const i18n = lang === "en"
     logout: "Выйти",
     signInRedirecting: "Перенаправляем на страницу входа...",
     guestFreeBanner: "До регистрации доступно ещё {n} бесплатных разбора.",
+    guestFreeCtaSuffix: "0",
     guestQuotaExceeded: "Бесплатные разборы закончились. Войдите, чтобы продолжить.",
     personaSaved: "Персона сохранена",
     personaDeleted: "Персона удалена",
@@ -826,9 +828,10 @@ async function loadGuestQuota() {
     state.guestQuotaLoaded = true;
     return result;
   } catch {
-    state.guestFreeRemaining = 0;
+    // Fail open: keep optimistic quota so guest-free forms do not lock on network errors.
+    state.guestFreeRemaining = Math.max(state.guestFreeRemaining, state.guestFreeLimit);
     state.guestQuotaLoaded = true;
-    return { remaining: 0, limit: state.guestFreeLimit, authenticated: false };
+    return { remaining: state.guestFreeRemaining, limit: state.guestFreeLimit, authenticated: false };
   }
 }
 
@@ -837,6 +840,29 @@ function syncGuestFreeBanner() {
   if (banner) {
     banner.remove();
   }
+}
+
+function syncGuestFreeCostLabels() {
+  const free = canUseGuestFreeReading();
+  const freeSuffix = i18n.guestFreeCtaSuffix || "0";
+  document.querySelectorAll(".auth-required-content[data-guest-free-allowed='true'] button.primary-btn[type='submit']").forEach((btn) => {
+    if (!(btn instanceof HTMLButtonElement)) {
+      return;
+    }
+    if (!btn.dataset.paidLabelHtml) {
+      btn.dataset.paidLabelHtml = btn.innerHTML;
+    }
+    if (!free) {
+      btn.innerHTML = btn.dataset.paidLabelHtml;
+      return;
+    }
+    const next = btn.dataset.paidLabelHtml
+      .replace(/·\s*\d+(\s*<span class="spark-icon"[^>]*>[\s\S]*?<\/span>)?/i, `· ${freeSuffix}$1`)
+      .replace(/·\s*\d+(\s*✦)?/u, `· ${freeSuffix}$1`);
+    btn.innerHTML = next.includes("spark-icon") || next.includes("✦")
+      ? next
+      : `${btn.dataset.paidLabelHtml.replace(/·[\s\S]*$/, "").trim()} · ${freeSuffix} <span class="spark-icon" aria-hidden="true">✦</span>`;
+  });
 }
 
 async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess, onError, collapseForm = true, scrollToResult = true, requiredCost = 0 }) {
@@ -866,6 +892,7 @@ async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess,
       applyGuestFreeRemaining(data.guest_free_remaining);
       syncAuthRequiredSections(!isLoggedIn());
       syncGuestFreeBanner();
+      syncGuestFreeCostLabels();
     }
     if (onSuccess) {
       onSuccess(data, { revealResult: (content) => revealAiResult(resultId, content, { scroll: scrollToResult }) });

@@ -3844,13 +3844,18 @@ button.page-back-arrow {
 }
 
 .reveal-on-scroll {
-  opacity: 0;
-  transform: translateY(28px);
+  opacity: 1;
+  transform: none;
   transition:
     opacity 0.55s cubic-bezier(0.16, 0.82, 0.21, 1),
     transform 0.55s cubic-bezier(0.16, 0.82, 0.21, 1);
   transition-delay: var(--reveal-delay, 0ms);
   will-change: opacity, transform;
+}
+
+html.js .reveal-on-scroll:not(.is-visible) {
+  opacity: 0;
+  transform: translateY(28px);
 }
 
 .reveal-on-scroll.is-visible {
@@ -3861,6 +3866,13 @@ button.page-back-arrow {
 .dashboard-section-services .feature-list-card.reveal-on-scroll,
 .dashboard-section-faq .dashboard-faq-card.reveal-on-scroll,
 .dashboard-section-intro .dashboard-template-feature-card.reveal-on-scroll {
+  opacity: 1;
+  transform: none;
+}
+
+html.js .dashboard-section-services .feature-list-card.reveal-on-scroll:not(.is-visible),
+html.js .dashboard-section-faq .dashboard-faq-card.reveal-on-scroll:not(.is-visible),
+html.js .dashboard-section-intro .dashboard-template-feature-card.reveal-on-scroll:not(.is-visible) {
   opacity: 0;
   transform: translateY(22px);
 }

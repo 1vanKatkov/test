@@ -6,6 +6,7 @@
  */
 
 async function boot() {
+  document.documentElement.classList.add("js");
   initPageEntranceAnimation();
   await initAuthStaticPage();
   toggleHeaderAuthLinks();
@@ -56,6 +57,7 @@ async function boot() {
   await loadGuestQuota();
   syncAuthRequiredSections(!isLoggedIn());
   syncGuestPersonaUi();
+  syncGuestFreeCostLabels();
   await loadPersonas();
   await loadTarotCardsDeck().catch(() => {});
   await loadTarotCardsReport().catch(() => {});
