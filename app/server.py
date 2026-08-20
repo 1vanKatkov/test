@@ -227,10 +227,7 @@ def _resolve_page_lang(
     if identity_lang and normalized_identity in {"ru", "en"}:
         return normalized_identity, False
 
-    accept_lang = _parse_accept_language(request.headers.get("accept-language", ""))
-    if accept_lang in {"ru", "en"}:
-        return accept_lang, False
-
+    # Product default is RU; language switch sets the cookie explicitly.
     return settings.app_default_lang, False
 
 
@@ -1735,7 +1732,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "optional-birth-v1",
+        "assets_version": "design-unify-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,

@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.admin_panel }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=admin-i18n-v1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/static/style.css?v=design-unify-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell"
@@ -148,7 +152,7 @@
     </section>
   </main>
 
-  {% set assets_version = assets_version|default('sparks-modal-v1') %}
+  {% set assets_version = assets_version|default('design-unify-v1') %}
   {% include "partials/client_scripts.html" %}
 </body>
 </html>

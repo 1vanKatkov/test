@@ -185,6 +185,12 @@ function wireDashboardScroll() {
     });
   };
 
+  if (window.location.hash === "#dashboard-services") {
+    window.requestAnimationFrame(() => {
+      window.setTimeout(scrollToServices, prefersReducedMotion() ? 0 : 80);
+    });
+  }
+
   element("dashboard-go-services")?.addEventListener("click", scrollToServices);
   root.querySelectorAll(".dashboard-go-services-card").forEach((card) => {
     card.addEventListener("click", scrollToServices);
