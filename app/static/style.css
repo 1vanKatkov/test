@@ -5855,8 +5855,7 @@ body.is-guest #profile-persona-add-btn {
 .card,
 .service-theme-shell,
 .persona-picker-card,
-.legal-doc-card,
-.auth-page .card {
+.legal-doc-card {
   border-radius: var(--radius-lg);
   border-color: var(--border);
   background:
@@ -5903,15 +5902,98 @@ body.is-guest #profile-persona-add-btn {
 .auth-page,
 .auth-static-page {
   background:
-    radial-gradient(circle at 12% 0%, rgba(139, 106, 217, 0.18), transparent 34%),
-    radial-gradient(circle at 88% 8%, rgba(217, 155, 77, 0.12), transparent 28%),
+    radial-gradient(circle at 12% 0%, rgba(139, 106, 217, 0.16), transparent 38%),
+    radial-gradient(circle at 88% 10%, rgba(217, 155, 77, 0.1), transparent 32%),
     var(--bg);
+  min-height: 100dvh;
 }
 
 .auth-page .mobile-client,
 .auth-static-page .mobile-client {
-  max-width: 460px;
+  max-width: 420px;
   margin: 0 auto;
+  padding-top: 28px;
+  padding-bottom: 40px;
+}
+
+/* Auth forms should blend into page atmosphere — no floating high-contrast card. */
+.auth-page.mobile-client-shell .mobile-client > .card,
+.auth-static-page.mobile-client-shell .mobile-client > .card,
+.auth-page .card,
+.auth-static-page .card {
+  padding: 8px 2px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-page .card h2,
+.auth-static-page .card h2 {
+  margin: 0 0 18px;
+  text-align: center;
+  font-size: clamp(28px, 7vw, 36px);
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.auth-page .form-grid,
+.auth-static-page .form-grid {
+  gap: 14px;
+}
+
+.auth-page .form-grid label,
+.auth-static-page .form-grid label {
+  color: var(--muted);
+}
+
+.auth-page .form-grid input,
+.auth-static-page .form-grid input,
+.auth-page .form-grid textarea,
+.auth-static-page .form-grid textarea {
+  border-color: rgba(42, 32, 66, 0.95);
+  background: rgba(10, 7, 22, 0.55);
+}
+
+.auth-page .primary-btn,
+.auth-static-page .primary-btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.auth-page .auth-switch-line,
+.auth-static-page .auth-switch-line {
+  text-align: center;
+  margin-top: 14px;
+}
+
+.auth-page .auth-switch-line a,
+.auth-static-page .auth-switch-line a {
+  color: var(--link-accent);
+}
+
+.auth-page #auth-result,
+.auth-static-page #auth-result,
+.auth-page #password-reset-result,
+.auth-static-page #password-reset-result {
+  margin-top: 12px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 767px) {
+  .auth-page.mobile-client-shell .app-topbar,
+  .auth-static-page.mobile-client-shell .app-topbar {
+    display: flex !important;
+  }
+
+  .auth-page .mobile-client,
+  .auth-static-page .mobile-client {
+    padding-top: 18px;
+  }
 }
 
 .mobile-bottom-nav {
