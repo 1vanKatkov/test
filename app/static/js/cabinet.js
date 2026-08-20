@@ -228,7 +228,7 @@ function moduleLabel(module) {
     sovmestimost_names_dates: lang === "en" ? "Compatibility" : "Совместимость",
     tarot: lang === "en" ? "Astrology" : "Астрология",
     tarot_cards: lang === "en" ? "Tarot" : "Таро",
-    astrology: lang === "en" ? "Astrology" : "Астропрогноз",
+    astrology: lang === "en" ? "Astrology" : "Астрология",
   };
   return labels[module] || module || (lang === "en" ? "Request" : "Запрос");
 }
@@ -325,7 +325,7 @@ function formatHistoryDisplay(item) {
     result.persona = name || "";
     result.birthDate = birthDate || "";
     const infoParts = [focus, birthPlace].filter((part) => part && part !== "-");
-    result.requestInfo = compactText(infoParts.join(" · "), lang === "en" ? "Astrology forecast request" : "Запрос на астропрогноз");
+    result.requestInfo = compactText(infoParts.join(" · "), lang === "en" ? "Astrology request" : "Запрос на астрологию");
     return result;
   }
 

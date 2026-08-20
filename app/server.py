@@ -625,7 +625,7 @@ def _translations(lang: str) -> dict:
             "tarot": "Astrology",
             "natal_maps": "Astrology",
             "tarot_cards": "Tarot",
-            "astrology": "Astrology Forecast",
+            "astrology": "Astrology",
             "topup": "Top Up",
             "home": "Home",
             "dream_description": "Dream description",
@@ -917,7 +917,7 @@ def _translations(lang: str) -> dict:
         "tarot": "Астрология",
         "natal_maps": "Астрология",
         "tarot_cards": "Таро",
-        "astrology": "Астропрогноз",
+        "astrology": "Астрология",
         "topup": "Пополнение",
         "home": "Главная",
         "dream_description": "Описание сна",
@@ -1238,8 +1238,8 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
             "astrology": {
                 "title": "About Astrology",
                 "subtitle": "Astrology is a language of cycles, temperament, timing, and personal focus.",
-                "back_url": "/client/astrology",
-                "back_label": "Back to Astrology Forecast",
+                "back_url": "/client/tarot",
+                "back_label": "Back to Astrology",
                 "items": [
                     {
                         "question": "Why does astrology need exact birth data?",
@@ -1267,39 +1267,6 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
                         "answer": (
                             "If you are looking for a medical, legal, or emergency decision, astrology should not be the deciding tool. "
                             "Use it as reflection, not as a substitute for professional help."
-                        ),
-                    },
-                ],
-            },
-            "tarot": {
-                "title": "About Tarot Portraits",
-                "subtitle": "A Tarot portrait is a structured symbolic reading of a life theme, not a fixed verdict.",
-                "back_url": "/client/tarot",
-                "back_label": "Back to Tarot",
-                "items": [
-                    {
-                        "question": "What is a Tarot portrait?",
-                        "answer": (
-                            "It is a focused reading around a chosen theme: relationships, money, strengths, or a full personal overview. "
-                            "The goal is clarity and options, not fear or fatalism."
-                        ),
-                    },
-                    {
-                        "question": "Why does personal context matter?",
-                        "answer": (
-                            "Name, birth date, and optional details help keep the reading grounded in your situation instead of generic advice."
-                        ),
-                    },
-                    {
-                        "question": "Is the result a prediction of fate?",
-                        "answer": (
-                            "No. Treat it as a map of tendencies, tensions, and possible moves. Decisions stay yours."
-                        ),
-                    },
-                    {
-                        "question": "When should I not rely on Tarot alone?",
-                        "answer": (
-                            "Do not use it for medical, legal, or emergency decisions. Prefer reflection and practical next steps."
                         ),
                     },
                 ],
@@ -1446,8 +1413,8 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
         "astrology": {
             "title": "Об астрологии",
             "subtitle": "Астрология помогает увидеть личные ритмы, сильные стороны, периоды внимания и темы, которые сейчас требуют осознанности.",
-            "back_url": "/client/astrology",
-            "back_label": "Назад к Астропрогнозу",
+            "back_url": "/client/tarot",
+            "back_label": "Назад к Астрологии",
             "items": [
                 {
                     "question": "Почему в астрологии важны точное время и место рождения?",
@@ -1482,39 +1449,6 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
                     "answer": (
                         "Она помогает мягче относиться к своим особенностям, замечать подходящие периоды для действий и лучше понимать, "
                         "какие темы сейчас требуют внимания, дисциплины или отдыха."
-                    ),
-                },
-            ],
-        },
-        "tarot": {
-            "title": "О разборах Таро",
-            "subtitle": "Разбор Таро — это структурированное символическое чтение темы жизни, а не жёсткий приговор.",
-            "back_url": "/client/tarot",
-            "back_label": "Назад к Таро",
-            "items": [
-                {
-                    "question": "Что такое разбор Таро?",
-                    "answer": (
-                        "Это фокусный разбор выбранной темы: отношения, деньги, сильные стороны или полный личный обзор. "
-                        "Цель — ясность и варианты действий, а не страх или фатализм."
-                    ),
-                },
-                {
-                    "question": "Зачем нужен личный контекст?",
-                    "answer": (
-                        "Имя, дата рождения и дополнительные детали помогают сделать ответ ближе к вашей ситуации, а не общим советом."
-                    ),
-                },
-                {
-                    "question": "Это предсказание судьбы?",
-                    "answer": (
-                        "Нет. Относитесь к результату как к карте тенденций, напряжений и возможных шагов. Решение остаётся за вами."
-                    ),
-                },
-                {
-                    "question": "Когда на Таро лучше не опираться?",
-                    "answer": (
-                        "Не используйте разбор для медицинских, юридических или экстренных решений. Это инструмент рефлексии и практических выводов."
                     ),
                 },
             ],
@@ -1692,9 +1626,11 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
 
 def _service_about_page(slug: str, lang: str) -> dict:
     pages = _service_about_pages(lang)
-    if slug not in pages:
+    # Natal astrology lives at /client/tarot; keep legacy /about/tarot links on astrology copy.
+    resolved = "astrology" if slug == "tarot" else slug
+    if resolved not in pages:
         raise HTTPException(status_code=404, detail="About page not found")
-    return pages[slug]
+    return pages[resolved]
 
 
 def _resolve_about_back_url(back: str, default: str) -> str:
@@ -1826,7 +1762,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "design-unify-v3",
+        "assets_version": "design-unify-v4",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -1995,13 +1931,9 @@ async def client_tarot_cards_report(
     )
 
 
-@app.get("/client/astrology", response_class=HTMLResponse, include_in_schema=False)
-async def client_astrology(
-    request: Request,
-    lang: str = Query(default=""),
-    auth: ClientAuthContext = Depends(optional_client_auth),
-):
-    return _render_client_page(request, "client_astrology.html", lang, auth=auth)
+@app.get("/client/astrology", include_in_schema=False)
+async def client_astrology():
+    return RedirectResponse(url="/client/tarot", status_code=302)
 
 
 @app.get("/client/about/{service_slug}", response_class=HTMLResponse, include_in_schema=False)

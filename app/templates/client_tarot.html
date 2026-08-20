@@ -31,7 +31,7 @@
       {% endif %}
     </div>
     <div class="auth-required-content" data-guest-free-allowed="true">
-      <a class="service-about-inline-link" href="/client/about/tarot?back=/client/tarot">{{ t.about_tarot or 'О таро' }}</a>
+      <a class="service-about-inline-link" href="/client/about/astrology?back=/client/tarot">{{ t.about_astrology or 'Об астрологии' }}</a>
       {% if not selected_card_reading_topic %}
       <div class="card-reading-grid" aria-label="{{ t.tarot }}">
         {% for topic in card_reading_topics %}
