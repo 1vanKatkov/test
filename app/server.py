@@ -399,17 +399,19 @@ def _validate_required_birth_time(value: str) -> str:
 
 
 def _clean_persona_payload(payload: PersonaCreateRequest | PersonaUpdateRequest) -> dict[str, str]:
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Persona name is required")
     birth_date = payload.birth_date.strip()
+    if not birth_date:
+        raise HTTPException(status_code=400, detail="Birth date is required")
     compatibility.parse_date(birth_date)
-    birth_place = payload.birth_place.strip()
-    if not birth_place:
-        raise HTTPException(status_code=400, detail="Birth place is required")
     return {
-        "name": payload.name.strip(),
+        "name": name,
         "birth_date": birth_date,
-        "birth_time": _validate_required_birth_time(payload.birth_time),
-        "birth_place": birth_place,
-        "note": payload.note.strip(),
+        "birth_time": _validate_optional_birth_time(payload.birth_time),
+        "birth_place": (payload.birth_place or "").strip(),
+        "note": (payload.note or "").strip(),
     }
 
 
@@ -435,18 +437,12 @@ def _persona_context_from_values(
     birth_place: str = "",
     note: str = "",
     required: bool = True,
-    require_birth_details: bool = True,
+    require_birth_details: bool = False,
 ) -> dict | None:
     if persona_id:
         row = db.get_persona(user_id=user_id, persona_id=persona_id)
         if not row:
             raise HTTPException(status_code=404, detail="Persona not found")
-        if (
-            required
-            and require_birth_details
-            and (not (row["birth_time"] or "").strip() or not (row["birth_place"] or "").strip())
-        ):
-            raise HTTPException(status_code=400, detail="Birth time and birth place are required")
         return _serialize_persona(row)
 
     name = name.strip()
@@ -456,20 +452,20 @@ def _persona_context_from_values(
     note = note.strip()
     if not required and not (name or birth_date or birth_time or birth_place or note):
         return None
-    if not name or not birth_date:
-        if require_birth_details:
-            raise HTTPException(
-                status_code=400,
-                detail="Choose a saved persona or enter name, birth date, birth time, and birth place",
-            )
+    if required and (not name or not birth_date):
         raise HTTPException(status_code=400, detail="Choose a saved persona or enter name and birth date")
+    if not required and name and not birth_date and not birth_time and not birth_place and not note:
+        # Optional context may be name-only (e.g. dream book).
+        pass
+    elif not required and not name and birth_date:
+        raise HTTPException(status_code=400, detail="Enter a name together with the birth date")
+    if birth_date:
+        compatibility.parse_date(birth_date)
     if require_birth_details:
         if not birth_time:
             raise HTTPException(status_code=400, detail="Birth time is required")
         if not birth_place:
             raise HTTPException(status_code=400, detail="Birth place is required")
-    if birth_date:
-        compatibility.parse_date(birth_date)
     return {
         "name": name,
         "birth_date": birth_date,
@@ -502,6 +498,7 @@ def _optional_persona_from_payload(user_id: int, payload) -> dict | None:
         birth_place=getattr(payload, "persona_birth_place", "") or "",
         note=getattr(payload, "persona_note", "") or "",
         required=False,
+        require_birth_details=False,
     )
 
 
@@ -792,15 +789,17 @@ def _translations(lang: str) -> dict:
             "dashboard_slide_faq_title": "FAQ: Answers to questions",
             "dashboard_slide_faq_subtitle": "Short answers about how Astrolhub works and what to expect from readings.",
             "dashboard_faq_q1": "Do I need an exact birth time?",
-            "dashboard_faq_a1": "For astrology — yes, it improves accuracy. For numerology, name and birth date are enough; birth time is not required.",
+            "dashboard_faq_a1": "No — birth time and place are optional everywhere. For astrology they can improve accuracy if you know them. Numerology needs only name and birth date. The dreambook mainly needs the dream text; persona details are optional.",
             "dashboard_faq_q2": "Are the readings strict predictions?",
             "dashboard_faq_a2": "No. They help you see patterns, timing, and options. Final decisions always stay with you.",
             "dashboard_faq_q3": "What are sparks used for?",
             "dashboard_faq_a3": "Sparks are spent to generate reports. Each service shows its cost before you start.",
             "dashboard_faq_q4": "Can I save people once and reuse them?",
-            "dashboard_faq_a4": "Yes. Save personas in your profile and use them across dreams, numerology, compatibility, and astrology.",
+            "dashboard_faq_a4": "Yes, after registration. Save personas in your profile and reuse them across services. Guests can enter details for a single reading but cannot create saved personas.",
             "dashboard_faq_q5": "When should I not rely on a reading?",
             "dashboard_faq_a5": "Do not use readings for medical, legal, or emergency decisions. They are for reflection, not professional advice.",
+            "optional": "optional",
+            "persona_save_needs_auth": "Sign in to save personas",
             "dashboard_slider_nav_label": "Dashboard slides",
             "dashboard_slider_dot_intro": "Project overview",
             "dashboard_slider_dot_services": "Feature list",
@@ -1079,15 +1078,17 @@ def _translations(lang: str) -> dict:
         "dashboard_slide_faq_title": "FAQ: Ответы на вопросы",
         "dashboard_slide_faq_subtitle": "Кратко о том, как работает Astrolhub и чего ждать от разборов.",
         "dashboard_faq_q1": "Нужно ли точное время рождения?",
-        "dashboard_faq_a1": "Для астрологии — да, оно повышает точность. Для нумерологии достаточно имени и даты рождения; время вводить не нужно.",
+        "dashboard_faq_a1": "Нет — время и место рождения нигде не обязательны. В астрологии они повышают точность, если вы их знаете. Для нумерологии достаточно имени и даты. Для сонника главное — текст сна; данные персоны необязательны.",
         "dashboard_faq_q2": "Разборы — это жёсткие предсказания?",
         "dashboard_faq_a2": "Нет. Они помогают увидеть паттерны, периоды и варианты. Решения всегда остаются за вами.",
         "dashboard_faq_q3": "Зачем нужны искры?",
         "dashboard_faq_a3": "Искры списываются за генерацию разборов. Стоимость каждого сервиса видна до запуска.",
         "dashboard_faq_q4": "Можно сохранить данные один раз и использовать снова?",
-        "dashboard_faq_a4": "Да. Сохраните персоны в профиле и используйте их в соннике, нумерологии, совместимости и астрологии.",
+        "dashboard_faq_a4": "Да, после регистрации. Сохраните персоны в профиле и используйте их в сервисах. Гости могут ввести данные для одного разбора, но не могут создавать сохранённые персоны.",
         "dashboard_faq_q5": "Когда на разбор лучше не опираться?",
         "dashboard_faq_a5": "Не используйте разборы для медицинских, юридических или экстренных решений. Это инструмент для рефлексии, а не замена специалиста.",
+        "optional": "необязательно",
+        "persona_save_needs_auth": "Войдите, чтобы сохранять персоны",
         "dashboard_slider_nav_label": "Слайды кабинета",
         "dashboard_slider_dot_intro": "О проекте",
         "dashboard_slider_dot_services": "Функционал",
@@ -1732,7 +1733,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "scroll-pwd-v1",
+        "assets_version": "optional-birth-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,

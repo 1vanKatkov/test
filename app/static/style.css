@@ -5814,3 +5814,8 @@ button.page-back-arrow {
   text-decoration: underline;
   cursor: pointer;
 }
+
+body.is-guest .guest-hide-save-persona,
+body.is-guest .guest-hide-saved-persona {
+  display: none !important;
+}

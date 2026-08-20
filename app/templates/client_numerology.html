@@ -24,20 +24,20 @@
       <form id="numerology-form" class="form-grid service-theme-form" novalidate>
         <section class="persona-picker-card">
           <h3>{{ t.personas }}</h3>
-          <div class="persona-mode-tabs">
+          <div class="persona-mode-tabs guest-hide-saved-persona">
             <label><input type="radio" name="numerology-persona-mode" value="saved" /> <span>{{ t.persona_use_saved }}</span></label>
             <label><input type="radio" name="numerology-persona-mode" value="manual" checked /> <span>{{ t.persona_manual }}</span></label>
           </div>
-          <div id="numerology-persona-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel" hidden>
+          <div id="numerology-persona-saved-persona-panel" class="form-grid persona-subpanel persona-saved-panel guest-hide-saved-persona" hidden>
             <div id="numerology-persona-choices" class="persona-choice-list" role="listbox" aria-label="{{ t.persona_select_placeholder }}"></div>
           </div>
           <div id="numerology-persona-manual-persona-panel" class="form-grid persona-subpanel persona-manual-panel">
             <label>{{ t.persona_name }} <input id="numerology-persona-name" /></label>
             <label>{{ t.birth_date }} <input id="numerology-persona-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
             <input id="numerology-persona-birth-time" type="hidden" value="" />
-            <label>{{ t.astrology_birth_place }} <input id="numerology-persona-birth-place" /></label>
+            <input id="numerology-persona-birth-place" type="hidden" value="" />
             <label>{{ t.persona_note }} <textarea id="numerology-persona-note" rows="3"></textarea></label>
-            <label class="payment-offer-consent">
+            <label class="payment-offer-consent guest-hide-save-persona">
               <input id="numerology-persona-save-persona" type="checkbox" />
               <span>{{ t.persona_save_offer }}</span>
             </label>

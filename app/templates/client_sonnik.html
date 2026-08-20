@@ -22,7 +22,7 @@
     <div class="auth-required-content" data-guest-free-allowed="true">
       <a class="service-about-inline-link" href="/client/about/sonnik?back=/client/sonnik">{{ t.about_sonnik or 'О соннике' }}</a>
       <form id="sonnik-form" class="form-grid service-theme-form" novalidate>
-        {% with prefix='sonnik-persona', default_mode='manual', use_choices=false %}
+        {% with prefix='sonnik-persona', default_mode='manual', use_choices=false, show_birth_details=false %}
         {% include "partials/persona_picker.html" %}
         {% endwith %}
         <label>{{ t.dream_description }}

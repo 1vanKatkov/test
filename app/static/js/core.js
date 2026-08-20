@@ -135,7 +135,8 @@ const i18n = lang === "en"
     personaDeleted: "Persona deleted",
     personaEmpty: "No saved personas yet",
     choosePersona: "Choose persona",
-    personaRequired: "Choose a saved persona or enter name, birth date, birth time, and birth place.",
+    personaRequired: "Choose a saved persona or enter name and birth date.",
+    personaSaveNeedsAuth: "Sign in to save personas",
     chooseTarotCards: "The deck is drawing three cards for your spread...",
     tarotCardsSelected: "Your spread",
     tarotCardsNeedExact: "Choose a topic and complete the required fields.",
@@ -229,7 +230,8 @@ const i18n = lang === "en"
     personaDeleted: "Персона удалена",
     personaEmpty: "Сохранённых персон пока нет",
     choosePersona: "Выберите персону",
-    personaRequired: "Выберите сохранённую персону или введите имя, дату, время и место рождения.",
+    personaRequired: "Выберите сохранённую персону или введите имя и дату рождения.",
+    personaSaveNeedsAuth: "Войдите, чтобы сохранять персоны",
     chooseTarotCards: "Колода вытягивает три карты для вашего расклада...",
     tarotCardsSelected: "Ваш расклад",
     tarotCardsNeedExact: "Выберите тему и заполните нужные поля.",
@@ -1275,6 +1277,35 @@ function syncAuthRequiredSections(isGuest) {
   syncGuestFreeBanner();
 }
 
+function syncGuestPersonaUi() {
+  const guest = !isLoggedIn();
+  document.body.classList.toggle("is-guest", guest);
+  document.querySelectorAll(".guest-hide-save-persona").forEach((node) => {
+    node.hidden = guest;
+    const checkbox = node.querySelector("input[type='checkbox']");
+    if (checkbox && guest) {
+      checkbox.checked = false;
+    }
+  });
+  document.querySelectorAll(".guest-hide-saved-persona").forEach((node) => {
+    node.hidden = guest;
+  });
+  const addBtn = element("profile-persona-add-btn");
+  if (addBtn) {
+    addBtn.hidden = guest;
+  }
+  if (!guest) {
+    return;
+  }
+  document.querySelectorAll("input[name$='-mode'][value='manual']").forEach((radio) => {
+    if (!(radio instanceof HTMLInputElement)) {
+      return;
+    }
+    radio.checked = true;
+    radio.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 function syncAuthChrome(profile) {
   if (profile?.provider) {
     state.profileProvider = profile.provider;
@@ -1292,6 +1323,7 @@ function syncAuthChrome(profile) {
     // Keep forgot-password panel ownership on the login page.
     return;
   }
+  syncGuestPersonaUi();
   if (state.profileProvider === "email") {
     togglePasswordResetPanel(shouldShowPasswordReset());
   } else {

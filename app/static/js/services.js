@@ -300,32 +300,33 @@ async function resolvePersonaForPrefix(prefix, options = {}) {
   if (mode === "saved" && !personaId) {
     throw new Error(i18n.personaRequired);
   }
-  const requireBirthDetails = options.requireBirthDetails !== false;
-  if (mode === "manual") {
-    const missingCore = !manualPersona.name || !manualPersona.birth_date;
-    const missingDetails = requireBirthDetails && (!manualPersona.birth_time || !manualPersona.birth_place);
-    if (missingCore || missingDetails) {
+  if (mode === "manual" && !options.optional) {
+    if (!manualPersona.name || !manualPersona.birth_date) {
       throw new Error(i18n.personaRequired);
     }
   }
-  if (!options.skipSave && mode === "manual" && element(`${prefix}-save-persona`)?.checked && manualPersona.name && manualPersona.birth_date) {
-    const personaToSave = {
-      ...manualPersona,
-      birth_time: manualPersona.birth_time || "12:00",
-      birth_place: manualPersona.birth_place || "—",
-    };
-    const persona = await createPersona(personaToSave);
-    personaId = Number(persona?.id || 0);
-    await loadPersonas();
-    const select = element(`${prefix}-select`);
-    if (select && personaId) {
-      select.value = String(personaId);
-      updatePersonaPreview(prefix);
+  if (!options.skipSave && mode === "manual" && element(`${prefix}-save-persona`)?.checked) {
+    if (!isLoggedIn()) {
+      throw new Error(i18n.personaSaveNeedsAuth || i18n.signInRequiredTitle || i18n.personaRequired);
     }
-    const choices = element(`${prefix}-choices`);
-    if (choices && personaId) {
-      choices.dataset.selectedPersonaId = String(personaId);
-      renderPersonaSelect(prefix);
+    if (manualPersona.name && manualPersona.birth_date) {
+      const persona = await createPersona({
+        ...manualPersona,
+        birth_time: manualPersona.birth_time || "",
+        birth_place: manualPersona.birth_place || "",
+      });
+      personaId = Number(persona?.id || 0);
+      await loadPersonas();
+      const select = element(`${prefix}-select`);
+      if (select && personaId) {
+        select.value = String(personaId);
+        updatePersonaPreview(prefix);
+      }
+      const choices = element(`${prefix}-choices`);
+      if (choices && personaId) {
+        choices.dataset.selectedPersonaId = String(personaId);
+        renderPersonaSelect(prefix);
+      }
     }
   }
   return {
@@ -342,6 +343,11 @@ async function resolvePersonaForPrefix(prefix, options = {}) {
 }
 
 async function createPersona(payload) {
+  if (!isLoggedIn()) {
+    throw new Error(i18n.personaSaveNeedsAuth || (lang === "en"
+      ? "Sign in to save personas"
+      : "Войдите, чтобы сохранять персоны"));
+  }
   const result = await apiRequest("/api/personas", "POST", payload, { redirectOnUnauthorized: true });
   return result.persona;
 }
@@ -489,6 +495,13 @@ function wireProfilePersonas() {
     document.body.classList.remove("modal-open");
   };
   element("profile-persona-add-btn")?.addEventListener("click", () => {
+    if (!isLoggedIn()) {
+      setResult("profile-persona-result", i18n.personaSaveNeedsAuth || (lang === "en"
+        ? "Sign in to save personas"
+        : "Войдите, чтобы сохранять персоны"));
+      window.location.href = loginRedirectUrl();
+      return;
+    }
     clearProfilePersonaForm();
     setResult("profile-persona-result", "");
     openProfilePersonaModal("create");
@@ -624,7 +637,7 @@ function wireTarotForm() {
       element("tarot-persona-select")?.focus();
       return;
     }
-    if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date || !manualPersona.birth_time || !manualPersona.birth_place)) {
+    if (personaMode === "manual" && (!manualPersona.name || !manualPersona.birth_date)) {
       setTarotFormStatus(i18n.personaRequired);
       element("tarot-form-result")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
       return;
@@ -636,6 +649,11 @@ function wireTarotForm() {
       requiredCost: serviceCostFromDataset("costTarot"),
       request: async () => {
       if (personaMode === "manual" && element("tarot-save-persona")?.checked && manualPersona.name && manualPersona.birth_date) {
+        if (!isLoggedIn()) {
+          throw new Error(i18n.personaSaveNeedsAuth || (lang === "en"
+            ? "Sign in to save personas"
+            : "Войдите, чтобы сохранять персоны"));
+        }
         const persona = await createPersona(manualPersona);
         personaId = Number(persona?.id || 0);
         await loadPersonas();
