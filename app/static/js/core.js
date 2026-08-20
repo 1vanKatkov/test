@@ -22,6 +22,8 @@ const state = {
   profileProvider: "guest",
   activeAuthProvider: localStorage.getItem(ACTIVE_AUTH_PROVIDER_KEY) || "",
   personas: [],
+  guestFreeRemaining: 0,
+  guestFreeLimit: 2,
 };
 let telegramSdkLoadPromise = null;
 
@@ -122,6 +124,8 @@ const i18n = lang === "en"
     chooseTicketFirst: "Choose ticket first",
     logout: "Log out",
     signInRedirecting: "Redirecting to login...",
+    guestFreeBanner: "You have {n} free reading(s) left without registration.",
+    guestQuotaExceeded: "Free readings used up. Please sign in to continue.",
     personaSaved: "Persona saved",
     personaDeleted: "Persona deleted",
     personaEmpty: "No saved personas yet",
@@ -209,6 +213,8 @@ const i18n = lang === "en"
     chooseTicketFirst: "Сначала выберите обращение",
     logout: "Выйти",
     signInRedirecting: "Перенаправляем на страницу входа...",
+    guestFreeBanner: "До регистрации доступно ещё {n} бесплатных разбора.",
+    guestQuotaExceeded: "Бесплатные разборы закончились. Войдите, чтобы продолжить.",
     personaSaved: "Персона сохранена",
     personaDeleted: "Персона удалена",
     personaEmpty: "Сохранённых персон пока нет",
@@ -753,12 +759,80 @@ async function showInsufficientSparksModal(requiredCost) {
   return true;
 }
 
-async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess, onError, collapseForm = true, scrollToResult = true, requiredCost = 0 }) {
-  if (redirectGuestFromForm()) {
-    setResult(resultId, i18n.signInRedirecting);
-    return null;
+function isGuestQuotaExceededError(message) {
+  const text = String(message || "");
+  return /GUEST_QUOTA_EXCEEDED/i.test(text) || /бесплатн/i.test(text) && /регистрац|войд|авториз/i.test(text);
+}
+
+function guestFreeRemaining() {
+  return Math.max(0, Number(state.guestFreeRemaining) || 0);
+}
+
+function canUseGuestFreeReading() {
+  return !isLoggedIn() && guestFreeRemaining() > 0;
+}
+
+function applyGuestFreeRemaining(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    state.guestFreeRemaining = Math.max(0, value);
   }
-  const cost = Number(requiredCost) || 0;
+}
+
+async function loadGuestQuota() {
+  if (isLoggedIn()) {
+    state.guestFreeRemaining = 0;
+    return { remaining: 0, limit: 0, authenticated: true };
+  }
+  try {
+    const result = await apiRequest("/api/guest/quota", "GET", null, { redirectOnUnauthorized: false });
+    state.guestFreeLimit = Number(result.limit) || state.guestFreeLimit;
+    state.guestFreeRemaining = Number(result.remaining) || 0;
+    return result;
+  } catch {
+    state.guestFreeRemaining = 0;
+    return { remaining: 0, limit: state.guestFreeLimit, authenticated: false };
+  }
+}
+
+function syncGuestFreeBanner() {
+  const allowedRoot = document.querySelector("[data-guest-free-allowed='true']");
+  let banner = document.getElementById("guest-free-banner");
+  if (!allowedRoot) {
+    if (banner) {
+      banner.hidden = true;
+    }
+    return;
+  }
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "guest-free-banner";
+    banner.className = "guest-free-banner";
+    const panel = document.querySelector(".auth-required-panel[data-guest-free-allowed='true']");
+    const content = document.querySelector(".auth-required-content[data-guest-free-allowed='true']");
+    const anchor = panel || content;
+    if (anchor?.parentElement) {
+      anchor.parentElement.insertBefore(banner, anchor);
+    } else {
+      return;
+    }
+  }
+  if (!isLoggedIn() && guestFreeRemaining() > 0) {
+    const template = document.body.dataset.guestFreeBanner || i18n.guestFreeBanner || "";
+    banner.textContent = String(template).replace("{n}", String(guestFreeRemaining()));
+    banner.hidden = false;
+  } else {
+    banner.hidden = true;
+  }
+}
+
+async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess, onError, collapseForm = true, scrollToResult = true, requiredCost = 0 }) {
+  if (!isLoggedIn() && !canUseGuestFreeReading()) {
+    if (redirectGuestFromForm()) {
+      setResult(resultId, i18n.signInRedirecting);
+      return null;
+    }
+  }
+  const cost = canUseGuestFreeReading() ? 0 : (Number(requiredCost) || 0);
   if (cost > 0) {
     const balance = readCachedBalance();
     if (balance !== null && balance < cost) {
@@ -774,6 +848,11 @@ async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess,
   setFormBusy(form, true, null);
   try {
     const data = await request();
+    if (typeof data?.guest_free_remaining === "number") {
+      applyGuestFreeRemaining(data.guest_free_remaining);
+      syncAuthRequiredSections(!isLoggedIn());
+      syncGuestFreeBanner();
+    }
     if (onSuccess) {
       onSuccess(data, { revealResult: (content) => revealAiResult(resultId, content, { scroll: scrollToResult }) });
     } else {
@@ -782,6 +861,13 @@ async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess,
     return data;
   } catch (error) {
     restoreAiForm(form);
+    if (isGuestQuotaExceededError(error.message)) {
+      applyGuestFreeRemaining(0);
+      syncAuthRequiredSections(true);
+      syncGuestFreeBanner();
+      window.location.href = loginRedirectUrl();
+      return null;
+    }
     if (isInsufficientCreditsError(error.message) && cost > 0) {
       await showInsufficientSparksModal(cost);
       return null;
@@ -1165,15 +1251,20 @@ function syncGuestOnlyChrome(isGuest) {
 
 function syncAuthRequiredSections(isGuest) {
   document.querySelectorAll(".auth-required-panel").forEach((panel) => {
-    panel.hidden = !isGuest;
+    const allowsGuestFree = panel.getAttribute("data-guest-free-allowed") === "true";
+    const shouldLock = isGuest && !(allowsGuestFree && canUseGuestFreeReading());
+    panel.hidden = !shouldLock;
   });
   document.querySelectorAll(".auth-required-content").forEach((content) => {
+    const allowsGuestFree = content.getAttribute("data-guest-free-allowed") === "true";
+    const shouldLock = isGuest && !(allowsGuestFree && canUseGuestFreeReading());
     content.hidden = false;
-    content.classList.toggle("is-auth-locked", isGuest);
+    content.classList.toggle("is-auth-locked", shouldLock);
     content.querySelectorAll("input, textarea, select, button").forEach((control) => {
-      control.disabled = isGuest;
+      control.disabled = shouldLock;
     });
   });
+  syncGuestFreeBanner();
 }
 
 function syncAuthChrome(profile) {
@@ -1250,7 +1341,7 @@ function setFormBusy(form, isBusy, loadingText = i18n.loading) {
 }
 
 function redirectGuestFromForm() {
-  if (isLoggedIn()) {
+  if (isLoggedIn() || canUseGuestFreeReading()) {
     return false;
   }
   window.location.href = loginRedirectUrl();

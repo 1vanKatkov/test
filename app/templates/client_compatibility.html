@@ -14,12 +14,12 @@
   {% endwith %}
 
   <section class="card auth-gated-card service-theme-shell">
-    <div class="auth-required-panel" hidden>
+    <div class="auth-required-panel" data-guest-free-allowed="true" hidden>
       <h3>{{ t.sign_in_required_title }}</h3>
       <p>{{ t.sign_in_required_text }}</p>
       <a class="primary-btn" href="/static/auth/login.html?next=/client/compatibility">{{ t.sign_in_required_action }}</a>
     </div>
-    <div class="auth-required-content">
+    <div class="auth-required-content" data-guest-free-allowed="true">
       <a class="service-about-inline-link" href="/client/about/compatibility?back=/client/compatibility">{{ t.about_compatibility or 'О совместимости' }}</a>
       <form
         id="compat-names-dates-form"

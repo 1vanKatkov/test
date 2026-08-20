@@ -21,7 +21,7 @@
   {% endif %}
 
   <section class="card auth-gated-card service-theme-shell">
-    <div class="auth-required-panel" hidden>
+    <div class="auth-required-panel" data-guest-free-allowed="true" hidden>
       <h3>{{ t.sign_in_required_title }}</h3>
       <p>{{ t.sign_in_required_text }}</p>
       {% if selected_card_reading_topic %}
@@ -30,7 +30,7 @@
       <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot">{{ t.sign_in_required_action }}</a>
       {% endif %}
     </div>
-    <div class="auth-required-content">
+    <div class="auth-required-content" data-guest-free-allowed="true">
       <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?back=/client/tarot">{{ t.about_astrology or 'Об астрологии' }}</a>
       {% if not selected_card_reading_topic %}
       <div class="card-reading-grid" aria-label="{{ t.tarot }}">

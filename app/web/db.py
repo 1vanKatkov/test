@@ -180,6 +180,19 @@ class Database:
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_day ON site_visits(day)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_visitor ON site_visits(visitor_key)")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS guest_free_readings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guest_id TEXT NOT NULL,
+                    ip_hash TEXT NOT NULL DEFAULT '',
+                    module TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_guest_free_readings_guest ON guest_free_readings(guest_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_guest_free_readings_ip ON guest_free_readings(ip_hash)")
             self._ensure_column(conn, "users", "subscription_end", "TEXT")
             self._ensure_column(conn, "users", "password_hash", "TEXT")
             self._ensure_column(conn, "users", "role", "TEXT DEFAULT 'user'")
@@ -396,8 +409,10 @@ class Database:
         provider_user_id: str,
         username: Optional[str],
         language: str = "ru",
+        credits: Optional[int] = None,
     ) -> sqlite3.Row:
         now = self._now()
+        initial_credits = settings.starting_credits if credits is None else int(credits)
         with self.transaction() as conn:
             row = conn.execute(
                 "SELECT * FROM users WHERE provider = ? AND provider_user_id = ?",
@@ -420,13 +435,46 @@ class Database:
                     provider_user_id,
                     username,
                     language,
-                    settings.starting_credits,
+                    initial_credits,
                     now,
                     now,
                 ),
             )
             user_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
             return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    def count_guest_free_readings(self, guest_id: str = "", ip_hash: str = "") -> int:
+        conn = self.connect()
+        try:
+            used_guest = 0
+            used_ip = 0
+            if guest_id:
+                used_guest = int(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM guest_free_readings WHERE guest_id = ?",
+                        (guest_id,),
+                    ).fetchone()[0]
+                )
+            if ip_hash:
+                used_ip = int(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM guest_free_readings WHERE ip_hash = ?",
+                        (ip_hash,),
+                    ).fetchone()[0]
+                )
+            return max(used_guest, used_ip)
+        finally:
+            conn.close()
+
+    def record_guest_free_reading(self, guest_id: str, ip_hash: str, module: str) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO guest_free_readings (guest_id, ip_hash, module, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (guest_id, ip_hash or "", module, self._now()),
+            )
 
     def get_user_by_id(self, user_id: int) -> Optional[sqlite3.Row]:
         conn = self.connect()

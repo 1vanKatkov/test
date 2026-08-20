@@ -13,6 +13,7 @@
   data-dev-auth-mock-username="{{ dev_auth_mock_username }}"
   data-lang="{{ lang }}"
   data-email-skip-verification="{{ 'true' if email_skip_verification else 'false' }}"
+  data-guest-free-banner="{{ t.guest_free_banner|default('') }}"
   {% block body_attrs %}{% endblock %}
 >
   {% block header %}

@@ -14,12 +14,12 @@
   {% endwith %}
 
   <section class="card auth-gated-card service-theme-shell">
-    <div class="auth-required-panel" hidden>
+    <div class="auth-required-panel" data-guest-free-allowed="true" hidden>
       <h3>{{ t.sign_in_required_title }}</h3>
       <p>{{ t.sign_in_required_text }}</p>
       <a class="primary-btn" href="/static/auth/login.html?next=/client/sonnik">{{ t.sign_in_required_action }}</a>
     </div>
-    <div class="auth-required-content">
+    <div class="auth-required-content" data-guest-free-allowed="true">
       <a class="service-about-inline-link" href="/client/about/sonnik?back=/client/sonnik">{{ t.about_sonnik or 'О соннике' }}</a>
       <form id="sonnik-form" class="form-grid service-theme-form" novalidate>
         {% with prefix='sonnik-persona', default_mode='manual', use_choices=false %}

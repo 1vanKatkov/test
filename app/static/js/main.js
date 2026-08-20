@@ -54,6 +54,8 @@ async function boot() {
   }
   toggleEmailAuthEntry();
   syncAuthChrome(profile);
+  await loadGuestQuota();
+  syncAuthRequiredSections(!isLoggedIn());
   await loadPersonas();
   await loadTarotCardsDeck().catch(() => {});
   await loadTarotCardsReport().catch(() => {});

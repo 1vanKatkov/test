@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from typing import NamedTuple
 from datetime import date, timedelta
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -47,6 +47,7 @@ from app.web.auth.telegram_auth import (
     verify_telegram_bot_bearer,
 )
 from app.web.db import db
+from app.web.services.guest_quota import begin_reading_session, guest_quota_snapshot, resolve_report_owner_user_id
 from app.web.schemas import (
     AdminAdjustCreditsRequest,
     AdminSetRoleRequest,
@@ -602,8 +603,9 @@ def _translations(lang: str) -> dict:
             "get_interpretation": "Get interpretation",
             "cost_label": "Cost",
             "sign_in_required_title": "Sign in to continue",
-            "sign_in_required_text": "Create an account or log in to use this tool and keep your results in history.",
+            "sign_in_required_text": "You already used 2 free readings. Create an account or log in to continue.",
             "sign_in_required_action": "Log in",
+            "guest_free_banner": "You have {n} free reading(s) left without registration.",
             "full_name": "Full name",
             "birth_date": "Birth date (DD.MM.YYYY)",
             "generate_pdf": "Generate PDF",
@@ -875,8 +877,9 @@ def _translations(lang: str) -> dict:
         "get_interpretation": "Получить интерпретацию",
         "cost_label": "Стоимость",
         "sign_in_required_title": "Войдите, чтобы продолжить",
-        "sign_in_required_text": "Создайте аккаунт или войдите, чтобы пользоваться инструментом и сохранять результаты в истории.",
+        "sign_in_required_text": "Вы использовали 2 бесплатных разбора. Создайте аккаунт или войдите, чтобы продолжить.",
         "sign_in_required_action": "Войти",
+        "guest_free_banner": "До регистрации доступно ещё {n} бесплатных разбора.",
         "full_name": "Полное имя",
         "birth_date": "Дата рождения (ДД.ММ.ГГГГ)",
         "generate_pdf": "Сгенерировать PDF",
@@ -1646,7 +1649,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "admin-unique-visits-v1",
+        "assets_version": "guest-free-readings-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -3014,54 +3017,90 @@ async def api_admin_audit_log(
     return {"success": True, "items": [dict(row) for row in db.list_admin_audit_log(limit=limit, offset=offset)]}
 
 
-@app.post("/api/sonnik/interpret")
-async def api_sonnik(
-    payload: SonnikRequest,
+
+@app.get("/api/guest/quota")
+async def api_guest_quota(
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    if email_identity or max_identity or telegram_identity:
+        return {"success": True, "limit": 0, "used": 0, "remaining": 0, "authenticated": True}
+    snapshot = guest_quota_snapshot(request, response)
+    return {"success": True, **snapshot, "authenticated": False}
+
+
+@app.post("/api/sonnik/interpret")
+async def api_sonnik(
+    payload: SonnikRequest,
+    request: Request,
+    response: Response,
+    max_identity: MaxIdentity | None = Depends(optional_max_auth),
+    telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
+):
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="sonnik",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
-    persona_context = _optional_persona_from_payload(user_id, payload)
-    charge(user_id, settings.cost_sonnik, "sonnik", {"module": "sonnik"})
+    persona_context = None if session.is_guest_free else _optional_persona_from_payload(user_id, payload)
+    session.charge(settings.cost_sonnik, "sonnik", {"module": "sonnik"})
     try:
         interpretation = sonnik.interpret_dream(payload.dream_text, requested_language, persona_context)
     except HTTPException as exc:
-        new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
+        new_balance = session.refund("sonnik_refund", {"module": "sonnik"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "sonnik", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(user_id, settings.cost_sonnik, "sonnik_refund", {"module": "sonnik"})
+        new_balance = session.refund("sonnik_refund", {"module": "sonnik"})
         return JSONResponse(status_code=502, content={"error": _service_failure_message("sonnik", requested_language), "balance": new_balance})
 
     persona_name = f"; persona={persona_context.get('name')}" if persona_context and persona_context.get("name") else ""
     db.record_history(user_id, "sonnik", f"{payload.dream_text}{persona_name}", interpretation)
-    return {"success": True, "interpretation": interpretation, "balance": get_balance(user_id)}
+    remaining = session.finalize_success("sonnik")
+    return {"success": True, "interpretation": interpretation, "balance": session.balance(), "guest_free_remaining": remaining}
 
 
 @app.post("/api/numerology/generate")
 async def api_numerology(
     payload: NumerologyRequest,
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="numerology",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     persona_context = _persona_context_from_values(
         user_id=user_id,
-        persona_id=payload.persona_id,
+        persona_id=None if session.is_guest_free else payload.persona_id,
         name=payload.persona_name or payload.full_name,
         birth_date=payload.persona_birth_date or payload.birth_date,
-        birth_time=payload.persona_birth_time,
-        birth_place=payload.persona_birth_place,
-        note=payload.persona_note,
+        birth_time=None if session.is_guest_free else payload.persona_birth_time,
+        birth_place=None if session.is_guest_free else payload.persona_birth_place,
+        note=None if session.is_guest_free else payload.persona_note,
         required=True,
         require_birth_details=False,
     )
     full_name = persona_context["name"]
     birth_date = persona_context["birth_date"]
-    charge(user_id, settings.cost_numerology, "numerology", {"module": "numerology"})
+    session.charge(settings.cost_numerology, "numerology", {"module": "numerology"})
     try:
         report_payload = numerology.generate_web_report(full_name, birth_date, requested_language)
         report_payload["persona"] = {
@@ -3072,10 +3111,10 @@ async def api_numerology(
             "note": persona_context.get("note") or "",
         }
     except HTTPException as exc:
-        new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
+        new_balance = session.refund("numerology_refund", {"module": "numerology"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "numerology", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(user_id, settings.cost_numerology, "numerology_refund", {"module": "numerology"})
+        new_balance = session.refund("numerology_refund", {"module": "numerology"})
         return JSONResponse(status_code=500, content={"error": _service_failure_message("numerology", requested_language), "balance": new_balance})
 
     report_id = db.record_html_report(
@@ -3094,19 +3133,26 @@ async def api_numerology(
         "success": True,
         "report_id": report_id,
         "report_url": f"/client/numerology/report/{report_id}",
-        "balance": get_balance(user_id),
+        "balance": session.balance(),
+        "guest_free_remaining": session.finalize_success("numerology"),
     }
 
 
 @app.get("/api/numerology/report/{report_id}")
 async def api_numerology_report(
     report_id: int,
+    request: Request,
     lang: str = Query(default=""),
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    user_id = resolve_report_owner_user_id(
+        request,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+    )
     row = db.get_html_report(report_id=report_id, user_id=user_id)
     if not row:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -3128,64 +3174,75 @@ def api_report(file_name: str):
 @app.post("/api/sovmestimost/by-names")
 async def api_sovmestimost_names(
     payload: SovmestimostNamesRequest,
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="sovmestimost_names",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
-    charge(user_id, settings.cost_sovmestimost, "sovmestimost_names", {"module": "sovmestimost"})
+    session.charge(settings.cost_sovmestimost, "sovmestimost_names", {"module": "sovmestimost"})
     try:
         result = compatibility.by_names(payload.name1, payload.name2, requested_language)
     except HTTPException as exc:
-        new_balance = refund(
-            user_id,
-            settings.cost_sovmestimost,
-            "sovmestimost_refund",
-            {"module": "sovmestimost"},
-        )
+        new_balance = session.refund("sovmestimost_refund", {"module": "sovmestimost"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "compatibility", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(
-            user_id,
-            settings.cost_sovmestimost,
-            "sovmestimost_refund",
-            {"module": "sovmestimost"},
-        )
+        new_balance = session.refund("sovmestimost_refund", {"module": "sovmestimost"})
         return JSONResponse(status_code=502, content={"error": _service_failure_message("compatibility", requested_language), "balance": new_balance})
 
     db.record_history(user_id, "sovmestimost_names", f"{payload.name1};{payload.name2}", result)
-    return {"success": True, "result": result, "balance": get_balance(user_id)}
+    remaining = session.finalize_success("sovmestimost_names")
+    return {"success": True, "result": result, "balance": session.balance(), "guest_free_remaining": remaining}
 
 
 @app.post("/api/sovmestimost/by-names-dates")
 async def api_sovmestimost_names_dates(
     payload: SovmestimostNamesDatesRequest,
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="sovmestimost_names_dates",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     persona1 = _persona_context_from_values(
         user_id=user_id,
-        persona_id=payload.persona1_id,
+        persona_id=None if session.is_guest_free else payload.persona1_id,
         name=payload.persona1_name or payload.name1,
         birth_date=payload.persona1_birth_date or payload.date1,
-        birth_time=payload.persona1_birth_time,
-        birth_place=payload.persona1_birth_place,
-        note=payload.persona1_note,
+        birth_time=None if session.is_guest_free else payload.persona1_birth_time,
+        birth_place=None if session.is_guest_free else payload.persona1_birth_place,
+        note=None if session.is_guest_free else payload.persona1_note,
         required=True,
         require_birth_details=False,
     )
     persona2 = _persona_context_from_values(
         user_id=user_id,
-        persona_id=payload.persona2_id,
+        persona_id=None if session.is_guest_free else payload.persona2_id,
         name=payload.persona2_name or payload.name2,
         birth_date=payload.persona2_birth_date or payload.date2,
-        birth_time=payload.persona2_birth_time,
-        birth_place=payload.persona2_birth_place,
-        note=payload.persona2_note,
+        birth_time=None if session.is_guest_free else payload.persona2_birth_time,
+        birth_place=None if session.is_guest_free else payload.persona2_birth_place,
+        note=None if session.is_guest_free else payload.persona2_note,
         required=True,
         require_birth_details=False,
     )
@@ -3193,8 +3250,7 @@ async def api_sovmestimost_names_dates(
     date1 = persona1["birth_date"]
     name2 = persona2["name"]
     date2 = persona2["birth_date"]
-    charge(
-        user_id,
+    session.charge(
         settings.cost_sovmestimost,
         "sovmestimost_names_dates",
         {"module": "sovmestimost"},
@@ -3210,20 +3266,10 @@ async def api_sovmestimost_names_dates(
             persona2=persona2,
         )
     except HTTPException as exc:
-        new_balance = refund(
-            user_id,
-            settings.cost_sovmestimost,
-            "sovmestimost_refund",
-            {"module": "sovmestimost"},
-        )
+        new_balance = session.refund("sovmestimost_refund", {"module": "sovmestimost"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "compatibility", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(
-            user_id,
-            settings.cost_sovmestimost,
-            "sovmestimost_refund",
-            {"module": "sovmestimost"},
-        )
+        new_balance = session.refund("sovmestimost_refund", {"module": "sovmestimost"})
         status_code = 400 if "Invalid date format" in str(exc) else 502
         error = str(exc) if status_code == 400 else _service_failure_message("compatibility", requested_language)
         return JSONResponse(status_code=status_code, content={"error": error, "balance": new_balance})
@@ -3234,34 +3280,46 @@ async def api_sovmestimost_names_dates(
         f"{name1};{date1};{name2};{date2}",
         result,
     )
-    return {"success": True, "result": result, "balance": get_balance(user_id)}
+    remaining = session.finalize_success("sovmestimost_names_dates")
+    return {"success": True, "result": result, "balance": session.balance(), "guest_free_remaining": remaining}
 
 
 @app.post("/api/tarot/reading")
 async def api_tarot_reading(
     payload: TarotRequest,
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="tarot",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     topic = _validate_card_reading_topic(payload.topic)
     spread = _validate_tarot_spread(payload.spread)
-    persona_context = _tarot_persona_context(user_id, payload)
-    charge(user_id, settings.cost_tarot, "tarot", {"module": "tarot"})
+    persona_context = None if session.is_guest_free else _tarot_persona_context(user_id, payload)
+    session.charge(settings.cost_tarot, "tarot", {"module": "tarot"})
     try:
         result = divination.tarot_reading(payload.question, topic, spread, requested_language, persona_context)
     except HTTPException as exc:
-        new_balance = refund(user_id, settings.cost_tarot, "tarot_refund", {"module": "tarot"})
+        new_balance = session.refund("tarot_refund", {"module": "tarot"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "reading", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(user_id, settings.cost_tarot, "tarot_refund", {"module": "tarot"})
+        new_balance = session.refund("tarot_refund", {"module": "tarot"})
         return JSONResponse(status_code=502, content={"error": _service_failure_message("reading", requested_language), "balance": new_balance})
 
     persona_name = f"; persona={persona_context.get('name')}" if persona_context and persona_context.get("name") else ""
     db.record_history(user_id, "tarot", f"{topic}; {spread}{persona_name}; {payload.question}", result)
-    return {"success": True, "result": result, "balance": get_balance(user_id)}
+    remaining = session.finalize_success("tarot")
+    return {"success": True, "result": result, "balance": session.balance(), "guest_free_remaining": remaining}
 
 
 @app.get("/api/tarot-cards/deck")
@@ -3286,19 +3344,29 @@ async def api_tarot_cards_draw(payload: TarotCardDrawRequest):
 @app.post("/api/tarot-cards/reading")
 async def api_tarot_cards_reading(
     payload: TarotCardReadingRequest,
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="tarot_cards",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     topic = payload.topic or payload.spread or "question"
     try:
         selected_card_ids = tarot_cards.validate_draw_token(payload.draw_token, topic)
     except HTTPException as exc:
-        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": get_balance(user_id)})
-    persona_context = _optional_persona_from_payload(user_id, payload)
-    charge(user_id, settings.cost_tarot_cards, "tarot_cards", {"module": "tarot_cards", "topic": topic})
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "balance": session.balance()})
+    persona_context = None if session.is_guest_free else _optional_persona_from_payload(user_id, payload)
+    session.charge(settings.cost_tarot_cards, "tarot_cards", {"module": "tarot_cards", "topic": topic})
     try:
         result = tarot_cards.tarot_card_reading(
             payload.question,
@@ -3311,10 +3379,10 @@ async def api_tarot_cards_reading(
             topic=topic,
         )
     except HTTPException as exc:
-        new_balance = refund(user_id, settings.cost_tarot_cards, "tarot_cards_refund", {"module": "tarot_cards"})
+        new_balance = session.refund("tarot_cards_refund", {"module": "tarot_cards"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "reading", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(user_id, settings.cost_tarot_cards, "tarot_cards_refund", {"module": "tarot_cards"})
+        new_balance = session.refund("tarot_cards_refund", {"module": "tarot_cards"})
         return JSONResponse(status_code=502, content={"error": _service_failure_message("reading", requested_language), "balance": new_balance})
 
     cards_summary = ", ".join(card["name"] for card in result["cards"])
@@ -3327,23 +3395,31 @@ async def api_tarot_cards_reading(
         content_json=json.dumps(result, ensure_ascii=False),
     )
     db.record_history(user_id, "tarot_cards", input_text, result["interpretation"])
+    remaining = session.finalize_success("tarot_cards")
     return {
         "success": True,
         **result,
         "report_id": report_id,
         "report_url": f"/client/tarot-cards/report/{report_id}",
-        "balance": get_balance(user_id),
+        "balance": session.balance(),
+        "guest_free_remaining": remaining,
     }
 
 
 @app.get("/api/tarot-cards/report/{report_id}")
 async def api_tarot_cards_report(
     report_id: int,
+    request: Request,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    user_id = resolve_report_owner_user_id(
+        request,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+    )
     row = db.get_html_report(report_id=report_id, user_id=user_id)
     if not row or row["module"] != "tarot_cards":
         raise HTTPException(status_code=404, detail="Report not found")
@@ -3357,27 +3433,38 @@ async def api_tarot_cards_report(
 @app.post("/api/astrology/forecast")
 async def api_astrology_forecast(
     payload: AstrologyForecastRequest,
+    request: Request,
+    response: Response,
     max_identity: MaxIdentity | None = Depends(optional_max_auth),
     telegram_identity: TelegramIdentity | None = Depends(optional_telegram_auth),
     email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    user_id, _provider = _require_authenticated_user(max_identity, telegram_identity, email_identity)
+    session = begin_reading_session(
+        request,
+        response,
+        max_identity=max_identity,
+        telegram_identity=telegram_identity,
+        email_identity=email_identity,
+        module="astrology",
+    )
+    user_id = session.user_id
     requested_language = _normalize_lang(payload.language or _resolve_language(email_identity, max_identity, telegram_identity))
     persona_context = _persona_context_from_values(
         user_id=user_id,
-        persona_id=payload.persona_id,
+        persona_id=None if session.is_guest_free else payload.persona_id,
         name=payload.persona_name or payload.name,
         birth_date=payload.persona_birth_date or payload.birth_date,
         birth_time=payload.persona_birth_time or payload.birth_time,
         birth_place=payload.persona_birth_place or payload.birth_place,
-        note=payload.persona_note,
+        note=None if session.is_guest_free else payload.persona_note,
         required=True,
+        require_birth_details=False,
     )
     name = persona_context["name"]
     birth_date = persona_context["birth_date"]
     birth_time = persona_context["birth_time"]
     birth_place = persona_context["birth_place"]
-    charge(user_id, settings.cost_astrology, "astrology", {"module": "astrology"})
+    session.charge(settings.cost_astrology, "astrology", {"module": "astrology"})
     try:
         result = divination.astrology_forecast(
             name,
@@ -3389,10 +3476,10 @@ async def api_astrology_forecast(
             persona=persona_context,
         )
     except HTTPException as exc:
-        new_balance = refund(user_id, settings.cost_astrology, "astrology_refund", {"module": "astrology"})
+        new_balance = session.refund("astrology_refund", {"module": "astrology"})
         return JSONResponse(status_code=exc.status_code, content={"error": _public_error_detail(exc, "astrology", requested_language), "balance": new_balance})
     except Exception as exc:
-        new_balance = refund(user_id, settings.cost_astrology, "astrology_refund", {"module": "astrology"})
+        new_balance = session.refund("astrology_refund", {"module": "astrology"})
         return JSONResponse(status_code=502, content={"error": _service_failure_message("astrology", requested_language), "balance": new_balance})
 
     input_text = (
@@ -3400,4 +3487,5 @@ async def api_astrology_forecast(
         f"{birth_place or '-'}; persona={name}; {payload.focus or '-'}"
     )
     db.record_history(user_id, "astrology", input_text, result)
-    return {"success": True, "result": result, "balance": get_balance(user_id)}
+    remaining = session.finalize_success("astrology")
+    return {"success": True, "result": result, "balance": session.balance(), "guest_free_remaining": remaining}

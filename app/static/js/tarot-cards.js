@@ -469,6 +469,10 @@ async function requestTarotDraw(topicId) {
 }
 
 async function startTarotReadingFlow() {
+  if (!isLoggedIn() && !canUseGuestFreeReading()) {
+    window.location.href = loginRedirectUrl();
+    return;
+  }
   if (!selectedTarotTopic) {
     setResult("tarot-cards-form-result", i18n.tarotCardsNeedExact);
     return;
@@ -487,9 +491,9 @@ async function startTarotReadingFlow() {
     return;
   }
 
-  const requiredCost = serviceCostFromDataset("costTarotCards");
+  const requiredCost = canUseGuestFreeReading() ? 0 : serviceCostFromDataset("costTarotCards");
   const balance = readCachedBalance();
-  if (Number.isFinite(requiredCost) && balance !== null && balance < requiredCost) {
+  if (Number.isFinite(requiredCost) && requiredCost > 0 && balance !== null && balance < requiredCost) {
     showTarotStep("details");
     await showInsufficientSparksModal(requiredCost);
     return;
@@ -532,6 +536,11 @@ async function startTarotReadingFlow() {
     if (typeof result.balance === "number") {
       saveTimedCache(BALANCE_CACHE_KEY, result.balance);
     }
+    if (typeof result.guest_free_remaining === "number") {
+      applyGuestFreeRemaining(result.guest_free_remaining);
+      syncAuthRequiredSections(!isLoggedIn());
+      syncGuestFreeBanner();
+    }
     tarotLastReportUrl = result.report_url || "";
     showTarotStep("result");
     renderTarotCardsResult(result);
@@ -540,7 +549,13 @@ async function startTarotReadingFlow() {
     deck?.classList.remove("is-shuffling", "is-dealing");
     showTarotStep("details");
     const message = error?.message || i18n.tarotCardsDrawFailed;
-    if (isInsufficientCreditsError(message) || String(message).toLowerCase().includes("spark") || String(message).includes("искр")) {
+    if (isGuestQuotaExceededError(message)) {
+      applyGuestFreeRemaining(0);
+      syncAuthRequiredSections(true);
+      window.location.href = loginRedirectUrl();
+      return;
+    }
+    if (requiredCost > 0 && (isInsufficientCreditsError(message) || String(message).toLowerCase().includes("spark") || String(message).includes("искр"))) {
       await showInsufficientSparksModal(requiredCost);
       return;
     }

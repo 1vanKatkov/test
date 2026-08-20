@@ -715,6 +715,17 @@ button:disabled {
   margin: 0;
 }
 
+.guest-free-banner {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 213, 106, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 213, 106, 0.08);
+  color: #ffe6b6;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .auth-required-panel p {
   color: var(--muted);
   line-height: 1.5;

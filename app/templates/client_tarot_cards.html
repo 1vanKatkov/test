@@ -20,12 +20,12 @@
   {% endwith %}
 
   <section class="card auth-gated-card service-theme-shell">
-    <div class="auth-required-panel" hidden>
+    <div class="auth-required-panel" data-guest-free-allowed="true" hidden>
       <h3>{{ t.sign_in_required_title }}</h3>
       <p>{{ t.sign_in_required_text }}</p>
       <a class="primary-btn" href="/static/auth/login.html?next=/client/tarot-cards">{{ t.sign_in_required_action }}</a>
     </div>
-    <div class="auth-required-content">
+    <div class="auth-required-content" data-guest-free-allowed="true">
       <a class="service-about-inline-link" href="/client/about/tarot-cards?back=/client/tarot-cards">{{ t.about_tarot_cards or 'О картах Таро' }}</a>
 
       <section id="tarot-step-topics" class="tarot-flow-step is-active" data-step="topics">

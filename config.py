@@ -112,6 +112,7 @@ class Settings:
     cost_tarot: int = 5
     cost_tarot_cards: int = int(os.getenv("COST_TAROT_CARDS", "10"))
     cost_astrology: int = 5
+    guest_free_readings_limit: int = int(os.getenv("GUEST_FREE_READINGS_LIMIT", "2"))
     max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
     max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))
     telegram_auth_skew_seconds: int = int(os.getenv("TELEGRAM_AUTH_SKEW_SECONDS", "86400"))
