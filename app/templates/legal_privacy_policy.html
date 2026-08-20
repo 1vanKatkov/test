@@ -1,0 +1,22 @@
+{% extends "layouts/client_base.html" %}
+
+{% block title %}{{ brand_name }} — {{ t.privacy_policy_title }}{% endblock %}
+
+{% block body_class %} legal-doc-page{% endblock %}
+
+{% block content %}
+<section class="card legal-doc-card">
+  <p class="muted legal-doc-meta">{{ t.privacy_policy_revision }}</p>
+  <h1>{{ t.privacy_policy_title }}</h1>
+  <div class="legal-doc-body">
+    {{ privacy_html | safe }}
+  </div>
+  <p class="legal-doc-links muted">
+    <a href="/privacy-policy.pdf" target="_blank" rel="noopener noreferrer">PDF</a>
+    ·
+    <a href="/personal-data-consent">{{ t.personal_data_consent_title }}</a>
+    ·
+    <a href="/public-offer.pdf" target="_blank" rel="noopener noreferrer">{{ t.public_offer_ack_link }}</a>
+  </p>
+</section>
+{% endblock %}

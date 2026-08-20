@@ -126,6 +126,7 @@ class EmailRegisterStartRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     password_confirm: str = Field(min_length=8, max_length=128)
     language: str = Field(default="ru", max_length=8)
+    accept_personal_data: bool = False
 
 
 class EmailRegisterVerifyRequest(BaseModel):

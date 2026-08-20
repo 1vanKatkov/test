@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.register }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=legal-pd-consent-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell auth-page"
@@ -28,6 +28,15 @@
         <label>{{ t.email }} <input id="register-email" type="email" autocomplete="email" required /></label>
         <label>{{ t.password }} <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
         <label>{{ t.repeat_password }} <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
+        <label class="payment-offer-consent">
+          <input id="register-pd-consent" type="checkbox" required />
+          <span>
+            {{ t.pd_consent_prefix }}
+            <a href="/personal-data-consent" target="_blank" rel="noopener noreferrer">{{ t.pd_consent_link }}</a>
+            {{ t.pd_consent_and_privacy_prefix }}
+            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">{{ t.pd_consent_privacy_link }}</a>.
+          </span>
+        </label>
         <button type="submit" class="primary-btn" id="register-submit-btn">{% if email_skip_verification %}{{ t.register }}{% else %}{{ t.send_code }}{% endif %}</button>
       </form>
       <p class="muted auth-switch-line">
@@ -38,7 +47,7 @@
     </section>
   </main>
 
-  {% set assets_version = assets_version|default('sparks-modal-v1') %}
+  {% set assets_version = assets_version|default('legal-pd-consent-v1') %}
   {% include "partials/client_scripts.html" %}
 </body>
 </html>

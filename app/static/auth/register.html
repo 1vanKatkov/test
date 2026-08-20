@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Astrolhub - Регистрация</title>
-  <link rel="stylesheet" href="/static/style.css?v=spark-icon-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=legal-pd-consent-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell auth-page auth-static-page"
@@ -44,6 +44,15 @@
         <label><span data-auth-label="email">Email</span> <input id="register-email" type="email" autocomplete="email" required /></label>
         <label><span data-auth-label="password">Пароль</span> <input id="register-password" type="password" autocomplete="new-password" required minlength="8" /></label>
         <label><span data-auth-label="repeatPassword">Повтор пароля</span> <input id="register-password-confirm" type="password" autocomplete="new-password" required minlength="8" /></label>
+        <label class="payment-offer-consent">
+          <input id="register-pd-consent" type="checkbox" required />
+          <span>
+            <span data-auth-label="pdConsentPrefix">Я даю согласие на</span>
+            <a href="/personal-data-consent" target="_blank" rel="noopener noreferrer" data-auth-label="pdConsentLink">обработку персональных данных</a>
+            <span data-auth-label="pdConsentAndPrivacyPrefix">и подтверждаю, что ознакомился с</span>
+            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" data-auth-label="pdConsentPrivacyLink">Политикой конфиденциальности</a>.
+          </span>
+        </label>
         <button type="submit" class="primary-btn" id="register-submit-btn" data-auth-label="registerSubmitCode">Отправить код</button>
       </form>
       <p class="muted auth-switch-line">
@@ -54,6 +63,6 @@
     </section>
   </main>
 
-  <script defer src="/static/app.js?v=spark-icon-v1"></script>
+  <script defer src="/static/app.js?v=legal-pd-consent-v1"></script>
 </body>
 </html>

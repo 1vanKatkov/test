@@ -48,6 +48,12 @@ from app.web.auth.telegram_auth import (
 )
 from app.web.db import db
 from app.web.services.guest_quota import begin_reading_session, guest_quota_snapshot, resolve_report_owner_user_id
+from app.web.services.legal_docs import (
+    personal_data_consent_html_en,
+    personal_data_consent_html_ru,
+    privacy_policy_html_en,
+    privacy_policy_html_ru,
+)
 from app.web.schemas import (
     AdminAdjustCreditsRequest,
     AdminSetRoleRequest,
@@ -93,6 +99,8 @@ PUBLIC_OFFER_FILE_CANDIDATES = (
     BASE_DIR.parent / "bots228" / "sonnik" / "Публичная оферта.pdf",
     BASE_DIR.parent / "bots228" / "sovmestimost" / "Публичная оферта.pdf",
 )
+PRIVACY_POLICY_PDF = STATIC_DIR / "legal" / "privacy-policy.pdf"
+PERSONAL_DATA_CONSENT_PDF = STATIC_DIR / "legal" / "personal-data-consent.pdf"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -671,6 +679,15 @@ def _translations(lang: str) -> dict:
             "receipt_email": "Receipt email",
             "public_offer_ack_prefix": "I have read the terms of the",
             "public_offer_ack_link": "public offer",
+            "privacy_policy_title": "Privacy Policy",
+            "privacy_policy_revision": "Revision dated 20.08.2026",
+            "personal_data_consent_title": "Personal data processing consent",
+            "personal_data_consent_revision": "Revision dated 20.08.2026",
+            "pd_consent_prefix": "I agree to the",
+            "pd_consent_link": "processing of personal data",
+            "pd_consent_and_privacy_prefix": "and confirm that I have read the",
+            "pd_consent_privacy_link": "Privacy Policy",
+            "accept_pd_consent": "Confirm consent to personal data processing",
             "soon": "Soon",
             "sparks": "Sparks",
             "email_auth": "Email auth",
@@ -945,6 +962,15 @@ def _translations(lang: str) -> dict:
         "receipt_email": "Email для чека",
         "public_offer_ack_prefix": "Я ознакомился с условиями",
         "public_offer_ack_link": "публичной оферты",
+        "privacy_policy_title": "Политика конфиденциальности",
+        "privacy_policy_revision": "Редакция от 20.08.2026",
+        "personal_data_consent_title": "Согласие на обработку персональных данных",
+        "personal_data_consent_revision": "Редакция от 20.08.2026",
+        "pd_consent_prefix": "Я даю согласие на",
+        "pd_consent_link": "обработку персональных данных",
+        "pd_consent_and_privacy_prefix": "и подтверждаю, что ознакомился с",
+        "pd_consent_privacy_link": "Политикой конфиденциальности",
+        "accept_pd_consent": "Подтвердите согласие на обработку персональных данных",
         "soon": "Скоро",
         "sparks": "Искры",
         "email_auth": "Авторизация по email",
@@ -1641,6 +1667,52 @@ async def public_offer_pdf():
     return FileResponse(path=offer_file, media_type="application/pdf", filename="Публичная оферта.pdf")
 
 
+@app.get("/privacy-policy.pdf", include_in_schema=False)
+async def privacy_policy_pdf():
+    if not PRIVACY_POLICY_PDF.exists():
+        raise HTTPException(status_code=404, detail="Privacy policy PDF not found")
+    return FileResponse(
+        path=PRIVACY_POLICY_PDF,
+        media_type="application/pdf",
+        filename="Политика конфиденциальности.pdf",
+    )
+
+
+@app.get("/personal-data-consent.pdf", include_in_schema=False)
+async def personal_data_consent_pdf():
+    if not PERSONAL_DATA_CONSENT_PDF.exists():
+        raise HTTPException(status_code=404, detail="Personal data consent PDF not found")
+    return FileResponse(
+        path=PERSONAL_DATA_CONSENT_PDF,
+        media_type="application/pdf",
+        filename="Согласие на обработку персональных данных.pdf",
+    )
+
+
+@app.get("/privacy-policy", response_class=HTMLResponse, include_in_schema=False)
+async def privacy_policy_page(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    page_lang, _ = _resolve_page_lang(request, lang)
+    context = _client_template_context(request, page_lang)
+    context["privacy_html"] = privacy_policy_html_en() if page_lang == "en" else privacy_policy_html_ru()
+    return templates.TemplateResponse(request=request, name="legal_privacy_policy.html", context=context)
+
+
+@app.get("/personal-data-consent", response_class=HTMLResponse, include_in_schema=False)
+async def personal_data_consent_page(
+    request: Request,
+    lang: str = Query(default=""),
+    auth: ClientAuthContext = Depends(optional_client_auth),
+):
+    page_lang, _ = _resolve_page_lang(request, lang)
+    context = _client_template_context(request, page_lang)
+    context["consent_html"] = personal_data_consent_html_en() if page_lang == "en" else personal_data_consent_html_ru()
+    return templates.TemplateResponse(request=request, name="legal_personal_data_consent.html", context=context)
+
+
 def _client_template_context(request: Request, lang: str, selected_card_topic: str = "") -> dict:
     page_lang = _normalize_lang(lang)
     initial_auth_username = _translations(page_lang)["guest"]
@@ -1649,7 +1721,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "guest-free-readings-v1",
+        "assets_version": "legal-pd-consent-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -2224,6 +2296,13 @@ async def api_email_health():
 @app.post("/api/auth/email/register/start")
 async def api_email_register_start(request: Request, payload: EmailRegisterStartRequest):
     lang = _effective_auth_lang(request, payload.language)
+    if not payload.accept_personal_data:
+        detail = (
+            "Confirm consent to personal data processing"
+            if lang == "en"
+            else "Подтвердите согласие на обработку персональных данных"
+        )
+        raise HTTPException(status_code=400, detail=detail)
     if settings.email_skip_verification:
         identity, is_new_user = await run_in_threadpool(
             complete_email_registration,

@@ -70,6 +70,11 @@ const i18n = lang === "en"
     needCreatePaymentFirst: "Create a payment first",
     enterEmail: "Enter a valid email",
     acceptPublicOffer: "Confirm that you have read the public offer terms",
+    acceptPdConsent: "Confirm consent to personal data processing",
+    pdConsentPrefix: "I agree to the",
+    pdConsentLink: "processing of personal data",
+    pdConsentAndPrivacyPrefix: "and confirm that I have read the",
+    pdConsentPrivacyLink: "Privacy Policy",
     paymentPending: "Payment is pending",
     paymentsHistoryEmpty: "No payments yet",
     cancelPayment: "Cancel",
@@ -159,6 +164,11 @@ const i18n = lang === "en"
     needCreatePaymentFirst: "Сначала создайте платеж",
     enterEmail: "Введите корректный email",
     acceptPublicOffer: "Подтвердите, что вы ознакомились с условиями публичной оферты",
+    acceptPdConsent: "Подтвердите согласие на обработку персональных данных",
+    pdConsentPrefix: "Я даю согласие на",
+    pdConsentLink: "обработку персональных данных",
+    pdConsentAndPrivacyPrefix: "и подтверждаю, что ознакомился с",
+    pdConsentPrivacyLink: "Политикой конфиденциальности",
     paymentPending: "Платеж еще в обработке",
     paymentsHistoryEmpty: "Платежей пока нет",
     cancelPayment: "Отменить",
@@ -264,6 +274,10 @@ const authPageCopy = {
     goLogin: "Log in",
     back: "Back",
     sparks: "✦",
+    pdConsentPrefix: "I agree to the",
+    pdConsentLink: "processing of personal data",
+    pdConsentAndPrivacyPrefix: "and confirm that I have read the",
+    pdConsentPrivacyLink: "Privacy Policy",
   },
   ru: {
     loginTitle: "Вход",
@@ -287,6 +301,10 @@ const authPageCopy = {
     goLogin: "Войти",
     back: "Назад",
     sparks: "✦",
+    pdConsentPrefix: "Я даю согласие на",
+    pdConsentLink: "обработку персональных данных",
+    pdConsentAndPrivacyPrefix: "и подтверждаю, что ознакомился с",
+    pdConsentPrivacyLink: "Политикой конфиденциальности",
   },
 };
 
@@ -1723,12 +1741,17 @@ function wireRegisterPage() {
       if (password !== passwordConfirm) {
         throw new Error(i18n.passwordsMismatch);
       }
+      const pdConsent = element("register-pd-consent");
+      if (pdConsent && !pdConsent.checked) {
+        throw new Error(i18n.acceptPdConsent || i18n.acceptPublicOffer);
+      }
       const email = element("register-email")?.value.trim() || "";
       const result = await apiRequest("/api/auth/email/register/start", "POST", {
         email,
         password,
         password_confirm: passwordConfirm,
         language: lang,
+        accept_personal_data: true,
       });
       if (result.profile || result.token) {
         applyEmailAuthResult(result);
