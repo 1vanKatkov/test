@@ -1,6 +1,6 @@
 /**
  * Astrolhub client — ui.js
- * Compatibility, dashboard carousel, language switch
+ * Compatibility, dashboard scroll reveal, language switch
  * Split from monolithic app.js for maintainability.
  * Load order: core → cabinet → services → tarot-cards → admin → ui → main.
  */
@@ -168,339 +168,57 @@ function wireCompatibilityForms() {
   }
 }
 
-function wireDashboardCarousel() {
-  const carousel = element("dashboard-carousel");
-  if (!carousel) {
-    return;
-  }
-  const track = carousel.querySelector(".dashboard-carousel-track");
-  const slides = Array.from(carousel.querySelectorAll(".dashboard-slide"));
-  if (!track || !slides.length) {
+function wireDashboardScroll() {
+  const root = element("dashboard-scroll");
+  if (!root) {
     return;
   }
 
-  const slideQueryRaw = Number(new URLSearchParams(window.location.search).get("slide"));
-  const slideQuery = Number.isFinite(slideQueryRaw) ? Math.trunc(slideQueryRaw) : 0;
-  let currentSlide = Math.max(
-    0,
-    Math.min(slides.length - 1, Number.isFinite(slideQuery) && slideQuery > 0 ? slideQuery : Number(carousel.dataset.slide || 0)),
-  );
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartScrollTop = 0;
-  let isAnimating = false;
-  let wheelLockUntil = 0;
-  let fitFrame = 0;
-  const transitionMs = prefersReducedMotion() ? 0 : 560;
-  const transitionSafetyMs = transitionMs + 80;
-  const goServicesButton = element("dashboard-go-services");
-  const mobileFitMq = window.matchMedia("(max-width: 767px)");
-  const supportsZoom = typeof CSS !== "undefined" && typeof CSS.supports === "function"
-    ? CSS.supports("zoom", "0.5")
-    : "zoom" in document.documentElement.style;
-
-  const goToServicesSlide = () => {
-    applySlide(Math.min(slides.length - 1, 1));
-  };
-
-  const clearTransitionState = (slide) => {
-    slide.classList.remove(
-      "is-entering",
-      "is-leaving",
-      "from-bottom",
-      "from-top",
-      "to-top",
-      "to-bottom",
-    );
-  };
-
-  const resetSlideFit = (body) => {
-    body.style.zoom = "";
-    body.style.transform = "";
-    body.style.width = "";
-    body.style.marginBottom = "";
-    body.style.maxHeight = "";
-  };
-
-  const applyBodyScale = (body, scale) => {
-    if (scale >= 0.999) {
-      resetSlideFit(body);
+  const services = element("dashboard-services");
+  const scrollToServices = () => {
+    if (!services) {
       return;
     }
-    if (supportsZoom) {
-      body.style.zoom = String(scale);
-      body.style.transform = "";
-      body.style.width = "";
-      body.style.marginBottom = "";
-      return;
-    }
-    body.style.zoom = "";
-    body.style.transformOrigin = "top center";
-    body.style.transform = `scale(${scale})`;
-    body.style.width = `${100 / scale}%`;
-    body.style.marginBottom = `${-(body.scrollHeight * (1 - scale))}px`;
-  };
-
-  const measureScaledHeight = (body, scale) => {
-    applyBodyScale(body, scale);
-    // zoom affects layout metrics; transform does not — use getBoundingClientRect for both.
-    return body.getBoundingClientRect().height;
-  };
-
-  const densifyIntroSlide = (slide, available, needed) => {
-    if (!slide.classList.contains("dashboard-slide-intro")) {
-      return;
-    }
-    slide.classList.remove("is-dense", "is-compact", "is-ultra");
-    if (needed <= available + 1) {
-      return;
-    }
-    const ratio = needed / Math.max(available, 1);
-    slide.classList.add("is-dense");
-    if (ratio > 1.12) {
-      slide.classList.add("is-compact");
-    }
-    if (ratio > 1.28) {
-      slide.classList.add("is-ultra");
-    }
-  };
-
-  const fitSlideBodies = () => {
-    slides.forEach((slide) => {
-      const body = slide.querySelector(":scope > .dashboard-slide-body")
-        || slide.querySelector(".dashboard-slide-body");
-      if (!body) {
-        return;
-      }
-      resetSlideFit(body);
-      slide.classList.remove("is-dense", "is-compact", "is-ultra");
-
-      const ctaDock = slide.querySelector(":scope > .dashboard-slide-cta-dock");
-      const ctaHeight = ctaDock ? Math.ceil(ctaDock.getBoundingClientRect().height) : 0;
-      const availableTotal = slide.clientHeight;
-      const available = Math.max(0, availableTotal - ctaHeight);
-      if (available <= 0) {
-        return;
-      }
-
-      let needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
-      densifyIntroSlide(slide, available, needed);
-      needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
-      if (needed <= available + 1) {
-        return;
-      }
-
-      if (slide.classList.contains("dashboard-slide-intro") && !slide.classList.contains("is-ultra")) {
-        slide.classList.add("is-dense", "is-compact", "is-ultra");
-        needed = Math.max(body.scrollHeight, body.getBoundingClientRect().height);
-        if (needed <= available + 1) {
-          return;
-        }
-      }
-
-      let low = 0.45;
-      let high = Math.min(1, available / needed);
-      let best = high;
-      for (let i = 0; i < 10; i += 1) {
-        const mid = (low + high) / 2;
-        const measured = measureScaledHeight(body, mid);
-        if (measured <= available + 1) {
-          best = mid;
-          low = mid;
-        } else {
-          high = mid;
-        }
-      }
-      applyBodyScale(body, Math.max(0.45, Math.min(1, best)));
-      if (body.getBoundingClientRect().height > available + 2) {
-        applyBodyScale(body, Math.max(0.45, available / Math.max(needed, 1)));
-      }
+    services.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
     });
   };
 
-  const scheduleFitSlideBodies = () => {
-    if (fitFrame) {
-      window.cancelAnimationFrame(fitFrame);
-    }
-    fitFrame = window.requestAnimationFrame(() => {
-      fitFrame = 0;
-      fitSlideBodies();
-      // Second pass after layout settles (fonts / images / safe-area).
-      window.requestAnimationFrame(() => {
-        fitSlideBodies();
-        syncTrackPosition(currentSlide);
+  element("dashboard-go-services")?.addEventListener("click", scrollToServices);
+  root.querySelectorAll(".dashboard-go-services-card").forEach((card) => {
+    card.addEventListener("click", scrollToServices);
+  });
+
+  const revealNodes = Array.from(root.querySelectorAll(".reveal-on-scroll"));
+  if (!revealNodes.length) {
+    return;
+  }
+
+  if (prefersReducedMotion()) {
+    revealNodes.forEach((node) => node.classList.add("is-visible"));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
       });
-    });
-  };
+    },
+    { root: null, rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+  );
 
-  const canScrollInsideActiveSlide = () => false;
-
-  const syncTrackPosition = (index) => {
-    const offset = Math.max(0, track.clientHeight) * index;
-    track.style.transform = `translateY(-${offset}px)`;
-  };
-
-  const applySlide = (index, options = {}) => {
-    const force = Boolean(options.force);
-    const next = Math.max(0, Math.min(slides.length - 1, index));
-    if (next === currentSlide && !force) {
-      return false;
+  revealNodes.forEach((node, index) => {
+    if (node.classList.contains("is-visible")) {
+      return;
     }
-    if (isAnimating && !force) {
-      return false;
-    }
-    const previous = currentSlide;
-    isAnimating = !force;
-    currentSlide = next;
-    carousel.dataset.slide = String(next);
-    syncTrackPosition(next);
-    slides.forEach((slide, slideIndex) => {
-      const active = slideIndex === next;
-      slide.classList.toggle("is-active", active);
-      slide.setAttribute("aria-hidden", active ? "false" : "true");
-      if (active && previous !== next) {
-        slide.scrollTop = 0;
-      }
-    });
-
-    if (previous !== next) {
-      const previousSlide = slides[previous];
-      const nextSlide = slides[next];
-      clearTransitionState(previousSlide);
-      clearTransitionState(nextSlide);
-      if (next > previous) {
-        nextSlide.classList.add("is-entering", "from-bottom");
-        previousSlide.classList.add("is-leaving", "to-top");
-      } else {
-        nextSlide.classList.add("is-entering", "from-top");
-        previousSlide.classList.add("is-leaving", "to-bottom");
-      }
-      if (transitionMs === 0) {
-        clearTransitionState(previousSlide);
-        clearTransitionState(nextSlide);
-      } else {
-        setTimeout(() => {
-          clearTransitionState(previousSlide);
-          clearTransitionState(nextSlide);
-        }, transitionSafetyMs);
-      }
-    }
-
-    if (transitionMs === 0 || force) {
-      isAnimating = false;
-    } else {
-      setTimeout(() => {
-        isAnimating = false;
-      }, transitionMs);
-    }
-    scheduleFitSlideBodies();
-    return true;
-  };
-
-  if (goServicesButton) {
-    goServicesButton.addEventListener("click", goToServicesSlide);
-  }
-
-  carousel.querySelectorAll(".dashboard-go-services-card").forEach((card) => {
-    card.addEventListener("click", goToServicesSlide);
+    node.style.setProperty("--reveal-delay", `${Math.min(index % 5, 4) * 60}ms`);
+    observer.observe(node);
   });
-
-  carousel.addEventListener("touchstart", (event) => {
-    const touch = event.changedTouches?.[0];
-    if (!touch) {
-      return;
-    }
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    touchStartScrollTop = slides[currentSlide]?.scrollTop || 0;
-  }, { passive: true });
-
-  carousel.addEventListener("touchend", (event) => {
-    const touch = event.changedTouches?.[0];
-    if (!touch) {
-      return;
-    }
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    if (Math.abs(deltaY) < 56 || Math.abs(deltaY) <= Math.abs(deltaX)) {
-      return;
-    }
-    const activeSlide = slides[currentSlide];
-    if (activeSlide && Math.abs((activeSlide.scrollTop || 0) - touchStartScrollTop) > 8) {
-      return;
-    }
-    if (canScrollInsideActiveSlide(deltaY < 0 ? 1 : -1)) {
-      return;
-    }
-    applySlide(currentSlide + (deltaY < 0 ? 1 : -1));
-  }, { passive: true });
-
-  carousel.addEventListener("wheel", (event) => {
-    const deltaY = event.deltaY || 0;
-    if (!deltaY || Math.abs(deltaY) < 18) {
-      return;
-    }
-    if (Date.now() < wheelLockUntil) {
-      event.preventDefault();
-      return;
-    }
-    if (canScrollInsideActiveSlide(deltaY)) {
-      return;
-    }
-    if (deltaY > 0) {
-      if (currentSlide < slides.length - 1) {
-        event.preventDefault();
-        if (applySlide(currentSlide + 1)) {
-          wheelLockUntil = Date.now() + Math.max(280, transitionMs - 40);
-        }
-      }
-      return;
-    }
-    if (currentSlide > 0) {
-      event.preventDefault();
-      if (applySlide(currentSlide - 1)) {
-        wheelLockUntil = Date.now() + Math.max(280, transitionMs - 40);
-      }
-    }
-  }, { passive: false });
-
-  carousel.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      event.preventDefault();
-      applySlide(currentSlide + 1);
-      return;
-    }
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      event.preventDefault();
-      applySlide(currentSlide - 1);
-    }
-  });
-
-  window.addEventListener("resize", () => {
-    scheduleFitSlideBodies();
-  });
-  window.visualViewport?.addEventListener("resize", () => {
-    scheduleFitSlideBodies();
-  });
-  window.addEventListener("orientationchange", () => {
-    window.setTimeout(scheduleFitSlideBodies, 120);
-  });
-
-  if (typeof mobileFitMq.addEventListener === "function") {
-    mobileFitMq.addEventListener("change", scheduleFitSlideBodies);
-  } else if (typeof mobileFitMq.addListener === "function") {
-    mobileFitMq.addListener(scheduleFitSlideBodies);
-  }
-
-  if (typeof ResizeObserver === "function") {
-    const resizeObserver = new ResizeObserver(() => {
-      scheduleFitSlideBodies();
-    });
-    resizeObserver.observe(carousel);
-    slides.forEach((slide) => resizeObserver.observe(slide));
-  }
-
-  applySlide(currentSlide, { force: true });
 }
 
 function wireLangSwitch() {

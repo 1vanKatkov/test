@@ -22,6 +22,7 @@ from app.web.auth.email_auth import (
     EmailIdentity,
     complete_email_registration,
     confirm_password_reset,
+    confirm_password_reset_by_email,
     ensure_seed_accounts,
     has_pending_registration,
     issue_email_auth_token,
@@ -29,6 +30,7 @@ from app.web.auth.email_auth import (
     normalize_email,
     optional_email_auth,
     request_password_reset,
+    request_password_reset_by_email,
     resend_registration_code,
     start_email_registration,
     verify_email_registration,
@@ -61,6 +63,7 @@ from app.web.schemas import (
     AdminTicketStatusRequest,
     EmailLoginRequest,
     EmailPasswordResetConfirmRequest,
+    EmailPasswordResetRequest,
     EmailResendRequest,
     EmailRegisterStartRequest,
     EmailRegisterVerifyRequest,
@@ -703,6 +706,10 @@ def _translations(lang: str) -> dict:
             "confirm_registration": "Confirm registration",
             "password_reset": "Change password",
             "password_reset_code_hint": "We will send a code to your email. Enter it to continue.",
+            "forgot_password": "Forgot password?",
+            "forgot_password_title": "Password recovery",
+            "forgot_password_hint": "Enter your email and we will send a verification code.",
+            "back_to_login": "Back to login",
             "next": "Next",
             "code_sent": "Code sent to your email",
             "auth_cell_open": "Sign in with email",
@@ -986,6 +993,10 @@ def _translations(lang: str) -> dict:
         "confirm_registration": "Подтвердить регистрацию",
         "password_reset": "Смена пароля",
         "password_reset_code_hint": "Отправим код на вашу почту. Введите его, чтобы продолжить.",
+        "forgot_password": "Забыли пароль?",
+        "forgot_password_title": "Восстановление пароля",
+        "forgot_password_hint": "Укажите email — отправим код подтверждения.",
+        "back_to_login": "Назад ко входу",
         "next": "Далее",
         "code_sent": "Код отправлен на почту",
         "auth_cell_open": "Войти по email",
@@ -1721,7 +1732,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "hide-guest-free-banner-v1",
+        "assets_version": "scroll-pwd-v1",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -2370,28 +2381,53 @@ async def api_logout():
 
 @app.post("/api/auth/email/password-reset/request")
 async def api_email_password_reset_request(
-    email_identity: EmailIdentity = Depends(optional_email_auth),
+    request: Request,
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    if not email_identity:
-        raise HTTPException(status_code=401, detail="Email authentication is required")
-    lang = email_identity.language
-    return await run_in_threadpool(request_password_reset, email_identity, lang)
+    if email_identity:
+        lang = email_identity.language or "ru"
+        return await run_in_threadpool(request_password_reset, email_identity, lang)
+    raw: dict = {}
+    try:
+        content_type = (request.headers.get("content-type") or "").lower()
+        if "application/json" in content_type:
+            parsed = await request.json()
+            if isinstance(parsed, dict):
+                raw = parsed
+    except Exception:
+        raw = {}
+    payload = EmailPasswordResetRequest(**raw)
+    if not (payload.email or "").strip():
+        raise HTTPException(status_code=400, detail="Email is required")
+    lang = (payload.language or "ru").strip().lower()
+    if lang not in {"ru", "en"}:
+        lang = "ru"
+    return await run_in_threadpool(request_password_reset_by_email, payload.email, lang)
 
 
 @app.post("/api/auth/email/password-reset/confirm")
 async def api_email_password_reset_confirm(
     payload: EmailPasswordResetConfirmRequest,
-    email_identity: EmailIdentity = Depends(optional_email_auth),
+    email_identity: EmailIdentity | None = Depends(optional_email_auth),
 ):
-    if not email_identity:
-        raise HTTPException(status_code=401, detail="Email authentication is required")
-    identity = await run_in_threadpool(
-        confirm_password_reset,
-        email_identity,
-        payload.code,
-        payload.new_password,
-        payload.password_confirm,
-    )
+    if email_identity:
+        identity = await run_in_threadpool(
+            confirm_password_reset,
+            email_identity,
+            payload.code,
+            payload.new_password,
+            payload.password_confirm,
+        )
+    else:
+        if not payload.email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        identity = await run_in_threadpool(
+            confirm_password_reset_by_email,
+            payload.email,
+            payload.code,
+            payload.new_password,
+            payload.password_confirm,
+        )
     return {"success": True, "message": "Password updated", "profile": {
         "provider": "email",
         "provider_user_id": identity.user_id,

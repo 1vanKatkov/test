@@ -278,6 +278,14 @@ const authPageCopy = {
     pdConsentLink: "processing of personal data",
     pdConsentAndPrivacyPrefix: "and confirm that I have read the",
     pdConsentPrivacyLink: "Privacy Policy",
+    forgotPassword: "Forgot password?",
+    forgotPasswordTitle: "Password recovery",
+    forgotPasswordHint: "Enter your email and we will send a verification code.",
+    sendCode: "Send code",
+    verificationCode: "Verification code",
+    next: "Next",
+    backToLogin: "Back to login",
+    passwordReset: "Change password",
   },
   ru: {
     loginTitle: "Вход",
@@ -305,6 +313,12 @@ const authPageCopy = {
     pdConsentLink: "обработку персональных данных",
     pdConsentAndPrivacyPrefix: "и подтверждаю, что ознакомился с",
     pdConsentPrivacyLink: "Политикой конфиденциальности",
+    forgotPassword: "Забыли пароль?",
+    forgotPasswordTitle: "Восстановление пароля",
+    forgotPasswordHint: "Укажите email — отправим код подтверждения.",
+    next: "Далее",
+    backToLogin: "Назад ко входу",
+    passwordReset: "Смена пароля",
   },
 };
 
@@ -960,7 +974,7 @@ function isEmailSkipVerificationEnabled() {
 }
 
 function shouldShowPasswordReset() {
-  return state.profileProvider === "email" && !isEmailSkipVerificationEnabled();
+  return state.profileProvider === "email";
 }
 
 function setAdminTileVisible(isVisible) {
@@ -1272,6 +1286,11 @@ function syncAuthChrome(profile) {
   const logoutBtn = element("profile-logout-btn");
   if (logoutBtn) {
     logoutBtn.hidden = !loggedIn;
+  }
+  const isLoginForgotFlow = Boolean(element("forgot-password-open"));
+  if (isLoginForgotFlow) {
+    // Keep forgot-password panel ownership on the login page.
+    return;
   }
   if (state.profileProvider === "email") {
     togglePasswordResetPanel(shouldShowPasswordReset());
@@ -1644,8 +1663,152 @@ function resetPasswordResetFormFields() {
 
 async function requestPasswordResetCode() {
   setResult("password-reset-result", i18n.loading);
-  await apiRequest("/api/auth/email/password-reset/request", "POST", undefined, { redirectOnUnauthorized: true });
+  const emailInput = element("password-reset-email");
+  const payload = {};
+  if (emailInput) {
+    const email = emailInput.value.trim();
+    if (!email) {
+      throw new Error(i18n.enterEmail);
+    }
+    payload.email = email;
+    payload.language = lang;
+  }
+  await apiRequest("/api/auth/email/password-reset/request", "POST", payload, {
+    redirectOnUnauthorized: Boolean(!emailInput),
+  });
   setResult("password-reset-result", i18n.codeSent);
+}
+
+function showLoginForgotPassword(isOpen) {
+  const loginPanel = element("login-main-panel");
+  const resetPanel = element("email-password-reset-panel");
+  if (!resetPanel) {
+    return;
+  }
+  if (loginPanel) {
+    loginPanel.hidden = Boolean(isOpen);
+  }
+  resetPanel.hidden = !isOpen;
+  if (isOpen) {
+    const loginEmail = element("login-email")?.value.trim() || "";
+    const resetEmail = element("password-reset-email");
+    if (resetEmail && loginEmail) {
+      resetEmail.value = loginEmail;
+    }
+    setPasswordResetStep("code");
+    resetPasswordResetFormFields();
+    if (resetEmail && loginEmail) {
+      resetEmail.value = loginEmail;
+    }
+  }
+}
+
+function wirePasswordResetForm() {
+  const panel = element("email-password-reset-panel");
+  if (!panel) {
+    return;
+  }
+
+  const isLoginForgot = Boolean(element("forgot-password-open") || element("password-reset-email"));
+  const startBtn = element("password-reset-start-btn");
+  const requestBtn = element("password-reset-request-btn");
+  const nextBtn = element("password-reset-code-next-btn");
+  const form = element("email-password-reset-form");
+  const openForgotBtn = element("forgot-password-open");
+
+  if (openForgotBtn) {
+    openForgotBtn.addEventListener("click", () => {
+      showLoginForgotPassword(true);
+    });
+  }
+
+  if (startBtn) {
+    startBtn.addEventListener("click", async () => {
+      setPasswordResetStep("code");
+      resetPasswordResetFormFields();
+      try {
+        await requestPasswordResetCode();
+      } catch (error) {
+        setResult("password-reset-result", error.message);
+      }
+    });
+  }
+
+  if (requestBtn) {
+    requestBtn.addEventListener("click", async () => {
+      try {
+        await requestPasswordResetCode();
+      } catch (error) {
+        setResult("password-reset-result", error.message);
+      }
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      const code = (element("password-reset-code")?.value || "").trim();
+      if (!/^\d{6}$/.test(code)) {
+        setResult("password-reset-result", i18n.invalidVerificationCode);
+        return;
+      }
+      setResult("password-reset-result", "");
+      setPasswordResetStep("password");
+    });
+  }
+
+  panel.querySelectorAll("[data-password-reset-cancel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetPasswordResetFormFields();
+      if (isLoginForgot) {
+        showLoginForgotPassword(false);
+        return;
+      }
+      setPasswordResetStep("start");
+    });
+  });
+
+  if (form) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setResult("password-reset-result", i18n.loading);
+      try {
+        const code = (element("password-reset-code")?.value || "").trim();
+        const newPassword = element("password-reset-new")?.value || "";
+        const passwordConfirm = element("password-reset-confirm")?.value || "";
+        if (newPassword !== passwordConfirm) {
+          throw new Error(i18n.passwordsMismatch);
+        }
+        const payload = {
+          code,
+          new_password: newPassword,
+          password_confirm: passwordConfirm,
+        };
+        const email = element("password-reset-email")?.value.trim();
+        if (email) {
+          payload.email = email;
+        }
+        await apiRequest(
+          "/api/auth/email/password-reset/confirm",
+          "POST",
+          payload,
+          { redirectOnUnauthorized: !email },
+        );
+        resetPasswordResetFormFields();
+        if (isLoginForgot) {
+          setResult("password-reset-result", i18n.passwordResetSuccess);
+          window.setTimeout(() => {
+            showLoginForgotPassword(false);
+            setResult("auth-result", i18n.passwordResetSuccess);
+          }, 700);
+          return;
+        }
+        setPasswordResetStep("start");
+        setResult("password-reset-result", i18n.passwordResetSuccess);
+      } catch (error) {
+        setResult("password-reset-result", error.message);
+      }
+    });
+  }
 }
 
 async function loadProfile() {
@@ -1819,92 +1982,6 @@ function wireAuthPages() {
     wireRegisterVerifyPage();
   } else if (page === "login") {
     wireLoginPage();
-  }
-}
-
-function wirePasswordResetForm() {
-  const panel = element("email-password-reset-panel");
-  if (!panel) {
-    return;
-  }
-
-  const startBtn = element("password-reset-start-btn");
-  const requestBtn = element("password-reset-request-btn");
-  const nextBtn = element("password-reset-code-next-btn");
-  const form = element("email-password-reset-form");
-
-  if (startBtn) {
-    startBtn.addEventListener("click", async () => {
-      setPasswordResetStep("code");
-      resetPasswordResetFormFields();
-      try {
-        await requestPasswordResetCode();
-      } catch (error) {
-        setResult("password-reset-result", error.message);
-      }
-    });
-  }
-
-  if (requestBtn) {
-    requestBtn.addEventListener("click", async () => {
-      try {
-        await requestPasswordResetCode();
-      } catch (error) {
-        setResult("password-reset-result", error.message);
-      }
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener("click", () => {
-      const code = (element("password-reset-code")?.value || "").trim();
-      if (!/^\d{6}$/.test(code)) {
-        setResult("password-reset-result", i18n.invalidVerificationCode);
-        return;
-      }
-      setResult("password-reset-result", "");
-      setPasswordResetStep("password");
-    });
-  }
-
-  panel.querySelectorAll("[data-password-reset-cancel]").forEach((button) => {
-    button.addEventListener("click", () => {
-      resetPasswordResetFormFields();
-      setPasswordResetStep("start");
-    });
-  });
-
-  if (form) {
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      setResult("password-reset-result", i18n.loading);
-      try {
-        const code = (element("password-reset-code")?.value || "").trim();
-        const newPassword = element("password-reset-new")?.value || "";
-        const passwordConfirm = element("password-reset-confirm")?.value || "";
-        if (!/^\d{6}$/.test(code)) {
-          throw new Error(i18n.invalidVerificationCode);
-        }
-        if (newPassword !== passwordConfirm) {
-          throw new Error(i18n.passwordsMismatch);
-        }
-        await apiRequest(
-          "/api/auth/email/password-reset/confirm",
-          "POST",
-          {
-            code,
-            new_password: newPassword,
-            password_confirm: passwordConfirm,
-          },
-          { redirectOnUnauthorized: true },
-        );
-        resetPasswordResetFormFields();
-        setPasswordResetStep("start");
-        setResult("password-reset-result", i18n.passwordResetSuccess);
-      } catch (error) {
-        setResult("password-reset-result", error.message);
-      }
-    });
   }
 }
 

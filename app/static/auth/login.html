@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Astrolhub - Вход</title>
-  <link rel="stylesheet" href="/static/style.css?v=no-tg-login-btn-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=scroll-pwd-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell auth-page auth-static-page"
@@ -36,7 +36,7 @@
   </header>
 
   <main class="mobile-client">
-    <section class="card">
+    <section class="card" id="login-main-panel">
       <h2 data-auth-label="loginTitle">Вход</h2>
       <form id="email-login-form" class="form-grid" method="post" action="#">
         <label><span data-auth-label="email">Email</span> <input id="login-email" type="email" autocomplete="email" required /></label>
@@ -44,13 +44,38 @@
         <button type="submit" class="primary-btn" data-auth-label="loginSubmit">Войти</button>
       </form>
       <p class="muted auth-switch-line">
+        <button type="button" class="linkish-btn" id="forgot-password-open" data-auth-label="forgotPassword">Забыли пароль?</button>
+      </p>
+      <p class="muted auth-switch-line">
         <span data-auth-label="noAccount">Нет аккаунта?</span>
         <a class="auth-register-link" href="/static/auth/register.html" data-auth-label="goRegister">Зарегистрироваться</a>
       </p>
       <pre id="auth-result" class="result"></pre>
     </section>
+
+    <section class="card" id="email-password-reset-panel" hidden>
+      <h2 data-auth-label="forgotPasswordTitle">Восстановление пароля</h2>
+      <div id="password-reset-step-start" class="form-grid" hidden></div>
+      <div id="password-reset-step-code" class="form-grid">
+        <p class="muted" data-auth-label="forgotPasswordHint">Укажите email — отправим код подтверждения.</p>
+        <label><span data-auth-label="email">Email</span> <input id="password-reset-email" type="email" autocomplete="email" required /></label>
+        <button type="button" id="password-reset-request-btn" class="primary-btn" data-auth-label="sendCode">Отправить код</button>
+        <label><span data-auth-label="verificationCode">Код из письма</span> <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" /></label>
+        <button type="button" id="password-reset-code-next-btn" class="primary-btn" data-auth-label="next">Далее</button>
+        <button type="button" class="secondary-btn" data-password-reset-cancel data-auth-label="backToLogin">Назад ко входу</button>
+      </div>
+      <div id="password-reset-step-password" hidden>
+        <form id="email-password-reset-form" class="form-grid">
+          <label><span data-auth-label="password">Пароль</span> <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <label><span data-auth-label="repeatPassword">Повтор пароля</span> <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <button type="submit" class="primary-btn" data-auth-label="passwordReset">Смена пароля</button>
+          <button type="button" class="secondary-btn" data-password-reset-cancel data-auth-label="backToLogin">Назад ко входу</button>
+        </form>
+      </div>
+      <pre id="password-reset-result" class="result"></pre>
+    </section>
   </main>
 
-  <script defer src="/static/app.js?v=no-tg-login-btn-v1"></script>
+  <script defer src="/static/app.js?v=scroll-pwd-v1"></script>
 </body>
 </html>

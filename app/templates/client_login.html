@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand_name }} - {{ t.login }}</title>
-  <link rel="stylesheet" href="/static/style.css?v=outer-blocks-v1" />
+  <link rel="stylesheet" href="/static/style.css?v=scroll-pwd-v1" />
 </head>
 <body
   class="app-shell mobile-client-shell auth-page"
@@ -20,7 +20,7 @@
   </header>
 
   <main class="mobile-client">
-    <section class="card">
+    <section class="card" id="login-main-panel">
       <h2>{{ t.login }}</h2>
       <form id="email-login-form" class="form-grid" method="post" action="#">
         <label>{{ t.email }} <input id="login-email" type="email" autocomplete="email" required /></label>
@@ -28,14 +28,39 @@
         <button type="submit" class="primary-btn">{{ t.login }}</button>
       </form>
       <p class="muted auth-switch-line">
+        <button type="button" class="linkish-btn" id="forgot-password-open">{{ t.forgot_password }}</button>
+      </p>
+      <p class="muted auth-switch-line">
         {{ t.no_account }}
         <a href="/static/auth/register.html">{{ t.go_to_register }}</a>
       </p>
       <pre id="auth-result" class="result"></pre>
     </section>
+
+    <section class="card" id="email-password-reset-panel" hidden>
+      <h2>{{ t.forgot_password_title }}</h2>
+      <div id="password-reset-step-start" class="form-grid" hidden></div>
+      <div id="password-reset-step-code" class="form-grid">
+        <p class="muted">{{ t.forgot_password_hint }}</p>
+        <label>{{ t.email }} <input id="password-reset-email" type="email" autocomplete="email" required /></label>
+        <button type="button" id="password-reset-request-btn" class="primary-btn">{{ t.send_code }}</button>
+        <label>{{ t.verification_code }} <input id="password-reset-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" /></label>
+        <button type="button" id="password-reset-code-next-btn" class="primary-btn">{{ t.next }}</button>
+        <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back_to_login }}</button>
+      </div>
+      <div id="password-reset-step-password" hidden>
+        <form id="email-password-reset-form" class="form-grid">
+          <label>{{ t.password }} <input id="password-reset-new" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <label>{{ t.repeat_password }} <input id="password-reset-confirm" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <button type="submit" class="primary-btn">{{ t.password_reset }}</button>
+          <button type="button" class="secondary-btn" data-password-reset-cancel>{{ t.back_to_login }}</button>
+        </form>
+      </div>
+      <pre id="password-reset-result" class="result"></pre>
+    </section>
   </main>
 
-  {% set assets_version = assets_version|default('sparks-modal-v1') %}
+  {% set assets_version = assets_version|default('scroll-pwd-v1') %}
   {% include "partials/client_scripts.html" %}
 </body>
 </html>

@@ -31,7 +31,7 @@ async function boot() {
   wireAstrologyForm();
   wireCompatibilityForms();
   wireLangSwitch();
-  wireDashboardCarousel();
+  wireDashboardScroll();
   localStorage.removeItem(TELEGRAM_INIT_DATA_KEY);
   hydrateUiFromCache();
   await verifyTelegramUsernameLinkFromQuery();

@@ -7,168 +7,168 @@
 {% block main_class %}mobile-client{% endblock %}
 
 {% block content %}
-    <section id="dashboard-carousel" class="dashboard-carousel" data-slide="0" aria-roledescription="carousel" tabindex="0">
-      <div class="dashboard-carousel-track">
-        <section class="dashboard-slide dashboard-slide-intro dashboard-template-slide is-active" aria-label="{{ t.dashboard_slider_dot_intro }}">
-          <div class="dashboard-slide-body">
-            <section class="dashboard-template-hero">
-              <div class="dashboard-template-hero-copy">
-                <h1>{{ brand_name }}</h1>
-                <p>{{ t.dashboard_template_subtitle }}</p>
-              </div>
-              <div class="dashboard-template-user-card">
-                <div class="dashboard-template-user-row">
-                  <img class="dashboard-template-user-star" src="/static/img/icons/dashboard-spark-star.svg" alt="" aria-hidden="true" loading="lazy" />
-                  <span class="dashboard-template-user-name">
-                    <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
-                    <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
-                      <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
-                      <span id="dashboard-hero-sparks">-</span>
-                    </span>
+    <div id="dashboard-scroll" class="dashboard-scroll">
+      <section class="dashboard-section dashboard-section-intro dashboard-slide-intro dashboard-template-slide reveal-on-scroll is-visible" aria-label="{{ t.dashboard_slider_dot_intro }}">
+        <div class="dashboard-section-body dashboard-slide-body">
+          <section class="dashboard-template-hero">
+            <div class="dashboard-template-hero-copy">
+              <h1>{{ brand_name }}</h1>
+              <p>{{ t.dashboard_template_subtitle }}</p>
+            </div>
+            <div class="dashboard-template-user-card">
+              <div class="dashboard-template-user-row">
+                <img class="dashboard-template-user-star" src="/static/img/icons/dashboard-spark-star.svg" alt="" aria-hidden="true" loading="lazy" />
+                <span class="dashboard-template-user-name">
+                  <span id="dashboard-hero-username">{{ initial_auth_username }}</span>
+                  <span id="dashboard-hero-spark-pill" class="dashboard-spark-pill" hidden>
+                    <span class="dashboard-spark-icon" aria-hidden="true">✦</span>
+                    <span id="dashboard-hero-sparks">-</span>
                   </span>
-                  <span id="dashboard-hero-plus-badge" class="plus-badge" hidden>{{ t.plus_badge or "Plus" }}</span>
-                </div>
+                </span>
+                <span id="dashboard-hero-plus-badge" class="plus-badge" hidden>{{ t.plus_badge or "Plus" }}</span>
               </div>
-              <p id="telegram-auth-status" class="result muted" hidden></p>
-            </section>
-            <header class="dashboard-template-section-head">
-              <h2 class="dashboard-template-section-title">{{ t.dashboard_template_section_title }}</h2>
-              <p class="dashboard-template-section-subtitle">{{ t.dashboard_template_section_subtitle }}</p>
-            </header>
-            <section class="dashboard-template-feature-list" aria-label="{{ t.dashboard_template_cards_label }}">
-              <button type="button" class="dashboard-template-feature-card dashboard-go-services-card">
-                <span class="dashboard-template-feature-icon" aria-hidden="true">
-                  <img src="/static/img/icons/dashboard-spark-star.svg" alt="" loading="lazy" />
-                </span>
-                <span class="dashboard-template-feature-copy">
-                  <strong>{{ t.dashboard_template_card_personal_title }}</strong>
-                  <small>{{ t.dashboard_template_card_personal_text }}</small>
-                </span>
-                <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-personal.svg" alt="" loading="lazy" />
-              </button>
-              <button type="button" class="dashboard-template-feature-card dashboard-go-services-card">
-                <span class="dashboard-template-feature-icon" aria-hidden="true">
-                  <img src="/static/img/icons/dashboard-moon-crescent.svg" alt="" loading="lazy" />
-                </span>
-                <span class="dashboard-template-feature-copy">
-                  <strong>{{ t.dashboard_template_card_holistic_title }}</strong>
-                  <small>{{ t.dashboard_template_card_holistic_text }}</small>
-                </span>
-                <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-holistic.svg" alt="" loading="lazy" />
-              </button>
-              <button type="button" class="dashboard-template-feature-card dashboard-go-services-card">
-                <span class="dashboard-template-feature-icon" aria-hidden="true">
-                  <img src="/static/img/icons/dashboard-rocket.svg" alt="" loading="lazy" />
-                </span>
-                <span class="dashboard-template-feature-copy">
-                  <strong>{{ t.dashboard_template_card_practical_title }}</strong>
-                  <small>{{ t.dashboard_template_card_practical_text }}</small>
-                </span>
-                <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-practical.svg" alt="" loading="lazy" />
-              </button>
-            </section>
-          </div>
-          <div class="dashboard-slide-cta-dock">
+            </div>
+            <p id="telegram-auth-status" class="result muted" hidden></p>
+          </section>
+          <header class="dashboard-template-section-head">
+            <h2 class="dashboard-template-section-title">{{ t.dashboard_template_section_title }}</h2>
+            <p class="dashboard-template-section-subtitle">{{ t.dashboard_template_section_subtitle }}</p>
+          </header>
+          <section class="dashboard-template-feature-list" aria-label="{{ t.dashboard_template_cards_label }}">
+            <button type="button" class="dashboard-template-feature-card dashboard-go-services-card reveal-on-scroll">
+              <span class="dashboard-template-feature-icon" aria-hidden="true">
+                <img src="/static/img/icons/dashboard-spark-star.svg" alt="" loading="lazy" />
+              </span>
+              <span class="dashboard-template-feature-copy">
+                <strong>{{ t.dashboard_template_card_personal_title }}</strong>
+                <small>{{ t.dashboard_template_card_personal_text }}</small>
+              </span>
+              <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-personal.svg" alt="" loading="lazy" />
+            </button>
+            <button type="button" class="dashboard-template-feature-card dashboard-go-services-card reveal-on-scroll">
+              <span class="dashboard-template-feature-icon" aria-hidden="true">
+                <img src="/static/img/icons/dashboard-moon-crescent.svg" alt="" loading="lazy" />
+              </span>
+              <span class="dashboard-template-feature-copy">
+                <strong>{{ t.dashboard_template_card_holistic_title }}</strong>
+                <small>{{ t.dashboard_template_card_holistic_text }}</small>
+              </span>
+              <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-holistic.svg" alt="" loading="lazy" />
+            </button>
+            <button type="button" class="dashboard-template-feature-card dashboard-go-services-card reveal-on-scroll">
+              <span class="dashboard-template-feature-icon" aria-hidden="true">
+                <img src="/static/img/icons/dashboard-rocket.svg" alt="" loading="lazy" />
+              </span>
+              <span class="dashboard-template-feature-copy">
+                <strong>{{ t.dashboard_template_card_practical_title }}</strong>
+                <small>{{ t.dashboard_template_card_practical_text }}</small>
+              </span>
+              <img class="dashboard-template-feature-art" src="/static/img/illustrations/dashboard-card-practical.svg" alt="" loading="lazy" />
+            </button>
+          </section>
+          <div class="dashboard-section-cta dashboard-slide-cta-dock">
             <button id="dashboard-go-services" type="button" class="primary-btn dashboard-go-services-btn dashboard-template-cta">
               {{ t.dashboard_template_cta or "Получить первый разбор" }}
               <span class="dashboard-template-cta-icon" aria-hidden="true">✦</span>
             </button>
           </div>
-        </section>
-        <section class="dashboard-slide dashboard-slide-services" aria-label="{{ t.dashboard_slider_dot_services }}" aria-hidden="true">
-          <div class="dashboard-slide-body">
-            <section id="admin-panel-entry" class="card" hidden>
-              <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin">{{ t.admin_panel }}</a>
-            </section>
-            <h2 class="dashboard-services-title">{{ t.dashboard_slide_services_title }}</h2>
-            <section class="feature-list">
-              <a class="feature-icon-tile feature-list-card" href="/client/sonnik">
-                <img class="tile-icon-img" src="/static/img/icons/dreambook-neon.svg" alt="" loading="lazy" />
-                <span class="feature-list-copy">
-                  <span class="tile-title">{{ t.sonnik }}</span>
-                  <span class="tile-description">{{ t.feature_sonnik_desc }}</span>
-                </span>
-                <span class="feature-list-arrow" aria-hidden="true">›</span>
-              </a>
-              <a class="feature-icon-tile feature-list-card" href="/client/numerology">
-                <img class="tile-icon-img" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
-                <span class="feature-list-copy">
-                  <span class="tile-title">{{ t.numerology }}</span>
-                  <span class="tile-description">{{ t.feature_numerology_desc }}</span>
-                </span>
-                <span class="feature-list-arrow" aria-hidden="true">›</span>
-              </a>
-              <a class="feature-icon-tile feature-list-card" href="/client/compatibility">
-                <img class="tile-icon-img" src="/static/img/icons/compatibility-neon.svg" alt="" loading="lazy" />
-                <span class="feature-list-copy">
-                  <span class="tile-title">{{ t.compatibility }}</span>
-                  <span class="tile-description">{{ t.feature_compatibility_desc }}</span>
-                </span>
-                <span class="feature-list-arrow" aria-hidden="true">›</span>
-              </a>
-              <a class="feature-icon-tile feature-list-card" href="/client/tarot">
-                <img class="tile-icon-img" src="/static/img/card-readings/full-portrait.svg" alt="" loading="lazy" />
-                <span class="feature-list-copy">
-                  <span class="tile-title">{{ t.tarot }}</span>
-                  <span class="tile-description">{{ t.feature_tarot_desc }}</span>
-                </span>
-                <span class="feature-list-arrow" aria-hidden="true">›</span>
-              </a>
-              <a class="feature-icon-tile feature-list-card" href="/client/tarot-cards">
-                <img class="tile-icon-img" src="/static/img/card-readings/hidden-scenarios.svg" alt="" loading="lazy" />
-                <span class="feature-list-copy">
-                  <span class="tile-title">{{ t.tarot_cards }}</span>
-                  <span class="tile-description">{{ t.feature_tarot_cards_desc }}</span>
-                </span>
-                <span class="feature-list-arrow" aria-hidden="true">›</span>
-              </a>
-            </section>
-          </div>
-        </section>
-        <section class="dashboard-slide dashboard-slide-faq" aria-label="{{ t.dashboard_slider_dot_faq }}" aria-hidden="true">
-          <div class="dashboard-slide-body">
-            <header class="dashboard-faq-head">
-              <h2 class="dashboard-faq-title">{{ t.dashboard_slide_faq_title }}</h2>
-            </header>
-            <section class="dashboard-faq-list" aria-label="{{ t.dashboard_slide_faq_title }}">
-              <article class="dashboard-faq-card">
-                <span class="dashboard-faq-index" aria-hidden="true">1</span>
-                <div>
-                  <h3>{{ t.dashboard_faq_q1 }}</h3>
-                  <p>{{ t.dashboard_faq_a1 }}</p>
-                </div>
-              </article>
-              <article class="dashboard-faq-card">
-                <span class="dashboard-faq-index" aria-hidden="true">2</span>
-                <div>
-                  <h3>{{ t.dashboard_faq_q2 }}</h3>
-                  <p>{{ t.dashboard_faq_a2 }}</p>
-                </div>
-              </article>
-              <article class="dashboard-faq-card">
-                <span class="dashboard-faq-index" aria-hidden="true">3</span>
-                <div>
-                  <h3>{{ t.dashboard_faq_q3 }}</h3>
-                  <p>{{ t.dashboard_faq_a3 }}</p>
-                </div>
-              </article>
-              <article class="dashboard-faq-card">
-                <span class="dashboard-faq-index" aria-hidden="true">4</span>
-                <div>
-                  <h3>{{ t.dashboard_faq_q4 }}</h3>
-                  <p>{{ t.dashboard_faq_a4 }}</p>
-                </div>
-              </article>
-              <article class="dashboard-faq-card">
-                <span class="dashboard-faq-index" aria-hidden="true">5</span>
-                <div>
-                  <h3>{{ t.dashboard_faq_q5 }}</h3>
-                  <p>{{ t.dashboard_faq_a5 }}</p>
-                </div>
-              </article>
-            </section>
-          </div>
-        </section>
-      </div>
-    </section>
+        </div>
+      </section>
+
+      <section id="dashboard-services" class="dashboard-section dashboard-section-services dashboard-slide-services reveal-on-scroll" aria-label="{{ t.dashboard_slider_dot_services }}">
+        <div class="dashboard-section-body dashboard-slide-body">
+          <section id="admin-panel-entry" class="card" hidden>
+            <a id="admin-panel-button" class="secondary-btn compact-action-btn" href="/admin">{{ t.admin_panel }}</a>
+          </section>
+          <h2 class="dashboard-services-title">{{ t.dashboard_slide_services_title }}</h2>
+          <section class="feature-list">
+            <a class="feature-icon-tile feature-list-card reveal-on-scroll" href="/client/sonnik">
+              <img class="tile-icon-img" src="/static/img/icons/dreambook-neon.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.sonnik }}</span>
+                <span class="tile-description">{{ t.feature_sonnik_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card reveal-on-scroll" href="/client/numerology">
+              <img class="tile-icon-img" src="/static/img/icons/numerology-neon.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.numerology }}</span>
+                <span class="tile-description">{{ t.feature_numerology_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card reveal-on-scroll" href="/client/compatibility">
+              <img class="tile-icon-img" src="/static/img/icons/compatibility-neon.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.compatibility }}</span>
+                <span class="tile-description">{{ t.feature_compatibility_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card reveal-on-scroll" href="/client/tarot">
+              <img class="tile-icon-img" src="/static/img/card-readings/full-portrait.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.tarot }}</span>
+                <span class="tile-description">{{ t.feature_tarot_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="feature-icon-tile feature-list-card reveal-on-scroll" href="/client/tarot-cards">
+              <img class="tile-icon-img" src="/static/img/card-readings/hidden-scenarios.svg" alt="" loading="lazy" />
+              <span class="feature-list-copy">
+                <span class="tile-title">{{ t.tarot_cards }}</span>
+                <span class="tile-description">{{ t.feature_tarot_cards_desc }}</span>
+              </span>
+              <span class="feature-list-arrow" aria-hidden="true">›</span>
+            </a>
+          </section>
+        </div>
+      </section>
+
+      <section class="dashboard-section dashboard-section-faq dashboard-slide-faq reveal-on-scroll" aria-label="{{ t.dashboard_slider_dot_faq }}">
+        <div class="dashboard-section-body dashboard-slide-body">
+          <header class="dashboard-faq-head">
+            <h2 class="dashboard-faq-title">{{ t.dashboard_slide_faq_title }}</h2>
+          </header>
+          <section class="dashboard-faq-list" aria-label="{{ t.dashboard_slide_faq_title }}">
+            <article class="dashboard-faq-card reveal-on-scroll">
+              <span class="dashboard-faq-index" aria-hidden="true">1</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q1 }}</h3>
+                <p>{{ t.dashboard_faq_a1 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card reveal-on-scroll">
+              <span class="dashboard-faq-index" aria-hidden="true">2</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q2 }}</h3>
+                <p>{{ t.dashboard_faq_a2 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card reveal-on-scroll">
+              <span class="dashboard-faq-index" aria-hidden="true">3</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q3 }}</h3>
+                <p>{{ t.dashboard_faq_a3 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card reveal-on-scroll">
+              <span class="dashboard-faq-index" aria-hidden="true">4</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q4 }}</h3>
+                <p>{{ t.dashboard_faq_a4 }}</p>
+              </div>
+            </article>
+            <article class="dashboard-faq-card reveal-on-scroll">
+              <span class="dashboard-faq-index" aria-hidden="true">5</span>
+              <div>
+                <h3>{{ t.dashboard_faq_q5 }}</h3>
+                <p>{{ t.dashboard_faq_a5 }}</p>
+              </div>
+            </article>
+          </section>
+        </div>
+      </section>
+    </div>
 {% endblock %}

@@ -310,6 +310,22 @@ def request_password_reset(identity: EmailIdentity, lang: str = "ru") -> dict:
     return {"success": True, "message": "Verification code sent"}
 
 
+def request_password_reset_by_email(email: str, lang: str = "ru") -> dict:
+    """Unauthenticated forgot-password. Always returns success to avoid email enumeration."""
+    normalized = normalize_email(email)
+    row = db.get_user_by_provider(provider="email", provider_user_id=normalized)
+    if row and row["password_hash"]:
+        try:
+            _issue_and_store_code(normalized, "password_reset", {}, lang)
+        except HTTPException as exc:
+            if exc.status_code == 429:
+                raise
+            # Swallow mail/setup errors as generic success for callers that must not leak account existence.
+            if exc.status_code >= 500:
+                raise
+    return {"success": True, "message": "If the account exists, a verification code was sent"}
+
+
 def confirm_password_reset(
     identity: EmailIdentity,
     code: str,
@@ -320,6 +336,17 @@ def confirm_password_reset(
     _verify_stored_code(identity.user_id, "password_reset", code)
     db.update_user_password_hash(identity.internal_user_id, _hash_password(new_password))
     return _build_identity(identity.user_id)
+
+
+def confirm_password_reset_by_email(
+    email: str,
+    code: str,
+    new_password: str,
+    password_confirm: str,
+) -> EmailIdentity:
+    normalized = normalize_email(email)
+    identity = _build_identity(normalized)
+    return confirm_password_reset(identity, code, new_password, password_confirm)
 
 
 def _ensure_seed_email_user(email: str, password: str, username: str, role: str) -> None:
