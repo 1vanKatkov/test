@@ -5974,8 +5974,137 @@ body.is-guest #profile-persona-add-btn {
   text-decoration: none;
 }
 
-.site-footer a:hover {
-  text-decoration: underline;
+/* Shared topic picker (astrology + tarot cards) */
+.service-topic-title,
+.tarot-flow-title {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(22px, 5.5vw, 28px);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.service-topic-grid,
+.tarot-topic-grid,
+.card-reading-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+}
+
+.service-topic-card,
+.tarot-topic-card,
+.card-reading-topic {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, var(--violet-soft), transparent 42%),
+    linear-gradient(160deg, rgba(18, 14, 36, 0.96), rgba(12, 9, 26, 0.98));
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 26px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-topic-card.is-wide,
+.card-reading-topic-wide {
+  grid-column: 1 / -1;
+}
+
+.service-topic-card:hover,
+.service-topic-card:focus-visible,
+.tarot-topic-card:hover,
+.tarot-topic-card:focus-visible,
+.card-reading-topic:hover,
+.card-reading-topic:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(232, 181, 90, 0.45);
+  box-shadow: 0 12px 28px rgba(81, 44, 167, 0.24);
+  outline: none;
+}
+
+.service-topic-icon,
+.tarot-topic-icon,
+.card-reading-icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 181, 90, 0.28);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 229, 154, 0.16), transparent 62%),
+    rgba(12, 10, 36, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.service-topic-icon img,
+.service-topic-icon-img,
+.tarot-topic-icon-img,
+.card-reading-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.service-topic-copy,
+.card-reading-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.service-topic-copy strong,
+.card-reading-title,
+.tarot-topic-card strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.service-topic-copy small,
+.card-reading-description,
+.tarot-topic-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.service-topic-arrow,
+.card-reading-arrow {
+  color: var(--link-accent);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.selected-card-reading {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, var(--violet-soft), transparent 42%),
+    linear-gradient(160deg, rgba(18, 14, 36, 0.96), rgba(12, 9, 26, 0.98));
+}
+
+.topic-service-page .service-about-inline-link {
+  display: inline-block;
+  margin-bottom: 4px;
 }
 
 /* Palette consistency overrides (violet/gold dark system) */

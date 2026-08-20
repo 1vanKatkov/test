@@ -295,12 +295,15 @@ function renderTarotTopicGrid() {
     return;
   }
   grid.innerHTML = tarotCardsTopics.map((topic) => `
-    <button type="button" class="tarot-topic-card" data-topic-id="${escapeHtml(topic.id)}" role="listitem">
-      <span class="tarot-topic-icon" aria-hidden="true">
-        <img class="tarot-topic-icon-img" src="${escapeHtml(topic.icon || "")}" alt="" width="44" height="44" loading="lazy" decoding="async" />
+    <button type="button" class="service-topic-card tarot-topic-card" data-topic-id="${escapeHtml(topic.id)}" role="listitem">
+      <span class="service-topic-icon tarot-topic-icon" aria-hidden="true">
+        <img class="service-topic-icon-img tarot-topic-icon-img" src="${escapeHtml(topic.icon || "")}" alt="" width="44" height="44" loading="lazy" decoding="async" />
       </span>
-      <strong>${escapeHtml(topic.title)}</strong>
-      <small>${topic.size} ${lang === "en" ? "cards" : "карт"}</small>
+      <span class="service-topic-copy">
+        <strong>${escapeHtml(topic.title)}</strong>
+        <small>${topic.size} ${lang === "en" ? "cards" : "карт"}</small>
+      </span>
+      <span class="service-topic-arrow" aria-hidden="true">›</span>
     </button>
   `).join("");
 }

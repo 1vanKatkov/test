@@ -1238,7 +1238,7 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
             "astrology": {
                 "title": "About Astrology",
                 "subtitle": "Astrology is a language of cycles, temperament, timing, and personal focus.",
-                "back_url": "/client/tarot",
+                "back_url": "/client/astrology",
                 "back_label": "Back to Astrology",
                 "items": [
                     {
@@ -1413,7 +1413,7 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
         "astrology": {
             "title": "Об астрологии",
             "subtitle": "Астрология помогает увидеть личные ритмы, сильные стороны, периоды внимания и темы, которые сейчас требуют осознанности.",
-            "back_url": "/client/tarot",
+            "back_url": "/client/astrology",
             "back_label": "Назад к Астрологии",
             "items": [
                 {
@@ -1626,7 +1626,7 @@ def _service_about_pages(lang: str) -> dict[str, dict]:
 
 def _service_about_page(slug: str, lang: str) -> dict:
     pages = _service_about_pages(lang)
-    # Natal astrology lives at /client/tarot; keep legacy /about/tarot links on astrology copy.
+    # Natal astrology lives at /client/astrology; keep legacy /about/tarot links on astrology copy.
     resolved = "astrology" if slug == "tarot" else slug
     if resolved not in pages:
         raise HTTPException(status_code=404, detail="About page not found")
@@ -1762,7 +1762,7 @@ def _client_template_context(request: Request, lang: str, selected_card_topic: s
     return {
         "request": request,
         "brand_name": "Astrolhub",
-        "assets_version": "design-unify-v4",
+        "assets_version": "design-unify-v5",
         "dev_auth_bypass": settings.dev_auth_bypass,
         "dev_auth_mock_username": settings.dev_auth_mock_username,
         "lang": page_lang,
@@ -1881,17 +1881,17 @@ async def client_compatibility(
     return _render_client_page(request, "client_compatibility.html", lang, auth=auth)
 
 
-@app.get("/client/tarot", response_class=HTMLResponse, include_in_schema=False)
-async def client_tarot(
+@app.get("/client/astrology", response_class=HTMLResponse, include_in_schema=False)
+async def client_astrology(
     request: Request,
     lang: str = Query(default=""),
     auth: ClientAuthContext = Depends(optional_client_auth),
 ):
-    return _render_client_page(request, "client_tarot.html", lang, auth=auth)
+    return _render_client_page(request, "client_astrology.html", lang, auth=auth)
 
 
-@app.get("/client/tarot/{topic}", response_class=HTMLResponse, include_in_schema=False)
-async def client_tarot_topic(
+@app.get("/client/astrology/{topic}", response_class=HTMLResponse, include_in_schema=False)
+async def client_astrology_topic(
     request: Request,
     topic: str,
     lang: str = Query(default=""),
@@ -1899,11 +1899,21 @@ async def client_tarot_topic(
 ):
     return _render_client_page(
         request,
-        "client_tarot.html",
+        "client_astrology.html",
         lang,
         auth=auth,
         selected_card_topic=topic,
     )
+
+
+@app.get("/client/tarot", include_in_schema=False)
+async def client_tarot_legacy():
+    return RedirectResponse(url="/client/astrology", status_code=302)
+
+
+@app.get("/client/tarot/{topic}", include_in_schema=False)
+async def client_tarot_topic_legacy(topic: str):
+    return RedirectResponse(url=f"/client/astrology/{topic}", status_code=302)
 
 
 @app.get("/client/tarot-cards", response_class=HTMLResponse, include_in_schema=False)
@@ -1929,11 +1939,6 @@ async def client_tarot_cards_report(
         auth=auth,
         extra_context={"report_id": report_id},
     )
-
-
-@app.get("/client/astrology", include_in_schema=False)
-async def client_astrology():
-    return RedirectResponse(url="/client/tarot", status_code=302)
 
 
 @app.get("/client/about/{service_slug}", response_class=HTMLResponse, include_in_schema=False)

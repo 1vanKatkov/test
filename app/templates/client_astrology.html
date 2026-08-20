@@ -2,36 +2,103 @@
 
 {% block title %}{{ brand_name }} - {{ t.astrology }}{% endblock %}
 
-{% block body_class %} astrology-layout-page{% endblock %}
+{% block body_class %} topic-service-page astrology-layout-page{% endblock %}
 
 {% block body_attrs %}
   data-cost-tarot="{{ cost_tarot }}"
   data-cost-astrology="{{ cost_astrology }}"
 {% endblock %}
 
+{% block main_class %}mobile-client card-readings-page service-theme-page topic-service-page{% endblock %}
+
 {% block content %}
+  {% if selected_card_reading_topic %}
+  {% with hero_title=t.astrology, hero_back_href='/client/astrology', hero_back_label=t.back_to_natal_maps %}
+  {% include "partials/client_page_hero.html" %}
+  {% endwith %}
+  {% else %}
   {% with hero_title=t.astrology %}
   {% include "partials/client_page_hero.html" %}
   {% endwith %}
+  {% endif %}
 
   <section class="card auth-gated-card service-theme-shell">
     <div class="auth-required-panel" data-guest-free-allowed="true" hidden>
       <h3>{{ t.sign_in_required_title }}</h3>
       <p>{{ t.sign_in_required_text }}</p>
+      {% if selected_card_reading_topic %}
+      <a class="primary-btn" href="/static/auth/login.html?next=/client/astrology/{{ selected_card_reading_topic.key }}">{{ t.sign_in_required_action }}</a>
+      {% else %}
       <a class="primary-btn" href="/static/auth/login.html?next=/client/astrology">{{ t.sign_in_required_action }}</a>
+      {% endif %}
     </div>
     <div class="auth-required-content" data-guest-free-allowed="true">
-      <a class="service-about-inline-link astrology-about-link" href="/client/about/astrology?back=/client/astrology">{{ t.about_astrology or 'Об астрологии' }}</a>
-      <form id="astrology-form" class="form-grid service-theme-form" novalidate>
-        {% with prefix='astrology-persona', default_mode='manual', use_choices=false %}
-        {% include "partials/persona_picker.html" %}
-        {% endwith %}
-        <label>{{ t.astrology_focus }}
-          <textarea id="astrology-focus" rows="4"></textarea>
+      <a class="service-about-inline-link" href="/client/about/astrology?back=/client/astrology">{{ t.about_astrology or 'Об астрологии' }}</a>
+      {% if not selected_card_reading_topic %}
+      <h3 class="service-topic-title">{{ t.tarot_flow_title }}</h3>
+      <div class="service-topic-grid" aria-label="{{ t.astrology }}">
+        {% for topic in card_reading_topics %}
+        <a
+          class="service-topic-card{% if topic.wide %} is-wide{% endif %}"
+          href="/client/astrology/{{ topic.key }}"
+          data-card-topic="{{ topic.key }}"
+          data-topic-title="{{ topic.title }}"
+          data-topic-description="{{ topic.description }}"
+        >
+          <span class="service-topic-icon" aria-hidden="true">
+            <img src="{{ topic.icon }}" alt="" loading="lazy" />
+          </span>
+          <span class="service-topic-copy">
+            <strong>{{ topic.title }}</strong>
+            <small>{{ topic.description }}</small>
+          </span>
+          <span class="service-topic-arrow" aria-hidden="true">›</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <form id="tarot-form" class="form-grid natal-topic-form service-theme-form" novalidate>
+        <input id="tarot-topic" type="hidden" value="{{ selected_card_reading_topic.key }}" />
+        <div class="selected-card-reading">
+          <span class="muted">{{ t.natal_maps }}</span>
+          <strong id="tarot-selected-topic">{{ selected_card_reading_topic.title }}</strong>
+          <span id="tarot-selected-description" class="muted">{{ selected_card_reading_topic.description }}</span>
+        </div>
+        <section class="persona-picker-card">
+          <h3>{{ t.personas }}</h3>
+          <div class="persona-mode-tabs guest-hide-saved-persona">
+            <label><input type="radio" name="tarot-persona-mode" value="saved" /> {{ t.persona_use_saved }}</label>
+            <label><input type="radio" name="tarot-persona-mode" value="manual" checked /> {{ t.persona_manual }}</label>
+          </div>
+          <div id="tarot-saved-persona-panel" class="form-grid persona-subpanel guest-hide-saved-persona" hidden>
+            <label>{{ t.persona_select_placeholder }}
+              <select id="tarot-persona-select">
+                <option value="">{{ t.persona_select_placeholder }}</option>
+              </select>
+            </label>
+            <div id="tarot-persona-preview" class="muted"></div>
+          </div>
+          <div id="tarot-manual-persona-panel" class="form-grid persona-subpanel">
+            <label>{{ t.persona_name }} <input id="tarot-persona-name" /></label>
+            <label>{{ t.birth_date }} <input id="tarot-persona-birth-date" placeholder="15.04.1985" inputmode="numeric" /></label>
+            <label>{{ t.astrology_birth_time }} <span class="muted">({{ t.optional }})</span> <input id="tarot-persona-birth-time" placeholder="14:30" inputmode="numeric" /></label>
+            <label>{{ t.astrology_birth_place }} <span class="muted">({{ t.optional }})</span> <input id="tarot-persona-birth-place" /></label>
+            <label>{{ t.persona_note }} <textarea id="tarot-persona-note" rows="3"></textarea></label>
+            <label class="payment-offer-consent guest-hide-save-persona">
+              <input id="tarot-save-persona" type="checkbox" />
+              <span>{{ t.persona_save_offer }}</span>
+            </label>
+          </div>
+        </section>
+        <label>{{ t.tarot_question }}
+          <textarea id="tarot-question" rows="4"></textarea>
         </label>
-        <button type="submit" class="primary-btn">{{ t.get_astrology_forecast }} · {{ cost_astrology }} <span class="spark-icon" aria-hidden="true">✦</span></button>
+        <div id="tarot-form-result" class="result rich-result" aria-live="polite" hidden></div>
+        <button type="submit" class="primary-btn">{{ t.get_tarot_reading }} · {{ cost_tarot }} <span class="spark-icon" aria-hidden="true">✦</span></button>
       </form>
-      <div id="astrology-result" class="result rich-result" aria-live="polite" hidden></div>
+      {% endif %}
+
+      <div id="tarot-result" class="result rich-result" aria-live="polite" hidden></div>
     </div>
   </section>
 {% endblock %}
