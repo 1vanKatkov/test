@@ -4,6 +4,7 @@ OPERATOR_NAME = "Индивидуальный предприниматель Т�
 OPERATOR_OGRNIP = "321508100179458"
 OPERATOR_INN = "614317472771"
 OPERATOR_ADDRESS = "142700, Московская обл., г. Видное, Бульвар Зелёные аллеи, д. 17, кв. 246"
+OPERATOR_EMAIL = "astrolhub@yandex.ru"
 SERVICE_URLS = "https://astrolhub.ru/, https://t.me/astrolhub_bot"
 SERVICE_NAME = "Astrolhub"
 REVISION_DATE = "20.08.2026"
@@ -55,7 +56,7 @@ def privacy_policy_html_ru() -> str:
 
 <h2>7. Права Пользователя</h2>
 <p>7.1. Пользователь вправе запросить сведения об обработке своих данных, потребовать уточнения, блокирования или удаления данных, отозвать согласие на обработку, а также обратиться в уполномоченный орган по защите прав субъектов персональных данных.</p>
-<p>7.2. Для реализации прав Пользователь может направить обращение через интерфейс Сервиса или связаться с Оператором через канал поддержки Telegram-бота {SERVICE_NAME}.</p>
+<p>7.2. Для реализации прав Пользователь может направить обращение через интерфейс Сервиса, по электронной почте <a href="mailto:{OPERATOR_EMAIL}">{OPERATOR_EMAIL}</a> или через канал поддержки Telegram-бота {SERVICE_NAME}.</p>
 <p>7.3. Отзыв согласия не влияет на законность обработки, совершённой до отзыва, и может сделать невозможным дальнейшее использование части функций Сервиса.</p>
 
 <h2>8. Cookies и технические идентификаторы</h2>
@@ -69,6 +70,7 @@ def privacy_policy_html_ru() -> str:
 <p>{OPERATOR_NAME}<br/>
 ОГРНИП {OPERATOR_OGRNIP}, ИНН {OPERATOR_INN}<br/>
 Адрес: {OPERATOR_ADDRESS}<br/>
+Email: <a href="mailto:{OPERATOR_EMAIL}">{OPERATOR_EMAIL}</a><br/>
 Сервис: {SERVICE_URLS}</p>
 """
 
@@ -90,7 +92,7 @@ def personal_data_consent_html_ru() -> str:
 <p>Согласие действует с момента его предоставления и до достижения целей обработки либо до отзыва согласия Пользователем, если иное не предусмотрено законодательством РФ.</p>
 
 <h2>5. Отзыв согласия</h2>
-<p>Пользователь вправе отозвать согласие, направив обращение Оператору через Сервис или Telegram-бот {SERVICE_NAME}. После отзыва Оператор прекращает обработку, за исключением случаев, когда обработка допускается без согласия по закону или необходима для исполнения договора/обязательств.</p>
+<p>Пользователь вправе отозвать согласие, направив обращение Оператору по email <a href="mailto:{OPERATOR_EMAIL}">{OPERATOR_EMAIL}</a>, через Сервис или Telegram-бот {SERVICE_NAME}. После отзыва Оператор прекращает обработку, за исключением случаев, когда обработка допускается без согласия по закону или необходима для исполнения договора/обязательств.</p>
 
 <h2>6. Подтверждение</h2>
 <p>Отмечая соответствующий знак согласия в форме регистрации (или иным явным действием в интерфейсе), Пользователь подтверждает, что ознакомлен с текстом настоящего согласия и Политикой конфиденциальности, понимает цели и порядок обработки персональных данных.</p>
@@ -104,7 +106,7 @@ def privacy_policy_html_en() -> str:
 <p>This Privacy Policy explains how {SERVICE_NAME} (“Service”, available at {SERVICE_URLS}) processes personal data.</p>
 <p>Controller: {OPERATOR_NAME}, OGRNIP {OPERATOR_OGRNIP}, INN {OPERATOR_INN}, address: {OPERATOR_ADDRESS} (“Operator”).</p>
 <p>The Service processes account data, voluntarily provided profile/persona details, payment metadata, technical logs, and request history to provide the Service, process payments, ensure security, and comply with law. Details are governed by Russian Federal Law No. 152-FZ. The Russian version of this Policy prevails.</p>
-<p>Full text is published in Russian at this page when language is set to RU. Contact the Operator via the {SERVICE_NAME} Telegram bot for data-subject requests.</p>
+<p>Full text is published in Russian at this page when language is set to RU. Contact the Operator at <a href="mailto:{OPERATOR_EMAIL}">{OPERATOR_EMAIL}</a> or via the {SERVICE_NAME} Telegram bot for data-subject requests.</p>
 <p>Revision date: {REVISION_DATE}.</p>
 """
 
@@ -112,5 +114,5 @@ def privacy_policy_html_en() -> str:
 def personal_data_consent_html_en() -> str:
     return f"""
 <p>By checking the consent box during registration, you agree that {OPERATOR_NAME} (OGRNIP {OPERATOR_OGRNIP}) may process your personal data to create and maintain your account and provide {SERVICE_NAME} services, as described in the <a href="/privacy-policy">Privacy Policy</a>.</p>
-<p>The Russian version of this consent is legally binding. Revision date: {REVISION_DATE}.</p>
+<p>The Russian version of this consent is legally binding. Contact: <a href="mailto:{OPERATOR_EMAIL}">{OPERATOR_EMAIL}</a>. Revision date: {REVISION_DATE}.</p>
 """

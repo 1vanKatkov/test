@@ -9,6 +9,10 @@
 
   <section class="card auth-gated-card service-theme-shell">
     <div class="auth-required-content">
+      <p class="muted">
+        {{ t.support_email_hint or "Контакт для связи:" }}
+        <a href="mailto:astrolhub@yandex.ru">astrolhub@yandex.ru</a>
+      </p>
       <h3>{{ t.open_ticket }}</h3>
       <form id="support-ticket-form" class="form-grid service-theme-form">
         <label>{{ t.subject }} <input id="support-subject" required /></label>
