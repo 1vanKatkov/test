@@ -106,12 +106,12 @@ class Settings:
     daily_sparks_amount: int = int(os.getenv("DAILY_SPARKS_AMOUNT", "3"))
     daily_notify_interval_days: int = int(os.getenv("DAILY_NOTIFY_INTERVAL_DAYS", "2"))
     daily_sparks_check_seconds: int = int(os.getenv("DAILY_SPARKS_CHECK_SECONDS", "3600"))
-    cost_sonnik: int = 5
-    cost_numerology: int = 10
-    cost_sovmestimost: int = 5
-    cost_tarot: int = 5
+    cost_sonnik: int = int(os.getenv("COST_SONNIK", "5"))
+    cost_numerology: int = int(os.getenv("COST_NUMEROLOGY", "10"))
+    cost_sovmestimost: int = int(os.getenv("COST_SOVMESTIMOST", "5"))
+    cost_tarot: int = int(os.getenv("COST_TAROT", "30"))
     cost_tarot_cards: int = int(os.getenv("COST_TAROT_CARDS", "10"))
-    cost_astrology: int = 5
+    cost_astrology: int = int(os.getenv("COST_ASTROLOGY", "5"))
     guest_free_readings_limit: int = int(os.getenv("GUEST_FREE_READINGS_LIMIT", "2"))
     max_auth_secret: str = os.getenv("MAX_AUTH_SECRET", "")
     max_auth_skew_seconds: int = int(os.getenv("MAX_AUTH_SKEW_SECONDS", "300"))
