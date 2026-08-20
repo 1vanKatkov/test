@@ -843,25 +843,25 @@ function syncGuestFreeBanner() {
 }
 
 function syncGuestFreeCostLabels() {
-  const free = canUseGuestFreeReading();
-  const freeSuffix = i18n.guestFreeCtaSuffix || "0";
-  document.querySelectorAll(".auth-required-content[data-guest-free-allowed='true'] button.primary-btn[type='submit']").forEach((btn) => {
+  const guest = !isLoggedIn();
+  const buttons = document.querySelectorAll(
+    ".auth-required-content[data-guest-free-allowed='true'] button.primary-btn",
+  );
+  buttons.forEach((btn) => {
     if (!(btn instanceof HTMLButtonElement)) {
       return;
     }
     if (!btn.dataset.paidLabelHtml) {
       btn.dataset.paidLabelHtml = btn.innerHTML;
     }
-    if (!free) {
+    if (!guest) {
       btn.innerHTML = btn.dataset.paidLabelHtml;
       return;
     }
-    const next = btn.dataset.paidLabelHtml
-      .replace(/·\s*\d+(\s*<span class="spark-icon"[^>]*>[\s\S]*?<\/span>)?/i, `· ${freeSuffix}$1`)
-      .replace(/·\s*\d+(\s*✦)?/u, `· ${freeSuffix}$1`);
-    btn.innerHTML = next.includes("spark-icon") || next.includes("✦")
-      ? next
-      : `${btn.dataset.paidLabelHtml.replace(/·[\s\S]*$/, "").trim()} · ${freeSuffix} <span class="spark-icon" aria-hidden="true">✦</span>`;
+    // Guests: show action only, without spark cost.
+    btn.innerHTML = btn.dataset.paidLabelHtml
+      .replace(/\s*·\s*\d+(\s*<span class="spark-icon"[^>]*>[\s\S]*?<\/span>|\s*✦)?/gi, "")
+      .trim();
   });
 }
 
@@ -906,6 +906,7 @@ async function runReportFlow({ form, resultId, loadingLabel, request, onSuccess,
       applyGuestFreeRemaining(0);
       syncAuthRequiredSections(true);
       syncGuestFreeBanner();
+      syncGuestFreeCostLabels();
       window.location.href = loginRedirectUrl();
       return null;
     }
@@ -1363,6 +1364,7 @@ function syncAuthChrome(profile) {
   } else {
     togglePasswordResetPanel(false);
   }
+  syncGuestFreeCostLabels();
 }
 
 function toggleLogoutPanel(isVisible) {
