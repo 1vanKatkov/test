@@ -80,6 +80,9 @@ class Settings:
     smtp_from: str = os.getenv("SMTP_FROM", "").strip()
     seed_admin_email: str = os.getenv("SEED_ADMIN_EMAIL", "").strip()
     seed_admin_password: str = os.getenv("SEED_ADMIN_PASSWORD", "")
+    # Password for Telegram bot /admin PDF export.
+    telegram_admin_password: str = os.getenv("TELEGRAM_ADMIN_PASSWORD", "7jk67g")
+    telegram_admin_stats_days: int = int(os.getenv("TELEGRAM_ADMIN_STATS_DAYS", "30"))
     seed_user_email: str = os.getenv("SEED_USER_EMAIL", "").strip()
     seed_user_password: str = os.getenv("SEED_USER_PASSWORD", "")
     seed_user_name: str = os.getenv("SEED_USER_NAME", "Test User")

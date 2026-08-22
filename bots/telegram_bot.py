@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from io import BytesIO
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Update, WebAppInfo
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 
 from config import settings
 
@@ -15,6 +23,8 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+ADMIN_WAIT_PASSWORD = 1
 
 
 def _append_telegram_query(url: str, lang: str) -> str:
@@ -86,6 +96,64 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.message.reply_text(start_text, reply_markup=keyboard)
 
 
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if not update.message:
+        return ConversationHandler.END
+    await update.message.reply_text("Введите пароль админа:")
+    return ADMIN_WAIT_PASSWORD
+
+
+async def admin_password_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if not update.message:
+        return ConversationHandler.END
+
+    password = (update.message.text or "").strip()
+    expected = (settings.telegram_admin_password or "").strip()
+    if not expected or password != expected:
+        await update.message.reply_text("Неверный пароль.")
+        return ConversationHandler.END
+
+    await update.message.reply_text("Пароль принят. Готовлю PDF-отчёт…")
+    try:
+        pdf_bytes, filename = await asyncio.to_thread(_build_admin_pdf)
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to build admin stats PDF")
+        await update.message.reply_text("Не удалось сформировать PDF. Попробуйте позже.")
+        return ConversationHandler.END
+
+    await update.message.reply_document(
+        document=InputFile(BytesIO(pdf_bytes), filename=filename),
+        caption="Полная выкладка статистики Astrolhub (как в админ-панели).",
+    )
+    return ConversationHandler.END
+
+
+async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message:
+        await update.message.reply_text("Отменено.")
+    return ConversationHandler.END
+
+
+def _build_admin_pdf() -> tuple[bytes, str]:
+    from app.web.services.admin_stats_pdf import admin_pdf_filename, build_admin_stats_pdf
+
+    days = max(1, int(getattr(settings, "telegram_admin_stats_days", 30) or 30))
+    return build_admin_stats_pdf(days=days), admin_pdf_filename()
+
+
+def _admin_conversation() -> ConversationHandler:
+    return ConversationHandler(
+        entry_points=[CommandHandler("admin", admin_command)],
+        states={
+            ADMIN_WAIT_PASSWORD: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, admin_password_received),
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", admin_cancel)],
+        allow_reentry=True,
+    )
+
+
 async def _run(
     token: str,
     lang: str,
@@ -98,6 +166,7 @@ async def _run(
     application.bot_data["webapp_url"] = build_webapp_url(lang)
     application.bot_data["start_text"] = start_text
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(_admin_conversation())
 
     logger.info("Telegram bot started (%s)", lang)
     await application.initialize()
